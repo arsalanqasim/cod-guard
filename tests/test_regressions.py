@@ -70,7 +70,9 @@ class ServiceRegressionTests(unittest.TestCase):
         partial = service.verify_reply(self.order, "Please cancel the extra item only")
         self.assertEqual((partial["intent"], partial["decision"], partial["needs_review"]),
                          ("UNCLEAR", "SHIP", True))
+        self.assertTrue(service.assess_order(self.order)["needs_review"])
         service.verify_reply(self.order, "No, cancel")
+        self.assertFalse(service.assess_order(self.order)["needs_review"])
         negated = service.verify_reply(self.order, "I did not confirm this order")
         self.assertEqual((negated["intent"], negated["decision"], negated["needs_review"]),
                          ("UNCLEAR", "HOLD_CANCEL", True))

@@ -164,7 +164,8 @@ Round 2 tables.
 
 The review's past-tense negation and item-level cancellation now abstain.
 Scoped, conditional and contradictory replies ask the operator to clarify
-and retain any previous explicit decision. Direct whole-order instructions
+and retain any previous explicit decision. The order view retains the
+review flag until an explicit reply clears it. Direct whole-order instructions
 such as “Please do not send it” still stop dispatch.
 
 Regression coverage: `test_negated_scoped_and_contradictory_replies_abstain`

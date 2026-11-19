@@ -49,13 +49,21 @@ def parse_reply(text: str) -> str:
         r"if|unless|maybe|perhaps|later|tomorrow|wait|agar|kal|baad|اگر|شاید|کل|بعد"
         r"|will confirm|not sure|پتا نہیں"
     )
-    reported_negation = (
-        r"(?:did(?:n't| not)|ha(?:ven't|ve not|sn't|s not)|was(?:n't| not)|never)"
-        r"\s+(?:say\s+(?:yes|no)|(?:actually\s+)?(?:confirm|cancel|send|ship|dispatch|deliver)\w*)"
-        r"|not\s+(?:yet\s+)?confirmed"
+    action = r"cancel(?:led)?|confirm(?:ed)?|send|deliver|dispatch|ship|stop"
+    whole_order_object = (
+        r"it|please|thanks|now|today|and|but|kar\w*|mat|na|nahi|nahin|nhi"
+        r"|(?:(?:my|this|the|that|our)\s+)?(?:(?:whole|entire|full)\s+)?(?:order|delivery|shipment|package)"
     )
+    unknown_object = rf"(?:{action})\s+(?!(?:{whole_order_object})(?!\w))\w+"
+    reported_negation = (
+        r"(?:did(?:n't| not)|ha(?:ven't|ve not|sn't|s not)|was(?:n't| not))"
+        r"|(?:i|we)\s+(?:don't|do not|cannot|can't|won't|will not|never)"
+    )
+    negated_statement = (rf"(?:{reported_negation})\s+[^.!?;،,]{{0,40}}?"
+                         rf"(?<!\w)(?:{action}|yes|no)|not\s+(?:yet\s+)?(?:confirmed|yes|no)")
     if (re.search(question, t) or "?" in t or "؟" in t
-            or any(matches(pattern, t) for pattern in (partial_scope, uncertainty, reported_negation))):
+            or any(matches(pattern, t) for pattern in
+                   (partial_scope, unknown_object, uncertainty, negated_statement))):
         return "UNCLEAR"
 
     negated_cancel = (

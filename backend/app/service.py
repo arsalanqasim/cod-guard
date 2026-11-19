@@ -99,6 +99,7 @@ def assess_order(order):
             "signal_count": risk["signal_count"], "signals": risk["signals"],
             "decision": decision["decision"], "decision_why": decision["why"],
             "verified": bool(saved), "intent": (saved or {}).get("intent"),
+            "needs_review": bool((saved or {}).get("needs_review")),
             "outcome": state["outcomes"].get(order["order_id"]),
             "model_id": status.get("model_id"), "model_error": status["reason"]}
 
@@ -116,7 +117,8 @@ def verify_reply(order, reply_text, source="text"):
             effective_intent = previous["intent"]
             result = {"decision": previous["decision"],
                       "why": "Reply unclear; keeping the customer's previous explicit answer. Please clarify."}
-        state["decisions"][order["order_id"]] = {**result, "intent": effective_intent}
+        state["decisions"][order["order_id"]] = {**result, "intent": effective_intent,
+                                                 "needs_review": intent == "UNCLEAR"}
         state["messages"].setdefault(order["order_id"], []).append({
             "text": reply_text, "source": source, "intent": intent, **result,
             "at": datetime.now(timezone.utc).isoformat()})
