@@ -280,3 +280,10 @@ operator action against the linked store. Tests use fixtures, not merchant data.
 suppression, callback authentication, and tenant-scoped delivery accounting.
 Mocked API tests verify deduplication, reply scope, costs, and simulation;
 list-rate estimates are not reconciled charges. Daraz stays score-and-queue.
+
+### Round 5 — WS-E: Courier outcome loop
+
+[Courier outcomes](COURIERS.md) maps tenant-scoped atomic CSV import, TCS
+evidence limits, the audited correction path, and non-publishing outcome-fed
+evaluation. Tests exercise replay, tenant isolation, tracking and the locked
+trainer. No courier credentials or field labels were used during verification.

@@ -80,6 +80,16 @@ WHATSAPP_SCHEMA = (
 )
 
 
+COURIER_SCHEMA = (
+    """CREATE TABLE IF NOT EXISTS courier_outcome_evidence (
+        tenant_id TEXT NOT NULL, order_id TEXT NOT NULL, courier TEXT NOT NULL,
+        tracking_number TEXT NOT NULL, outcome TEXT NOT NULL, source TEXT NOT NULL,
+        recorded_at TEXT NOT NULL, billed_fee_paisa INTEGER,
+        PRIMARY KEY (tenant_id, order_id), UNIQUE (tenant_id, courier, tracking_number),
+        FOREIGN KEY (tenant_id, order_id) REFERENCES orders(tenant_id, order_id))""",
+)
+
+
 class StateUnavailable(RuntimeError):
     """The state store cannot be read or written."""
 
@@ -201,9 +211,9 @@ def _initialize(connection, legacy):
         connection.execute("ALTER TABLE decisions ADD COLUMN needs_review INTEGER NOT NULL DEFAULT 0")
         connection.execute("""UPDATE decisions SET needs_review=1 WHERE default_snapshot=0
                             AND (intent='UNCLEAR' OR why LIKE 'Reply unclear;%')""")
-    for statement in (*CONNECTOR_SCHEMA, *WHATSAPP_SCHEMA):
+    for statement in (*CONNECTOR_SCHEMA, *WHATSAPP_SCHEMA, *COURIER_SCHEMA):
         connection.execute(statement)
-    connection.execute("PRAGMA user_version=4")
+    connection.execute("PRAGMA user_version=5")
     connection.commit()
 
 
@@ -217,9 +227,9 @@ def connect(path):
             connection.execute("PRAGMA foreign_keys=ON")
             try:
                 version = connection.execute("PRAGMA user_version").fetchone()[0]
-                if version in (0, 1, 2, 3):
+                if version in (0, 1, 2, 3, 4):
                     _initialize(connection, legacy)
-                elif version != 4:
+                elif version != 5:
                     raise ValueError("Unsupported state schema version")
             except (ValueError, KeyError, TypeError, AttributeError) as exc:
                 raise StateUnavailable("State migration is unavailable") from exc

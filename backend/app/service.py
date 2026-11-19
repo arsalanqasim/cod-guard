@@ -198,21 +198,26 @@ def mark_outcome(order_id, outcome, *, actor="local-demo", tenant_id=DEMO_TENANT
         raise ValueError("Outcome must be delivered, returned, or refused")
     order = get_order(order_id, tenant_id)
     with transaction(STATE_PATH, tenant_id, (order_id,)) as state:
-        snapshot = state["outcome_decisions"].get(order_id)
-        if snapshot is None and order_id not in state["outcomes"]:
-            assessment = assess_order(order, state=state)
-            decision = state["decisions"].get(order_id)
-            if not decision or "revision" not in decision:
-                decision = append_event(state, order_id, "decision", actor,
-                                        decision=assessment["decision"], why=assessment["decision_why"],
-                                        zone=assessment["zone"], model_id=assessment["model_id"],
-                                        intent=assessment["intent"], default_snapshot=True)
-            snapshot = state["outcome_decisions"][order_id] = decision.copy()
-        event = append_event(state, order_id, "outcome", actor, outcome=outcome,
-                             decision_revision=(snapshot or {}).get("revision"),
-                             correction=order_id in state["outcomes"])
-        state["outcomes"][order_id] = outcome
-        return event.copy()
+        return apply_outcome(state, order, outcome, actor)
+
+
+def apply_outcome(state, order, outcome, actor):
+    order_id = order["order_id"]
+    snapshot = state["outcome_decisions"].get(order_id)
+    if snapshot is None and order_id not in state["outcomes"]:
+        assessment = assess_order(order, state=state)
+        decision = state["decisions"].get(order_id)
+        if not decision or "revision" not in decision:
+            decision = append_event(state, order_id, "decision", actor,
+                                    decision=assessment["decision"], why=assessment["decision_why"],
+                                    zone=assessment["zone"], model_id=assessment["model_id"],
+                                    intent=assessment["intent"], default_snapshot=True)
+        snapshot = state["outcome_decisions"][order_id] = decision.copy()
+    event = append_event(state, order_id, "outcome", actor, outcome=outcome,
+                         decision_revision=(snapshot or {}).get("revision"),
+                         correction=order_id in state["outcomes"])
+    state["outcomes"][order_id] = outcome
+    return event.copy()
 
 
 def live_metrics(tenant_id=DEMO_TENANT):
