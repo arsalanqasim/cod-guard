@@ -87,6 +87,10 @@ def update_state(connection, tenant_id, order_ids):
                 add_decision(connection, tenant_id, order_id, event)
             else:
                 add_outcome(connection, tenant_id, order_id, event)
+                if event.get("correction"):
+                    connection.execute("""DELETE FROM network_contributions
+                        WHERE tenant_id=? AND order_id=? AND outcome<>?""",
+                                       (tenant_id, order_id, event["outcome"]))
             audit(connection, tenant_id, event["actor"], event["kind"],
                   order_id=order_id, reference=str(event["revision"]))
     for order_id, messages in state["messages"].items():

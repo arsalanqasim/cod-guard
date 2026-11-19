@@ -15,6 +15,7 @@ from uuid import uuid4
 import httpx
 
 import service
+from pakistan_phone import normalize_phone
 from records import DEMO_TENANT, audit, connect, now, select_orders, write
 from storage import update_state
 from verification import opening_message, parse_reply
@@ -75,17 +76,6 @@ def accounts():
         return _accounts(os.environ.get("COD_GUARD_WHATSAPP", "{}"))
     except (TypeError, ValueError, KeyError):
         raise CloudError("WhatsApp configuration is invalid") from None
-
-
-def normalize_phone(value):
-    if not isinstance(value, str) or not re.fullmatch(r"\+?[0-9][0-9 ()-]{8,39}", value):
-        return None
-    digits = re.sub(r"[^0-9]", "", value)
-    if digits.startswith("0092"):
-        digits = digits[2:]
-    if digits.startswith("03"):
-        digits = "92" + digits[1:]
-    return digits if re.fullmatch(r"923[0-9]{9}", digits) else None
 
 
 def _digest(account, purpose, value):

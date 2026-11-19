@@ -308,3 +308,10 @@ No live store installed, App Store submission, or billing integration.
 [Social intake](SOCIAL_INTAKE.md) maps transient extraction, editable review,
 explicit save, scoped CSV ingestion from a private Sheets export, and the
 deferred Meta review path. Tests exercise API storage and the review screen.
+
+### Round 5 — WS-H: Auditable reputation network
+
+[Network governance](NETWORK.md) maps opt-in, HMAC pseudonymization,
+tenant/consent scope, count suppression, expiry, corrections and appeals.
+The size counter counts actual contributors in the selected deployment.
+Shadow-only counts cannot alter a score or hold an order.

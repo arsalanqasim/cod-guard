@@ -13,7 +13,7 @@ from operators import Operator, write_operator
 from order_intake import IdempotencyConflict, MAX_CSV_BYTES, import_orders
 from records import DEMO_TENANT
 from risk_engine import validate_features
-from whatsapp_cloud import normalize_phone
+from pakistan_phone import normalize_phone
 
 
 router = APIRouter(prefix="/integrations/social")

@@ -18,6 +18,7 @@ from woocommerce import WooCommerceError, configured_stores
 from connector_orders import connection_state
 from public_benchmark import benchmark_markdown, cohorts
 from savings_report import seller_report
+from reputation_network import size as network_size
 
 st.set_page_config(page_title="COD-Guard", page_icon="🛡️", layout="wide")
 st.markdown("""<style>
@@ -72,6 +73,13 @@ with st.sidebar:
     st.write("**Demo honesty**")
     st.caption("All orders and benchmark labels are SYNTHETIC. No merchant pilots or production accuracy claims.")
     st.caption("Competitors: Tasdeek, Botaura, OrderWitness, DukaanFlow.")
+    try:
+        network = network_size(service.STATE_PATH)
+    except StateUnavailable:
+        st.caption("Reputation network counter unavailable.")
+    else:
+        st.caption(f"Reputation network · {network['contributing_sellers']} active contributing sellers"
+                   if network["enabled"] else "Reputation network · disabled on this installation.")
     if os.environ.get("COD_GUARD_WOO_HEALTH_LOCAL") == "1":
         with st.expander("WooCommerce connection health"):
             try:

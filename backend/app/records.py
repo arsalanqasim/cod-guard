@@ -90,6 +90,24 @@ COURIER_SCHEMA = (
 )
 
 
+NETWORK_SCHEMA = (
+    """CREATE TABLE IF NOT EXISTS network_metadata (
+        id INTEGER PRIMARY KEY CHECK (id=1), key_tag TEXT NOT NULL)""",
+    """CREATE TABLE IF NOT EXISTS network_sellers (tenant_id TEXT PRIMARY KEY)""",
+    """CREATE TABLE IF NOT EXISTS network_consents (
+        tenant_id TEXT NOT NULL, phone_key TEXT NOT NULL, expires INTEGER NOT NULL,
+        evidence_reference TEXT NOT NULL, PRIMARY KEY (tenant_id, phone_key),
+        FOREIGN KEY (tenant_id) REFERENCES network_sellers(tenant_id) ON DELETE CASCADE)""",
+    """CREATE TABLE IF NOT EXISTS network_contributions (
+        tenant_id TEXT NOT NULL, order_id TEXT NOT NULL, phone_key TEXT NOT NULL, outcome TEXT NOT NULL,
+        expires INTEGER NOT NULL, PRIMARY KEY (tenant_id, order_id),
+        FOREIGN KEY (tenant_id, phone_key) REFERENCES network_consents(tenant_id, phone_key) ON DELETE CASCADE,
+        FOREIGN KEY (tenant_id, order_id) REFERENCES orders(tenant_id, order_id))""",
+    "CREATE INDEX IF NOT EXISTS network_phone ON network_contributions(phone_key, tenant_id)",
+    "CREATE TABLE IF NOT EXISTS network_suppressions (phone_key TEXT PRIMARY KEY)",
+)
+
+
 class StateUnavailable(RuntimeError):
     """The state store cannot be read or written."""
 
@@ -211,9 +229,9 @@ def _initialize(connection, legacy):
         connection.execute("ALTER TABLE decisions ADD COLUMN needs_review INTEGER NOT NULL DEFAULT 0")
         connection.execute("""UPDATE decisions SET needs_review=1 WHERE default_snapshot=0
                             AND (intent='UNCLEAR' OR why LIKE 'Reply unclear;%')""")
-    for statement in (*CONNECTOR_SCHEMA, *WHATSAPP_SCHEMA, *COURIER_SCHEMA):
+    for statement in (*CONNECTOR_SCHEMA, *WHATSAPP_SCHEMA, *COURIER_SCHEMA, *NETWORK_SCHEMA):
         connection.execute(statement)
-    connection.execute("PRAGMA user_version=5")
+    connection.execute("PRAGMA user_version=6")
     connection.commit()
 
 
@@ -227,9 +245,9 @@ def connect(path):
             connection.execute("PRAGMA foreign_keys=ON")
             try:
                 version = connection.execute("PRAGMA user_version").fetchone()[0]
-                if version in (0, 1, 2, 3, 4):
+                if version in (0, 1, 2, 3, 4, 5):
                     _initialize(connection, legacy)
-                elif version != 5:
+                elif version != 6:
                     raise ValueError("Unsupported state schema version")
             except (ValueError, KeyError, TypeError, AttributeError) as exc:
                 raise StateUnavailable("State migration is unavailable") from exc

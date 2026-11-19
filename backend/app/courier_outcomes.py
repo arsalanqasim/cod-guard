@@ -10,6 +10,7 @@ from decimal import Decimal
 
 import httpx
 
+import reputation_network
 import service
 from records import DEMO_TENANT, audit, now, select_orders, write
 from storage import update_state
@@ -78,6 +79,7 @@ def store(tenant_id, actor, rows, source):
                 raise OutcomeConflict("Tracking reference is already linked to another shipment")
             if order_id not in state["outcomes"]:
                 service.apply_outcome(state, orders[0], outcome, actor)
+                reputation_network.contribute(db, tenant_id, orders[0], outcome)
                 labels += 1
             if previous and previous["outcome"] == outcome and (fee is None or previous["billed_fee_paisa"] == fee):
                 continue
