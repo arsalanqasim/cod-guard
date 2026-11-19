@@ -65,6 +65,18 @@ class ServiceRegressionTests(unittest.TestCase):
         service.verify_reply(self.order, "No, cancel")
         self.assertEqual(service.verify_reply(self.order, "Kal bataunga")["decision"], "HOLD_CANCEL")
 
+    def test_ambiguous_scope_routes_to_operator_without_flipping_prior_decision(self):
+        service.verify_reply(self.order, "Yes confirm")
+        partial = service.verify_reply(self.order, "Please cancel the extra item only")
+        self.assertEqual((partial["intent"], partial["decision"], partial["needs_review"]),
+                         ("UNCLEAR", "SHIP", True))
+        self.assertTrue(service.assess_order(self.order)["needs_review"])
+        service.verify_reply(self.order, "No, cancel")
+        self.assertFalse(service.assess_order(self.order)["needs_review"])
+        negated = service.verify_reply(self.order, "I did not confirm this order")
+        self.assertEqual((negated["intent"], negated["decision"], negated["needs_review"]),
+                         ("UNCLEAR", "HOLD_CANCEL", True))
+
     def test_concurrent_state_updates_do_not_lose_messages(self):
         from concurrent.futures import ThreadPoolExecutor
         with ThreadPoolExecutor(max_workers=4) as pool:

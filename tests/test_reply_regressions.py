@@ -8,6 +8,22 @@ from verification import parse_reply
 
 
 class ReplyRegressionTests(unittest.TestCase):
+    def test_negated_scoped_and_contradictory_replies_abstain(self):
+        for reply in ["I did not confirm this order", "Please cancel the extra item only",
+                      "I haven't confirmed this order", "I did not cancel my order",
+                      "Don't cancel my order", "I did not say yes",
+                      "Yes, confirm the blue shirt only", "Please cancel one item",
+                      "Confirm the address, please", "Please cancel the extra item",
+                      "Order nahi, sirf address confirm karna hai", "صرف ایک آئٹم کینسل کریں",
+                      "Yes, confirm the order, but please cancel it", "Please confirm and cancel",
+                      "Please do not cancel one item", "Yes, confirm if the size is large",
+                      "Did you cancel my order?", "Please cancel the blue shirt",
+                      "Yes, cancel my second product", "Confirm payment",
+                      "Please stop calling me", "I did not ask you to confirm",
+                      "I don't want to confirm", "I cannot confirm this order", "Not yes"]:
+            with self.subTest(reply=reply):
+                self.assertEqual(parse_reply(reply), "UNCLEAR")
+
     def test_negated_dispatch_and_polite_denials(self):
         for reply in ["Ji nahi", "جی نہیں", "No, don't send it",
                       "Please do not confirm", "I did not place this order",
