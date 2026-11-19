@@ -61,7 +61,7 @@ class StorageTests(unittest.TestCase):
                             [("CONFIRM", "Reply unclear; previous answer kept", 0),
                              ("UNCLEAR", "Please clarify", 0), ("CONFIRM", "Explicit answer", 0)])
         with connect(self.path) as db:
-            self.assertEqual(db.execute("PRAGMA user_version").fetchone()[0], 2)
+            self.assertEqual(db.execute("PRAGMA user_version").fetchone()[0], 6)
             self.assertEqual([row[0] for row in db.execute("SELECT needs_review FROM decisions ORDER BY rowid")],
                              [1, 1, 0])
 

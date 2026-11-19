@@ -75,7 +75,7 @@ The model is cached in memory after its first use in each process.
 - **Verification:** select a RED order and confirm it → SHIP. Select a GREEN
   order and deny it → HOLD_CANCEL. History is durable; an unclear follow-up cannot
   erase an explicit answer. Upload, record, or transcribe the attributed Urdu sample.
-- **Metrics & learning:** both error rates, confusion matrix, test threshold
+- **Metrics & learning:** [locked public benchmark](docs/BENCHMARK.md), both error rates, confusion matrix, test threshold
   trade-off, and baseline costs are visible. Mark an outcome, then click
   **Retrain from marked outcomes**. A new version visibly consumes the label and
   re-evaluates the same held-out orders. Metrics may improve or worsen.

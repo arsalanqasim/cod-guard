@@ -15,9 +15,22 @@ from records import DEMO_TENANT, StateUnavailable
 from request_limits import RequestBodyLimit
 from verification import (parse_reply, transcribe_voice_note, VOICE_SUFFIXES,
                           VOICE_LIMIT_BYTES, VOICE_WORKERS)
+from woo_routes import router as woo_router
+from whatsapp_routes import router as whatsapp_router
+from courier_routes import router as courier_router
+from savings_report import seller_report
+from shopify_routes import router as shopify_router
+from social_routes import router as social_router
+from network_routes import router as network_router
 
 app = FastAPI(title="COD-Guard — shadow intake", version="0.3")
 app.add_middleware(RequestBodyLimit, limit=VOICE_LIMIT_BYTES + 1024 * 1024)
+app.include_router(woo_router)
+app.include_router(whatsapp_router)
+app.include_router(courier_router)
+app.include_router(shopify_router)
+app.include_router(social_router)
+app.include_router(network_router)
 voice_jobs = JobQueue(workers=VOICE_WORKERS, capacity=4, ttl_seconds=600)
 
 
@@ -159,6 +172,11 @@ def voice_status(order_id: str, job_id: str, operator: Operator = Depends(requir
 @app.get("/metrics")
 def metrics(operator: Operator = Depends(require_operator)):
     return service.live_metrics(operator.tenant_id)
+
+
+@app.get("/reports/savings")
+def savings(operator: Operator = Depends(require_operator)):
+    return seller_report(operator.tenant_id, service.latest_evaluation())
 
 
 @app.get("/evaluation")

@@ -164,25 +164,28 @@ def order_page(tenant_id=DEMO_TENANT, *, limit=50, offset=0, search=""):
 
 
 def verify_reply(order, reply_text, source="text", *, actor="local-demo", tenant_id=DEMO_TENANT):
-    intent = parse_reply(reply_text)
     with transaction(STATE_PATH, tenant_id, (order["order_id"],)) as state:
-        assessment = assess_order(order, state=state)
-        result = apply_reply(assessment["zone"], intent)
-        previous = state["decisions"].get(order["order_id"])
-        effective_intent = intent
-        if intent == "UNCLEAR":
-            result["why"] += ". Please clarify with the customer."
-        if intent == "UNCLEAR" and previous and previous.get("intent") in ("CONFIRM", "DENY"):
-            effective_intent = previous["intent"]
-            result = {"decision": previous["decision"],
-                      "why": "Reply unclear; keeping the customer's previous explicit answer. Please clarify."}
-        event = append_event(state, order["order_id"], "decision", actor, **result,
-                             intent=effective_intent, zone=assessment["zone"], model_id=assessment["model_id"],
-                             needs_review=intent == "UNCLEAR")
-        state["decisions"][order["order_id"]] = event.copy()
-        state["messages"].setdefault(order["order_id"], []).append({
-            "text": reply_text, "source": source, "intent": intent, **result,
-            "at": event["at"], "actor": actor, "decision_revision": event["revision"]})
+        return apply_verification(state, order, reply_text, parse_reply(reply_text), source, actor)
+
+
+def apply_verification(state, order, reply_text, intent, source, actor):
+    assessment = assess_order(order, state=state)
+    result = apply_reply(assessment["zone"], intent)
+    previous = state["decisions"].get(order["order_id"])
+    effective_intent = intent
+    if intent == "UNCLEAR":
+        result["why"] += ". Please clarify with the customer."
+    if intent == "UNCLEAR" and previous and previous.get("intent") in ("CONFIRM", "DENY"):
+        effective_intent = previous["intent"]
+        result = {"decision": previous["decision"],
+                  "why": "Reply unclear; keeping the customer's previous explicit answer. Please clarify."}
+    event = append_event(state, order["order_id"], "decision", actor, **result,
+                         intent=effective_intent, zone=assessment["zone"], model_id=assessment["model_id"],
+                         needs_review=intent == "UNCLEAR")
+    state["decisions"][order["order_id"]] = event.copy()
+    state["messages"].setdefault(order["order_id"], []).append({
+        "text": reply_text, "source": source, "intent": intent, **result,
+        "at": event["at"], "actor": actor, "decision_revision": event["revision"]})
     return {"intent": intent, "needs_review": intent == "UNCLEAR", **result}
 
 
@@ -195,21 +198,26 @@ def mark_outcome(order_id, outcome, *, actor="local-demo", tenant_id=DEMO_TENANT
         raise ValueError("Outcome must be delivered, returned, or refused")
     order = get_order(order_id, tenant_id)
     with transaction(STATE_PATH, tenant_id, (order_id,)) as state:
-        snapshot = state["outcome_decisions"].get(order_id)
-        if snapshot is None and order_id not in state["outcomes"]:
-            assessment = assess_order(order, state=state)
-            decision = state["decisions"].get(order_id)
-            if not decision or "revision" not in decision:
-                decision = append_event(state, order_id, "decision", actor,
-                                        decision=assessment["decision"], why=assessment["decision_why"],
-                                        zone=assessment["zone"], model_id=assessment["model_id"],
-                                        intent=assessment["intent"], default_snapshot=True)
-            snapshot = state["outcome_decisions"][order_id] = decision.copy()
-        event = append_event(state, order_id, "outcome", actor, outcome=outcome,
-                             decision_revision=(snapshot or {}).get("revision"),
-                             correction=order_id in state["outcomes"])
-        state["outcomes"][order_id] = outcome
-        return event.copy()
+        return apply_outcome(state, order, outcome, actor)
+
+
+def apply_outcome(state, order, outcome, actor):
+    order_id = order["order_id"]
+    snapshot = state["outcome_decisions"].get(order_id)
+    if snapshot is None and order_id not in state["outcomes"]:
+        assessment = assess_order(order, state=state)
+        decision = state["decisions"].get(order_id)
+        if not decision or "revision" not in decision:
+            decision = append_event(state, order_id, "decision", actor,
+                                    decision=assessment["decision"], why=assessment["decision_why"],
+                                    zone=assessment["zone"], model_id=assessment["model_id"],
+                                    intent=assessment["intent"], default_snapshot=True)
+        snapshot = state["outcome_decisions"][order_id] = decision.copy()
+    event = append_event(state, order_id, "outcome", actor, outcome=outcome,
+                         decision_revision=(snapshot or {}).get("revision"),
+                         correction=order_id in state["outcomes"])
+    state["outcomes"][order_id] = outcome
+    return event.copy()
 
 
 def live_metrics(tenant_id=DEMO_TENANT):

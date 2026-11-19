@@ -1,6 +1,7 @@
 """COD-Guard local exhibition dashboard; all displayed orders are SYNTHETIC."""
 import hashlib
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -13,6 +14,11 @@ import service
 from records import StateUnavailable
 from jobs import QueueFull
 from verification import transcribe_voice_note, parse_reply
+from woocommerce import WooCommerceError, configured_stores
+from connector_orders import connection_state
+from public_benchmark import benchmark_markdown, cohorts
+from savings_report import seller_report
+from reputation_network import size as network_size
 
 st.set_page_config(page_title="COD-Guard", page_icon="🛡️", layout="wide")
 st.markdown("""<style>
@@ -50,7 +56,7 @@ if not orders:
 
 with st.sidebar:
     st.subheader("Exhibition control")
-    st.caption("LOCAL CONVERSATION SIMULATOR")
+    st.caption("WHATSAPP MODE: SIMULATED · EXHIBITION TENANT")
     st.number_input("Order page", min_value=1, max_value=max(1, (total + page_size - 1) // page_size),
                     step=1, key="dispatch_page")
     st.write("No WhatsApp messages are sent. Reply intent uses offline rules; Urdu audio uses Whisper.")
@@ -67,6 +73,28 @@ with st.sidebar:
     st.write("**Demo honesty**")
     st.caption("All orders and benchmark labels are SYNTHETIC. No merchant pilots or production accuracy claims.")
     st.caption("Competitors: Tasdeek, Botaura, OrderWitness, DukaanFlow.")
+    try:
+        network = network_size(service.STATE_PATH)
+    except StateUnavailable:
+        st.caption("Reputation network counter unavailable.")
+    else:
+        st.caption(f"Reputation network · {network['contributing_sellers']} active contributing sellers"
+                   if network["enabled"] else "Reputation network · disabled on this installation.")
+    if os.environ.get("COD_GUARD_WOO_HEALTH_LOCAL") == "1":
+        with st.expander("WooCommerce connection health"):
+            try:
+                stores = configured_stores()
+                if not stores:
+                    st.caption("No stores configured.")
+                for account, store in stores.items():
+                    state = connection_state(service.STATE_PATH, store.identity)
+                    st.text(account)
+                    st.caption(f"Last poll: {state['last_poll'] or 'Not yet run'}")
+                    st.caption(f"Last webhook: {state['last_webhook'] or 'None received'}")
+                    if state["last_error"]:
+                        st.warning(state["last_error"])
+            except (StateUnavailable, WooCommerceError):
+                st.warning("WooCommerce connection health is unavailable.")
 
 counts = {decision: sum(a["decision"] == decision for a in assessments.values())
           for decision in ["SHIP", "VERIFY_FIRST", "HOLD", "HOLD_CANCEL"]}
@@ -235,8 +263,24 @@ with tab_metrics:
                 st.write("• " + limitation)
         st.download_button("Download evaluation (JSON)", json.dumps(report, indent=2),
                            file_name=f"synthetic-evaluation-{report['model_id']}.json", mime="application/json")
+        with st.expander("Public benchmark by channel and language"):
+            try:
+                markdown = benchmark_markdown(report)
+            except (ValueError, KeyError, OSError):
+                st.warning("No public report matches the committed evaluation lock.")
+            else:
+                st.dataframe(pd.DataFrame(cohorts(report)), hide_index=True, width="stretch")
+                st.download_button("Download public benchmark (Markdown)", markdown,
+                                   file_name=f"benchmark-{report['model_id']}.md", mime="text/markdown")
     else:
         st.warning("No evaluation matches the active model. Run python backend/app/train_model.py.")
+    st.divider()
+    st.subheader("Seller savings evidence")
+    savings = seller_report("demo", report)
+    estimate = savings["estimated"]["benchmark_cost_difference_pkr"]
+    st.caption(f"Estimated · Synthetic cost difference versus ship-everything: PKR {estimate:,}."
+               if estimate is not None else "Estimated · No matching benchmark.")
+    st.caption("Measured savings · Not established. The demo has no paid courier outcomes or real comparison group.")
     st.divider()
     st.subheader("Marked demo outcomes")
     metrics = service.live_metrics()

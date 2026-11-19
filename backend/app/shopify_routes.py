@@ -1,0 +1,126 @@
+"""Signed, merchant-specific Shopify order creation intake."""
+
+import base64
+import hmac
+import json
+import os
+import re
+from dataclasses import dataclass, field
+from functools import lru_cache
+
+from fastapi import APIRouter, Depends, HTTPException, Request
+from starlette.concurrency import run_in_threadpool
+
+import service
+from connector_orders import connection_state, ingest
+from operators import Operator, require_operator
+from records import DEMO_TENANT
+from risk_engine import validate_features
+
+
+router = APIRouter(prefix="/integrations/shopify")
+
+
+@dataclass(frozen=True)
+class Shop:
+    shop: str
+    tenant_id: str
+    secret: str = field(repr=False)
+    cod_gateway: str
+    allow_protected_fields: bool = False
+
+    @property
+    def identity(self):
+        return (self.tenant_id, "SHOPIFY", self.shop)
+
+
+@lru_cache(maxsize=1)
+def _shops(raw):
+    configs = json.loads(raw)
+    if not isinstance(configs, dict):
+        raise ValueError("Expected a shop mapping")
+    shops = {}
+    secrets = set()
+    for domain, data in configs.items():
+        shop = Shop(domain, **data)
+        if (not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,61}\.myshopify\.com", domain)
+                or shop.tenant_id == DEMO_TENANT or not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", shop.tenant_id)
+                or not isinstance(shop.secret, str) or len(shop.secret) < 24 or shop.secret in secrets
+                or not isinstance(shop.cod_gateway, str) or not shop.cod_gateway.strip()
+                or type(shop.allow_protected_fields) is not bool):
+            raise ValueError("Invalid Shopify configuration")
+        secrets.add(shop.secret)
+        shops[domain] = shop
+    return shops
+
+
+def configured_shops():
+    try:
+        return _shops(os.environ.get("COD_GUARD_SHOPIFY", "{}"))
+    except (ValueError, TypeError, KeyError):
+        raise HTTPException(503, "Shopify configuration is unavailable") from None
+
+
+def _text(value):
+    return value.strip()[:200] if isinstance(value, str) else ""
+
+
+def parse_order(shop, payload):
+    if not isinstance(payload, dict):
+        raise ValueError("Expected Shopify order payload")
+    gateways = payload.get("payment_gateway_names")
+    if (not isinstance(gateways, list) or len(gateways) != 1
+            or _text(gateways[0]).casefold() != shop.cod_gateway.strip().casefold()
+            or payload.get("currency") != "PKR" or payload.get("financial_status") != "pending"
+            or payload.get("fulfillment_status") is not None or payload.get("cancelled_at") is not None
+            or payload.get("test") is not False):
+        return None
+    external_id = payload.get("id")
+    if type(external_id) is not int or not 0 < external_id < 2**64:
+        raise ValueError("Invalid Shopify order ID")
+    shipping = (payload.get("shipping_address") or {}) if shop.allow_protected_fields else {}
+    items = payload.get("line_items") or []
+    if not isinstance(shipping, dict) or not isinstance(items, list) or any(not isinstance(item, dict) for item in items):
+        raise ValueError("Invalid Shopify order fields")
+    phone = _text(shipping.get("phone") or (payload.get("phone") if shop.allow_protected_fields else None))
+    if not re.fullmatch(r"\+?[0-9][0-9 ()-]{2,39}", phone):
+        phone = ""
+    address = " ".join(_text(shipping.get(key)) for key in ("address1", "address2"))
+    flags = {}
+    if payload.get("total_price") not in (None, ""):
+        flags["amount_pkr"] = payload["total_price"]
+    if address.strip():
+        flags["address_words"] = len(address.split())
+    amounts = [item.get("quantity") for item in items]
+    if amounts and all(type(amount) is int and 0 < amount <= 100_000 for amount in amounts):
+        flags["items_count"] = sum(amounts)
+    return str(external_id), {"customer_name": _text(shipping.get("name")) or "Name unavailable",
+                              "product": ", ".join(filter(None, (_text(item.get("title")) for item in items)))[:200]
+                              or "Items unavailable", "city": _text(shipping.get("city"))[:100],
+                              "phone": phone, **validate_features(flags)}
+
+
+@router.get("/status")
+def status(operator: Operator = Depends(require_operator)):
+    return {name: {"last_webhook": connection_state(service.STATE_PATH, shop.identity)["last_webhook"],
+                   "protected_fields_enabled": shop.allow_protected_fields}
+            for name, shop in configured_shops().items() if shop.tenant_id == operator.tenant_id}
+
+
+@router.post("/webhooks/{domain}")
+async def webhook(domain: str, request: Request):
+    shop = configured_shops().get(domain)
+    body = await request.body()
+    signature = request.headers.get("X-Shopify-Hmac-Sha256", "")
+    if (not shop or request.headers.get("X-Shopify-Shop-Domain") != domain or not signature.isascii()
+            or not hmac.compare_digest(base64.b64encode(hmac.digest(shop.secret.encode(), body, "sha256")).decode(), signature)):
+        raise HTTPException(401, "Invalid Shopify webhook authentication")
+    if request.headers.get("X-Shopify-Topic") != "orders/create":
+        raise HTTPException(422, "Unsupported Shopify webhook topic")
+    try:
+        order = parse_order(shop, json.loads(body))
+        inserted = await run_in_threadpool(ingest, service.STATE_PATH, shop.identity,
+                                           [order] if order else [], "shopify-webhook", webhook=True)
+    except (ValueError, TypeError, RecursionError):
+        raise HTTPException(422, "Invalid Shopify order payload") from None
+    return {"queued": inserted}

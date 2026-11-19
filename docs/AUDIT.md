@@ -274,3 +274,52 @@ can be reviewed in shadow mode by the tenant's operator. A design partner,
 courier integration, consented voice evaluation, field outcomes and pricing
 evidence still require separate work. Failed legacy outcomes without a frozen
 decision cannot be reconstructed and remain unscored.
+
+### Round 5 — WS-B: WooCommerce connector
+
+[WooCommerce setup](WOOCOMMERCE.md) maps HTTPS/permalink/auth checks, WP-Cron
+fallback, signed webhooks, polling and tenant-scoped health. The order identity
+table deduplicates webhook/poll deliveries. Outcome write-back is an explicit
+operator action against the linked store. Tests use fixtures, not merchant data.
+
+### Round 5 — WS-D: WhatsApp Cloud verification
+
+[WhatsApp setup and evidence gaps](WHATSAPP_CLOUD.md) map approval, consent,
+suppression, callback authentication, and tenant-scoped delivery accounting.
+Mocked API tests verify deduplication, reply scope, costs, and simulation;
+list-rate estimates are not reconciled charges. Daraz stays score-and-queue.
+
+### Round 5 — WS-E: Courier outcome loop
+
+[Courier outcomes](COURIERS.md) maps tenant-scoped atomic CSV import, TCS
+evidence limits, the audited correction path, and non-publishing outcome-fed
+evaluation. Tests exercise replay, tenant isolation, tracking and the locked
+trainer. No courier credentials or field labels were used during verification.
+
+### Round 5 — WS-G: Public benchmark and savings evidence
+
+[Public benchmark](BENCHMARK.md) identifies the model and both holdout hashes,
+and leaves unobserved channel/language cohorts unevaluated. The dashboard
+renders its active matching report. The tenant savings endpoint separates
+synthetic estimates, observed outcomes and statement charges from savings,
+which remain unavailable without a counterfactual comparison.
+
+### Round 5 — WS-C: Shopify custom app intake
+
+[Shopify setup](SHOPIFY.md) maps custom installation, protected fields, raw
+signature verification, merchant/order deduplication and distribution limits.
+Fixture tests cover redacted payloads, the COD filter and tenant isolation.
+No live store installed, App Store submission, or billing integration.
+
+### Round 5 — WS-F: Seller-reviewed social intake
+
+[Social intake](SOCIAL_INTAKE.md) maps transient extraction, editable review,
+explicit save, scoped CSV ingestion from a private Sheets export, and the
+deferred Meta review path. Tests exercise API storage and the review screen.
+
+### Round 5 — WS-H: Auditable reputation network
+
+[Network governance](NETWORK.md) maps opt-in, HMAC pseudonymization,
+tenant/consent scope, count suppression, expiry, corrections and appeals.
+The size counter counts actual contributors in the selected deployment.
+Shadow-only counts cannot alter a score or hold an order.
