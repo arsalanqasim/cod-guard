@@ -164,25 +164,28 @@ def order_page(tenant_id=DEMO_TENANT, *, limit=50, offset=0, search=""):
 
 
 def verify_reply(order, reply_text, source="text", *, actor="local-demo", tenant_id=DEMO_TENANT):
-    intent = parse_reply(reply_text)
     with transaction(STATE_PATH, tenant_id, (order["order_id"],)) as state:
-        assessment = assess_order(order, state=state)
-        result = apply_reply(assessment["zone"], intent)
-        previous = state["decisions"].get(order["order_id"])
-        effective_intent = intent
-        if intent == "UNCLEAR":
-            result["why"] += ". Please clarify with the customer."
-        if intent == "UNCLEAR" and previous and previous.get("intent") in ("CONFIRM", "DENY"):
-            effective_intent = previous["intent"]
-            result = {"decision": previous["decision"],
-                      "why": "Reply unclear; keeping the customer's previous explicit answer. Please clarify."}
-        event = append_event(state, order["order_id"], "decision", actor, **result,
-                             intent=effective_intent, zone=assessment["zone"], model_id=assessment["model_id"],
-                             needs_review=intent == "UNCLEAR")
-        state["decisions"][order["order_id"]] = event.copy()
-        state["messages"].setdefault(order["order_id"], []).append({
-            "text": reply_text, "source": source, "intent": intent, **result,
-            "at": event["at"], "actor": actor, "decision_revision": event["revision"]})
+        return apply_verification(state, order, reply_text, parse_reply(reply_text), source, actor)
+
+
+def apply_verification(state, order, reply_text, intent, source, actor):
+    assessment = assess_order(order, state=state)
+    result = apply_reply(assessment["zone"], intent)
+    previous = state["decisions"].get(order["order_id"])
+    effective_intent = intent
+    if intent == "UNCLEAR":
+        result["why"] += ". Please clarify with the customer."
+    if intent == "UNCLEAR" and previous and previous.get("intent") in ("CONFIRM", "DENY"):
+        effective_intent = previous["intent"]
+        result = {"decision": previous["decision"],
+                  "why": "Reply unclear; keeping the customer's previous explicit answer. Please clarify."}
+    event = append_event(state, order["order_id"], "decision", actor, **result,
+                         intent=effective_intent, zone=assessment["zone"], model_id=assessment["model_id"],
+                         needs_review=intent == "UNCLEAR")
+    state["decisions"][order["order_id"]] = event.copy()
+    state["messages"].setdefault(order["order_id"], []).append({
+        "text": reply_text, "source": source, "intent": intent, **result,
+        "at": event["at"], "actor": actor, "decision_revision": event["revision"]})
     return {"intent": intent, "needs_review": intent == "UNCLEAR", **result}
 
 

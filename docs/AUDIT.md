@@ -273,3 +273,10 @@ decision cannot be reconstructed and remain unscored.
 fallback, signed webhooks, polling and tenant-scoped health. The order identity
 table deduplicates webhook/poll deliveries. Outcome write-back is an explicit
 operator action against the linked store. Tests use fixtures, not merchant data.
+
+### Round 5 — WS-D: WhatsApp Cloud verification
+
+[WhatsApp setup and evidence gaps](WHATSAPP_CLOUD.md) map approval, consent,
+suppression, callback authentication, and tenant-scoped delivery accounting.
+Mocked API tests verify deduplication, reply scope, costs, and simulation;
+list-rate estimates are not reconciled charges. Daraz stays score-and-queue.

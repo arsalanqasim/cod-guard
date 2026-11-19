@@ -67,6 +67,17 @@ CONNECTOR_SCHEMA = (
         cursor TEXT, last_poll TEXT, last_webhook TEXT, last_error TEXT,
         PRIMARY KEY (tenant_id, channel, account))""",
 )
+WHATSAPP_SCHEMA = (
+    """CREATE TABLE IF NOT EXISTS whatsapp_consent (
+        tenant_id TEXT NOT NULL, recipient TEXT NOT NULL, opted_in INTEGER NOT NULL,
+        source TEXT NOT NULL, changed_at TEXT NOT NULL, PRIMARY KEY (tenant_id, recipient))""",
+    """CREATE TABLE IF NOT EXISTS whatsapp_verifications (
+        tenant_id TEXT NOT NULL, order_id TEXT NOT NULL, attempt_id TEXT NOT NULL UNIQUE,
+        recipient TEXT NOT NULL, started_at TEXT NOT NULL, expires INTEGER NOT NULL,
+        message_id TEXT UNIQUE, status TEXT NOT NULL, billable INTEGER, category TEXT,
+        estimated_usd_micros INTEGER, replied_at TEXT, PRIMARY KEY (tenant_id, order_id),
+        FOREIGN KEY (tenant_id, order_id) REFERENCES orders(tenant_id, order_id))""",
+)
 
 
 class StateUnavailable(RuntimeError):
@@ -190,9 +201,9 @@ def _initialize(connection, legacy):
         connection.execute("ALTER TABLE decisions ADD COLUMN needs_review INTEGER NOT NULL DEFAULT 0")
         connection.execute("""UPDATE decisions SET needs_review=1 WHERE default_snapshot=0
                             AND (intent='UNCLEAR' OR why LIKE 'Reply unclear;%')""")
-    for statement in CONNECTOR_SCHEMA:
+    for statement in (*CONNECTOR_SCHEMA, *WHATSAPP_SCHEMA):
         connection.execute(statement)
-    connection.execute("PRAGMA user_version=3")
+    connection.execute("PRAGMA user_version=4")
     connection.commit()
 
 
@@ -206,9 +217,9 @@ def connect(path):
             connection.execute("PRAGMA foreign_keys=ON")
             try:
                 version = connection.execute("PRAGMA user_version").fetchone()[0]
-                if version in (0, 1, 2):
+                if version in (0, 1, 2, 3):
                     _initialize(connection, legacy)
-                elif version != 3:
+                elif version != 4:
                     raise ValueError("Unsupported state schema version")
             except (ValueError, KeyError, TypeError, AttributeError) as exc:
                 raise StateUnavailable("State migration is unavailable") from exc

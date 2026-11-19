@@ -53,7 +53,7 @@ if not orders:
 
 with st.sidebar:
     st.subheader("Exhibition control")
-    st.caption("LOCAL CONVERSATION SIMULATOR")
+    st.caption("WHATSAPP MODE: SIMULATED · EXHIBITION TENANT")
     st.number_input("Order page", min_value=1, max_value=max(1, (total + page_size - 1) // page_size),
                     step=1, key="dispatch_page")
     st.write("No WhatsApp messages are sent. Reply intent uses offline rules; Urdu audio uses Whisper.")

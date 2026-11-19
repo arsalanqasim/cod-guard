@@ -71,20 +71,26 @@ def read_state(path, tenant_id=DEMO_TENANT, order_ids=None, *, messages=True):
 @contextmanager
 def transaction(path, tenant_id=DEMO_TENANT, order_ids=None):
     with write(path) as connection:
-        state = state_snapshot(connection, tenant_id, order_ids)
-        event_counts = {key: len(events) for key, events in state["events"].items()}
-        message_counts = {key: len(messages) for key, messages in state["messages"].items()}
-        yield state
-        for order_id, events in state["events"].items():
-            for event in events[event_counts.get(order_id, 0):]:
-                if event["kind"] == "decision":
-                    add_decision(connection, tenant_id, order_id, event)
-                else:
-                    add_outcome(connection, tenant_id, order_id, event)
-                audit(connection, tenant_id, event["actor"], event["kind"],
-                      order_id=order_id, reference=str(event["revision"]))
-        for order_id, messages in state["messages"].items():
-            for message in messages[message_counts.get(order_id, 0):]:
-                add_message(connection, tenant_id, order_id, message)
-        if state.get("training"):
-            add_model_version(connection, tenant_id, state["training"])
+        with update_state(connection, tenant_id, order_ids) as state:
+            yield state
+
+
+@contextmanager
+def update_state(connection, tenant_id, order_ids):
+    state = state_snapshot(connection, tenant_id, order_ids)
+    event_counts = {key: len(events) for key, events in state["events"].items()}
+    message_counts = {key: len(messages) for key, messages in state["messages"].items()}
+    yield state
+    for order_id, events in state["events"].items():
+        for event in events[event_counts.get(order_id, 0):]:
+            if event["kind"] == "decision":
+                add_decision(connection, tenant_id, order_id, event)
+            else:
+                add_outcome(connection, tenant_id, order_id, event)
+            audit(connection, tenant_id, event["actor"], event["kind"],
+                  order_id=order_id, reference=str(event["revision"]))
+    for order_id, messages in state["messages"].items():
+        for message in messages[message_counts.get(order_id, 0):]:
+            add_message(connection, tenant_id, order_id, message)
+    if state.get("training"):
+        add_model_version(connection, tenant_id, state["training"])
