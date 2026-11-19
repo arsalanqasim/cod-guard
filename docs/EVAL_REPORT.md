@@ -2,7 +2,7 @@
 
 **SYNTHETIC BENCHMARK — no real merchant records or pilots.**
 
-Reference figures supplied in the mission brief: OrderNation (~170k orders), 37.3% COD cancelled and ~49/100 cash collected. These are different measures. We target 51% expected non-collection, not 37.3% cancellation. Individual feature relationships remain synthetic assumptions.
+OrderNation reports approximately 49–57 cash collections per 100 COD orders and 37.3% COD cancellation across different measurement windows at one retailer. The generator uses the low end of the cash-collection range to target 51% expected non-collection. Feature relationships are simulation assumptions.
 
 Generated rows: 6000; empirical failure rate: 50.7000%. Benchmark SHA-256: `b03474a56979d6f86a0b1794ddaefcd2d4925ab63ea1f622942c3211854719b7`.
 
@@ -10,7 +10,7 @@ Model `cg-0328b4106253`: regularized_gradient_boosting, version 1. Training 3552
 
 ## Method
 
-Models and operating thresholds are selected on **validation only**. The test split is untouched during selection. The reported flag is the actual serving policy: rules + the saved ML threshold + the two-independent-signal guard. Both address checks count as one signal. A lone signal cannot hold or require verification; ML alone is not another independent signal. Confirmation overrides a flag; denial overrides a pass.
+Models and operating thresholds are selected on **validation only**. The test split is untouched during selection. Any AMBER or RED recommendation before a reply counts as a flag. With complete features the serving policy requires two distinct adverse signal groups. Both address checks share one group. ML refines the estimate. Confirmation overrides a flag and a denial overrides a pass.
 
 Cost assumptions: false negative PKR 650; false positive PKR 450. These are illustrative costs, not measured merchant losses. Any non-GREEN recommendation is counted as flagged, even though verification can later recover a genuine order.
 

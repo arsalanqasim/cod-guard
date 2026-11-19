@@ -1,6 +1,6 @@
 """Seed the exhibition demo orders: 80 sampled benchmark orders dressed
-with customer names and products. label_failed stays in the file ONLY as
-evaluation ground truth for the metrics page (never shown as a feature).
+with synthetic customer names and products. The original generated label
+is retained for provenance. Marked operator outcomes drive live demo metrics.
 Run: python scripts/seed_demo.py
 """
 import pandas as pd

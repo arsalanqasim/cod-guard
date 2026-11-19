@@ -1,8 +1,8 @@
 """One dispatch policy shared by serving and offline evaluation.
 
-Two independent adverse signals are required before requesting verification
-or holding an order. ML probability is evidence, not a second signal. The
-two address measurements count together as one signal.
+With complete inputs, the pre-reply policy requires two distinct adverse
+signal groups to flag an order. The address measurements share one group.
+Missing inputs follow the verification path.
 """
 import math
 

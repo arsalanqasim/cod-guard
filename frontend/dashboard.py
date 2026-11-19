@@ -127,7 +127,7 @@ with tab_orders:
     left, right = st.columns([1, 2])
     with left:
         decision_message(detail)
-        st.write(f"**{detail['signal_count']} independent adverse signal(s)**")
+        st.write(f"**{detail['signal_count']} distinct adverse signal groups**")
         st.caption(f"Rule score {detail['rule_score']}/100 · ML failure estimate {percent(detail['ml_probability'])}")
     with right:
         st.write("**Why this recommendation?**")
@@ -202,6 +202,8 @@ with tab_metrics:
     report = service.latest_evaluation()
     if report:
         chosen = report["chosen"]
+        report_label = "Baseline v1" if not report["split"]["feedback"] else f"Outcome-fed version {report['version']}"
+        st.caption(f"{report_label} · AMBER and RED count as pre-reply flags.")
         for column, label, value in zip(st.columns(4), ["False-positive rate", "False-negative rate", "Precision", "Recall"],
                                        [chosen["fp_rate"], chosen["fn_rate"], chosen["precision"], chosen["recall"]]):
             column.metric(label, percent(value))
@@ -237,8 +239,9 @@ with tab_metrics:
     for column, label, value in zip(st.columns(4), ["TP · failed held", "FP · delivered held", "FN · failed passed", "TN · delivered passed"],
                                    [metrics["tp"], metrics["fp"], metrics["fn"], metrics["tn"]]):
         column.metric(label, value)
-    st.caption(f"{metrics['marked']} scored outcomes · FPR {percent(metrics['fp_rate'])} · FNR {percent(metrics['fn_rate'])}. "
-               "Uses marked outcomes and frozen recommendations; this is a demo comparison, not prospective field evidence.")
+    st.caption(f"{metrics['marked']} scored outcomes · {metrics['unscored']} without a frozen decision · "
+               f"FPR {percent(metrics['fp_rate'])} · FNR {percent(metrics['fn_rate'])}. "
+               "Each scored outcome uses the decision revision saved with its first outcome.")
     outcome_order = st.selectbox("Order outcome to record", order_ids, format_func=order_label, key="outcome_order")
     selected_outcome = st.radio("Actual demo outcome", service.OUTCOMES, horizontal=True, key="outcome_value")
     if st.button("Save outcome", key="save_outcome"):

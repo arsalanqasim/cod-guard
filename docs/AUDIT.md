@@ -174,6 +174,25 @@ reaches fitting. They also check the committed evaluation and require a
 separate section for an outcome-fed version. The tuning and reporting rules
 are in the [metric protocol](METRIC_PROTOCOL.md).
 
+### 9. Claims and demo copy
+
+The README, demo, dashboard and generated baseline explain the pre-reply
+flag, distinguish the synthetic baseline from learned versions, document the
+source funnel's range and sampling limits, and give the offline budget results
+with actual utilization. The generator docstring describes assumptions. Claim
+regressions check the active wording and generated report parity. The original
+review and brief retain their wording as historical records.
+
+### Round 4 scope decisions
+
+The pilot remains single-instance. The API scopes orders and writes by
+operator and tenant. The dashboard shows the synthetic tenant. The model is
+trained on the synthetic benchmark and marked demo outcomes. Real CSV orders
+can be reviewed in shadow mode by the tenant's operator. A design partner,
+courier integration, consented voice evaluation, field outcomes and pricing
+evidence still require separate work. Failed legacy outcomes without a frozen
+decision cannot be reconstructed and remain unscored.
+
 ## Round 2 addendum
 
 The Round 1 test IDs, 6,000 synthetic rows, model ID `cg-0328b4106253`, and
