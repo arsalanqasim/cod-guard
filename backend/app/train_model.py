@@ -9,6 +9,7 @@ import hashlib
 import json
 import os
 import pickle
+import sys
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
@@ -24,6 +25,7 @@ from sklearn.preprocessing import StandardScaler
 from threadpoolctl import threadpool_limits
 
 from risk_engine import assess
+from round2_evaluation import analyze_round2, render_round2
 
 ROOT = Path(__file__).resolve().parents[2]
 COST_FN, COST_FP = 650, 450
@@ -74,7 +76,7 @@ def _digest(value):
     return hashlib.sha256(json.dumps(value, sort_keys=True).encode("utf-8")).hexdigest()
 
 
-def fit_and_evaluate(df, feedback_rows=None, feedback=None, previous_version=0):
+def fit_and_evaluate(df, feedback_rows=None, feedback=None, previous_version=0, *, oracle=None):
     train, validation, test, demo = split_benchmark(df)
     train = train.copy()
     feedback = feedback or {}
@@ -124,6 +126,8 @@ def fit_and_evaluate(df, feedback_rows=None, feedback=None, previous_version=0):
             selections.append({"model_name": name, **choice})
         selected = min(selections, key=lambda entry: (entry["total_cost"], entry["fp_rate"] + entry["fn_rate"]))
         model = fitted[selected["model_name"]]
+        if oracle is not None:
+            val_probs = model.predict_proba(X_validation)[:, 1]
         probabilities = model.predict_proba(X_test)[:, 1]
     test_sweep = [{"threshold": threshold,
                    **evaluate(test["label_failed"], policy_flags(test_rows, probabilities, threshold))}
@@ -173,6 +177,9 @@ def fit_and_evaluate(df, feedback_rows=None, feedback=None, previous_version=0):
                               "Benchmark generator and cost assumptions do not reproduce any merchant population.",
                               "Verification overrides are demonstrated by functional tests, not simulated as perfect human responses.",
                               "Marked demo outcomes are demonstrations, not prospectively collected field evidence."]}
+    if oracle is not None:
+        report["round2"] = analyze_round2(validation, test, val_probs, probabilities,
+                                          selected["threshold"], oracle, COST_FN, COST_FP)
     return bundle, report
 
 
@@ -234,6 +241,8 @@ def render_report(report):
     lines += ["", "| City | Rows | FPR | FNR |", "|---|---:|---:|---:|"]
     for entry in report["city_segments"]:
         lines.append(f"| {entry['city']} | {entry['rows']} | {entry['fp_rate']:.3f} | {entry['fn_rate']:.3f} |")
+    if "round2" in report:
+        lines += render_round2(report["round2"])
     lines += ["", "## Limits and brief conflicts", ""]
     lines += ["- " + limitation for limitation in report["limitations"]]
     lines += ["- The original generator produced 27.5% failure despite its calibration claim; "
@@ -266,8 +275,14 @@ def publish(bundle, report, model_path, evaluation_path, report_path=None):
 
 
 def main():
+    sys.path.insert(0, str(ROOT))
+    from data.generate_benchmark import generate_benchmark
+
     benchmark = pd.read_csv(ROOT / "data/benchmark_orders.csv")
-    bundle, report = fit_and_evaluate(benchmark)
+    generated, oracle = generate_benchmark()
+    if not benchmark.equals(generated):
+        raise ValueError("Benchmark differs from the generator. Run data/generate_benchmark.py before training.")
+    bundle, report = fit_and_evaluate(benchmark, oracle=oracle.set_index("order_id"))
     publish(bundle, report, ROOT / "backend/app/model.pkl", ROOT / "data/evaluation.json", ROOT / "docs/EVAL_REPORT.md")
     print(json.dumps({"model_id": bundle["model_id"], "model": bundle["model_name"],
                       "chosen": report["chosen"], "split": report["split"],

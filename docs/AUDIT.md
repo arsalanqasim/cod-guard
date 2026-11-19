@@ -116,3 +116,44 @@ artifacts were isolated from these browser marks.
 4. **Integration is local.** Seeded CSV intake, simulated conversation and manual
    outcome marking are implemented. Shopify/courier webhooks, real WhatsApp,
    authentication, public hosting and multi-merchant isolation are not built.
+
+## Round 2 addendum
+
+The Round 1 test IDs, 6,000 synthetic rows, model ID `cg-0328b4106253`, and
+0.50 threshold reproduce exactly. Pre-reply test counts are TP=245, FP=96,
+FN=356 and TN=487. Round 2 adds evaluation around the existing served path.
+
+- **Verification:** The test applies the existing reply-to-dispatch rules using
+  six fixed response assumptions and a zero-outreach control. Flags-only
+  outreach lowers FPR and raises FNR in both variants. The mid-rate comparison
+  changes FNR from 62.36% with flags only to 47.97% with all GREEN orders
+  contacted. Broad outreach costs more to attempt and can fare worse under
+  adverse reply assumptions. The full outreach range is 5.74%–17.83% FPR,
+  35.20%–64.01% FNR, and PKR 211,788.50–356,050.00 in illustrative cost.
+- **Capacity:** The raw any-signal baseline flags 907 orders (76.60% of the
+  batch), including 417 of 583 genuine labels. Equal caps and PKR 50 per
+  attempt favor the capped served policy or two-signal ML ranker at all three
+  budgets under either shared response setting. At 30% with no reply, the
+  best ranking costs PKR 290,950 versus PKR 293,150 for ranked any-signal.
+  The narrow PKR 2,200 gap depends on the specified ranking, costs and sample.
+  These batch rankings are evaluated separately from the threshold used at
+  runtime.
+- **Ceiling:** 352 of 356 observed misses fall in the generator's ordinary
+  stratum. At equal validation capacity, the served model catches 41.06% of
+  expected failures and the two-signal oracle catches 41.58% (0.51 percentage
+  points at full precision). A smaller histogram boosting candidate
+  (`max_leaf_nodes=4, max_iter=180, learning_rate=.06, min_samples_leaf=45,
+  l2_regularization=8, random_state=7`) saved one validation FN at the same
+  FP count and slightly reduced expected recall at a 20% ranking budget
+  (30.10% versus 30.20%). This small trade-off did not justify replacing the
+  model. Across ordinary test orders the oracle leaves 88.78% of the binary
+  outcome variance unexplained, and screening about 20% captures 28.75%
+  of expected failures. Variance share cannot identify an individual order
+  as predictable or unpredictable.
+
+Rebuild with `python scripts/build_demo.py`. During the baseline training step,
+the generator provides oracle diagnostics in memory after checking the CSV
+against the fixed generator. Model inputs and serialized weights contain
+only the existing features. The routine outcome-retraining report continues
+to describe its own model and split. The baseline JSON contains the full
+Round 2 tables.
