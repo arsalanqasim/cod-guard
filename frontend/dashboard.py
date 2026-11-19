@@ -11,6 +11,7 @@ import streamlit as st
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "backend/app"))
 import service
+from records import StateUnavailable
 from verification import transcribe_voice_note, parse_reply
 
 st.set_page_config(page_title="COD-Guard", page_icon="🛡️", layout="wide")
@@ -36,7 +37,7 @@ try:
     assessments = {oid: service.assess_order(order) for oid, order in orders.items()}
     model = service.model_status()
     learning = service.learning_status()
-except (FileNotFoundError, ValueError) as exc:
+except (FileNotFoundError, StateUnavailable, ValueError) as exc:
     st.error(f"Demo setup is incomplete: {exc}")
     st.code("python data/generate_benchmark.py\npython backend/app/train_model.py\npython scripts/seed_demo.py")
     st.stop()
@@ -136,7 +137,7 @@ with tab_verification:
         st.write(service.opening_message(order))
     for message in service.conversation(oid):
         with st.chat_message("user"):
-            st.write(message["text"])
+            st.write(message["text"] or "Reply text expired")
             st.caption("Urdu voice transcript" if message["source"] == "voice" else "Customer text reply")
         with st.chat_message("assistant"):
             st.write(f"**{message['intent']} → {message['decision']}**")

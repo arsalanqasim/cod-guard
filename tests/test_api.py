@@ -1,4 +1,6 @@
 import sys
+import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -9,6 +11,7 @@ from fastapi.testclient import TestClient
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "backend/app"))
 import main
 import service
+import operators
 
 
 class ApiTests(unittest.TestCase):
@@ -18,7 +21,11 @@ class ApiTests(unittest.TestCase):
         active = patch.object(service, "STATE_PATH", Path(temp.name) / "state.json")
         active.start()
         self.addCleanup(active.stop)
-        self.client = TestClient(main.app)
+        key = "synthetic-test-operator-key"
+        config = {"operator-a": {"tenant_id": "demo", "key": key}}
+        self.enterContext(patch.dict(os.environ, COD_GUARD_OPERATORS=json.dumps(config)))
+        self.enterContext(patch.object(operators, "_write_windows", {}))
+        self.client = TestClient(main.app, headers={"Authorization": f"Bearer {key}"})
         self.order_id = service.load_orders().iloc[0]["order_id"]
 
     def test_unknown_orders_are_404_and_outcomes_are_validated(self):

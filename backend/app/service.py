@@ -13,11 +13,12 @@ from pathlib import Path
 
 import pandas as pd
 
-from risk_engine import assess as rule_assess
+from risk_engine import OPTIONAL_MODEL_FEATURES, assess as rule_assess
 from verification import parse_reply, apply_reply, opening_message
 from storage import read_state, transaction
 from decision_events import append_event
-from records import DEMO_TENANT, ORDER_FIELDS, connect, ensure_seeded, select_orders
+from records import DEMO_TENANT, ORDER_FIELDS, audit, connect, ensure_seeded, select_orders, write
+from model_schema import probabilities, validate_bundle
 
 ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = Path(os.environ.get("COD_GUARD_DATA_DIR", ROOT / "data"))
@@ -35,9 +36,7 @@ def _load_state(tenant_id=DEMO_TENANT, order_ids=None, *, messages=True):
 def _cached_bundle(path, modified_ns, size):
     with open(path, "rb") as handle:
         bundle = pickle.load(handle)
-    if not all(key in bundle for key in ("model", "columns", "threshold")):
-        raise ValueError("Model bundle is missing its schema or operating threshold")
-    return bundle
+    return validate_bundle(bundle)
 
 
 def _bundle():
@@ -87,17 +86,28 @@ def _ml_probability(order):
         return None  # model_status exposes the failure to the UI/API
     if bundle is None:
         return None
+    if not order.get("city") or any(key not in order for key in bundle["columns"] if not key.startswith("city_")):
+        return None
     row = {column: order.get(column, 0) for column in bundle["columns"]}
     city_column = f"city_{order.get('city')}"
     if city_column in row:
         row[city_column] = 1
-    return float(bundle["model"].predict_proba(pd.DataFrame([row], columns=bundle["columns"]))[0][1])
+    try:
+        return float(probabilities(bundle, pd.DataFrame([row], columns=bundle["columns"]))[0])
+    except Exception:
+        return None
 
 
 def assess_order(order, *, state=None, tenant_id=DEMO_TENANT):
+    order = {key: value for key, value in order.items() if value is not None}
     status = model_status()
     probability = _ml_probability(order)
     risk = rule_assess(order, ml_probability=probability, threshold=status["threshold"])
+    missing_model_features = OPTIONAL_MODEL_FEATURES - order.keys()
+    if not order.get("city") or missing_model_features:
+        if risk["zone"] == "GREEN":
+            risk["zone"] = "AMBER"
+        risk["reasons"].append("Missing order features; request verification")
     if state is None:
         state = _load_state(tenant_id, (order["order_id"],), messages=False)
     saved = state["decisions"].get(order["order_id"])
@@ -183,7 +193,8 @@ def live_metrics(tenant_id=DEMO_TENANT):
             "marked": tp + fp + fn + tn,
             "fp_rate": fp / (fp + tn) if fp + tn else None,
             "fn_rate": fn / (fn + tp) if fn + tp else None,
-            "source": "Marked demo outcomes; not real merchant performance"}
+            "source": ("Marked demo outcomes; not real merchant performance" if tenant_id == DEMO_TENANT
+                       else "Marked shadow outcomes; observational comparison only")}
 
 
 def latest_evaluation():
@@ -196,7 +207,9 @@ def latest_evaluation():
     return None
 
 
-def learning_status():
+def learning_status(tenant_id=DEMO_TENANT):
+    if tenant_id != DEMO_TENANT:
+        return {"recorded": 0, "trained_outcomes": 0, "pending": 0, "model_id": None, "version": 0}
     status = model_status()
     state = _load_state()
     known = set(load_orders()["order_id"])
@@ -208,13 +221,14 @@ def learning_status():
             "model_id": status.get("model_id"), "version": status.get("version", 0)}
 
 
-def retrain_model():
+def retrain_model(*, actor="local-demo"):
     """Consume marked demo outcomes; keep validation/test identities fixed.
 
     The transaction prevents simultaneous retraining jobs from publishing
     competing versions. Feedback arriving later remains pending for the next run.
     """
     from train_model import fit_and_evaluate, publish
+    record_access(DEMO_TENANT, actor, "retrain")
     orders = load_orders()
     known = set(orders["order_id"])
     with transaction(STATE_PATH) as state:
@@ -235,6 +249,19 @@ def retrain_model():
     return {"ok": True, "model_id": bundle["model_id"], "version": bundle["version"],
             "feedback_count": len(feedback), "training_rows": report["split"]["training"],
             "test": report["chosen"], "source": "Marked SYNTHETIC demo outcomes"}
+
+
+def record_access(tenant_id, actor, action, *, order_id=None):
+    with write(STATE_PATH) as connection:
+        audit(connection, tenant_id, actor, action, order_id=order_id)
+
+
+def check_state():
+    ensure_seeded(STATE_PATH, SEED_PATH)
+    with connect(STATE_PATH) as connection:
+        connection.execute("SELECT order_id FROM orders LIMIT 1").fetchone()
+        connection.execute("SELECT revision FROM decisions LIMIT 1").fetchone()
+        connection.execute("SELECT revision FROM outcomes LIMIT 1").fetchone()
 
 
 __all__ = ["load_orders", "get_order", "assess_order", "verify_reply", "mark_outcome",

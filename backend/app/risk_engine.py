@@ -10,29 +10,34 @@ DEFAULTS = {"phone_fraud_history": 0, "phone_velocity_24h": 0, "phone_valid": 1,
             "customer_past_refusals": 0, "address_words": 10,
             "address_has_landmark": 1, "amount_pkr": 0, "order_hour": 12,
             "customer_past_delivered": 0}
+OPTIONAL_MODEL_FEATURES = {"items_count", "is_repeat_customer"}
 
 
-def _values(order):
+def validate_features(order):
     values = {}
-    for key, default in DEFAULTS.items():
+    for key in DEFAULTS.keys() | OPTIONAL_MODEL_FEATURES:
+        if key not in order:
+            continue
         try:
-            value = float(order.get(key, default))
+            value = float(order[key])
         except (TypeError, ValueError) as exc:
             raise ValueError(f"{key} must be a finite non-negative number") from exc
         if not math.isfinite(value) or value < 0:
             raise ValueError(f"{key} must be a finite non-negative number")
         if key != "amount_pkr" and not value.is_integer():
             raise ValueError(f"{key} must be an integer")
-        if key in ("phone_valid", "address_has_landmark") and value not in (0, 1):
+        if key in ("phone_valid", "address_has_landmark", "is_repeat_customer") and value not in (0, 1):
             raise ValueError(f"{key} must be 0 or 1")
         if key == "order_hour" and value > 23:
             raise ValueError("order_hour must be between 0 and 23")
-        values[key] = value
+        if key != "amount_pkr" and value >= 2**63:
+            raise ValueError(f"{key} is outside the supported integer range")
+        values[key] = value if key == "amount_pkr" else int(value)
     return values
 
 
 def _signals(order):
-    o = _values(order)
+    o = {**DEFAULTS, **validate_features(order)}
     signals = []
 
     def add(group, points, reason):
@@ -92,5 +97,9 @@ def assess(order: dict, ml_probability=None, threshold=0.60) -> dict:
         zone = "GREEN"
         if count:
             reasons.append("One adverse signal alone cannot stop dispatch; confirmation is still available")
+    if missing := sorted(DEFAULTS.keys() - order.keys()):
+        if zone == "GREEN":
+            zone = "AMBER"
+        reasons.append("Missing risk features: " + ", ".join(missing))
     return {"risk_score": score, "zone": zone, "reasons": reasons,
             "signal_count": count, "signals": signals}

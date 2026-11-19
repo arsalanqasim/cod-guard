@@ -137,6 +137,16 @@ the file. Malformed state leaves the original recoverable. The storage tests
 exercise both migration sources, 80 distinct events across eight concurrent
 writers, exception rollback, and online backup restored into a new location.
 
+### 4 and 7. API contracts, shadow intake and privacy
+
+`test_pilot_api` injects the review's unusable threshold, wrong model shape,
+corrupt SQLite and malformed legacy JSON. It also verifies streamed body
+limits, write throttling, authenticated CSV row errors and idempotency,
+cross-tenant isolation, masked lists, audited full-phone reads, write actors
+and raw reply expiry. `test_empty_order_requires_verification` protects the
+unknown-feature path. The dashboard remains limited to the synthetic demo
+tenant. See [shadow intake and retention](SHADOW_INTAKE.md).
+
 ## Round 2 addendum
 
 The Round 1 test IDs, 6,000 synthetic rows, model ID `cg-0328b4106253`, and
