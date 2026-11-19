@@ -26,6 +26,14 @@ class ReplyRegressionTests(unittest.TestCase):
             with self.subTest(reply=reply):
                 self.assertEqual(parse_reply(reply), "UNCLEAR")
 
+    def test_general_negative_speech_is_not_order_cancellation(self):
+        for reply in ["ان کے دور میں آلودگی مسئلہ نہیں تھی", "There is no weather update",
+                      "Is this a fake order?"]:
+            with self.subTest(reply=reply):
+                self.assertEqual(parse_reply(reply), "UNCLEAR")
+        self.assertEqual(parse_reply("کوئی مسئلہ نہیں، بھیج دیں"), "CONFIRM")
+        self.assertEqual(parse_reply("No problems, send it"), "CONFIRM")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -15,6 +15,10 @@ changing the decision logic.
 """
 import re
 import unicodedata
+import os
+import threading
+from functools import lru_cache
+from pathlib import Path
 
 def parse_reply(text: str) -> str:
     """Conservative, offline intent rules; this is not an LLM classifier.
@@ -36,25 +40,32 @@ def parse_reply(text: str) -> str:
     negated_cancel = r"(?:don't|do not|never)\s+cancel(?:\s+(?:it|the order|my order))?"
     keep_order = matches(negated_cancel, t)
     t = re.sub(r"(?<!\w)" + negated_cancel + r"(?!\w)", " ", t)
-    t = re.sub(r"(?<!\w)(?:no (?:problem|issue|worries)|not fake)(?!\w)", " ", t)
+    reassurance = r"no (?:problems?|issues?|worries)|not fake|(?:کوئی\s+)?(?:مسئلہ|دقت|اعتراض)\s+نہیں"
+    t = re.sub(r"(?<!\w)(?:" + reassurance + r")(?!\w)", " ", t).strip()
 
     negated_dispatch = (
         r"(?:don't|do not|never|cannot|can't)\s+(?:please\s+)?(?:send|confirm|deliver|dispatch)\w*"
         r"|(?:mat|na)\s+bhej\w*|(?:مت|نہ)\s+بھیج\w*|بھیج\w*\s+(?:مت|نہیں)"
     )
     denial = (
-        r"no|cancel(?:led)?|stop|fake|not mine|not my order|nahi|nahin|nai|نہیں|منسوخ|کینسل"
+        r"cancel(?:led)?|stop|not mine|not my order|منسوخ|کینسل"
         r"|(?:didn't|did not|never)\s+(?:place\s+)?(?:this\s+)?order(?:ed)?"
+        r"|(?:don't|do not)\s+want\s+(?:it|(?:my|the|this)\s+order)"
     )
+    question = re.match(r"^(?:can|could|would|what|when|where|how|is|are|did|have|کیا|کب|کیسے)(?!\w)", t)
+    if question and not matches(r"cancel|منسوخ|کینسل", t):
+        return "UNCLEAR"
+    direct_negative = re.match(r"^(?:(?:ji|جی|haan|yes|ہاں|bhai)\s*[,،]?\s*)*(?:no|nahi|nahin|nai|نہیں)(?!\w)", t)
+    order_negative = (matches(r"no|nahi|nahin|nai|نہیں", t)
+                      and matches(r"order\w*|آرڈر|منگو\w*|منگوا\w*|mangw\w*", t))
     # A clear denial wins over politeness and positive tokens elsewhere.
-    if matches(negated_dispatch, t) or matches(denial, t):
+    if direct_negative or order_negative or matches(negated_dispatch, t) or matches(denial, t):
         return "DENY"
 
     uncertainty = (
         r"if|unless|maybe|perhaps|later|tomorrow|wait|agar|kal|baad|اگر|شاید|کل|بعد"
         r"|will confirm|not sure|پتا نہیں"
     )
-    question = re.match(r"^(?:can|could|would|what|when|where|how|کیا|کب|کیسے)(?!\w)", t)
     if matches(uncertainty, t) or question:
         return "UNCLEAR"
     confirmation = (
@@ -91,6 +102,29 @@ def apply_reply(zone: str, intent: str) -> dict:
                 "why": "Medium risk and no clear confirmation — verify before dispatch"}
     return {"decision": "HOLD", "why": "High risk and no confirmation — do not dispatch"}
 
+VOICE_LIMIT_BYTES = 12 * 1024 * 1024
+VOICE_LIMIT_SECONDS = 60
+VOICE_SUFFIXES = {".ogg", ".mp3", ".wav", ".m4a", ".webm"}
+_VOICE_LOCK = threading.Lock()
+
+
+@lru_cache(maxsize=1)
+def _whisper_model(name, cache, offline):
+    from faster_whisper import WhisperModel
+    return WhisperModel(name, device="cpu", compute_type="int8",
+                        download_root=cache, local_files_only=offline)
+
+
+def prepare_voice_model(offline=False):
+    """Download once explicitly; runtime defaults to cached/offline weights."""
+    name = os.environ.get("COD_GUARD_WHISPER_MODEL", "small")
+    cache = Path(os.environ.get("COD_GUARD_WHISPER_CACHE",
+                               Path(__file__).resolve().parents[2] / "data/whisper"))
+    cache.mkdir(parents=True, exist_ok=True)
+    with _VOICE_LOCK:
+        return _whisper_model(name, str(cache), offline)
+
+
 def transcribe_voice_note(path: str) -> dict:
     """Transcribe an Urdu voice note with Whisper (faster-whisper).
 
@@ -98,13 +132,43 @@ def transcribe_voice_note(path: str) -> dict:
     Returns {"ok": False, "reason": ...} instead of crashing when the
     package or model is unavailable, so the chat flow never breaks.
     """
+    path = Path(path)
+    if not path.is_file():
+        return {"ok": False, "error": "invalid_audio", "reason": f"Audio file does not exist: {path}"}
+    if path.suffix.lower() not in VOICE_SUFFIXES or not 0 < path.stat().st_size <= VOICE_LIMIT_BYTES:
+        return {"ok": False, "error": "invalid_audio", "reason": "Use OGG/MP3/WAV/M4A/WebM audio up to 12 MiB"}
     try:
-        from faster_whisper import WhisperModel
-    except ImportError:
-        return {"ok": False, "reason": "faster-whisper not installed on this machine"}
+        import av
+    except ImportError as exc:
+        return {"ok": False, "error": "model_unavailable",
+                "reason": f"{type(exc).__name__}: {exc}. Install requirements.txt first."}
     try:
-        model = WhisperModel("small", device="cpu", compute_type="int8")
-        segments, _info = model.transcribe(path, language="ur")
-        return {"ok": True, "text": "".join(s.text for s in segments).strip()}
-    except Exception as e:  # model download / file errors must not kill the flow
-        return {"ok": False, "reason": f"transcription failed: {e}"}
+        with av.open(str(path)) as audio:
+            if not audio.streams.audio or audio.duration is None:
+                raise ValueError("Cannot determine audio duration; use a short OGG, MP3 or WAV clip")
+            duration = audio.duration / av.time_base
+            if duration > VOICE_LIMIT_SECONDS:
+                raise ValueError("Voice notes must be 60 seconds or shorter; audio is never silently truncated")
+    except Exception as exc:
+        return {"ok": False, "error": "invalid_audio", "reason": f"{type(exc).__name__}: {exc}"}
+    try:
+        offline = os.environ.get("COD_GUARD_OFFLINE", "1") != "0"
+        model = prepare_voice_model(offline=offline)
+    except Exception as exc:
+        return {"ok": False, "error": "model_unavailable",
+                "reason": f"{type(exc).__name__}: {exc}. Run python scripts/prepare_voice.py while online."}
+    try:
+        with _VOICE_LOCK:
+            segments, _info = model.transcribe(str(path), language="ur", vad_filter=True,
+                                               condition_on_previous_text=False)
+            segments = list(segments)
+        text = "".join(segment.text for segment in segments).strip()
+        warning = None
+        if not text:
+            warning = "No audible speech detected; ask the customer to repeat"
+        elif any(segment.avg_logprob < -1.0 for segment in segments):
+            warning = "Low transcription confidence; ask the customer to repeat or type their answer"
+        return {"ok": True, "text": text, "duration_seconds": round(duration, 2),
+                "language": "ur", "warning": warning}
+    except Exception as exc:
+        return {"ok": False, "error": "transcription_failed", "reason": f"{type(exc).__name__}: {exc}"}
