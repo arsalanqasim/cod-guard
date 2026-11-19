@@ -35,3 +35,17 @@ verbatim output, and explicit model-unavailable errors.
 The dashboard and API preview transcripts before applying them. Silence or
 low-confidence output requests another reply; it cannot be applied by the voice
 action. The parser is conservative offline rules, not a claimed multilingual LLM.
+# Voice job latency budget
+
+On a warmed exhibition machine, allow 30 seconds of inference for the bundled
+12-second clip and 60 seconds from submission when both worker slots are busy.
+Rehearse the actual stage machine and use the scripted text reply if the voice
+budget is exceeded. Longer clips (up to 60 seconds of audio) can take longer.
+
+The authenticated API returns 202 for a valid upload. Poll
+`GET /orders/{order_id}/voice/{job_id}` for `queued`, `running`, `done`, or
+`failed`. Two worker slots share one offline Whisper model per process. The
+four-job admission limit includes running jobs. A full queue returns 429.
+The same operator and order are required to retrieve a result. Finished
+results expire after ten minutes. Applied text follows the raw-reply retention
+policy. The dashboard keeps an explicit transcript preview and apply action.

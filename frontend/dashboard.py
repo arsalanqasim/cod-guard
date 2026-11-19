@@ -2,7 +2,6 @@
 import hashlib
 import json
 import sys
-import tempfile
 from pathlib import Path
 
 import pandas as pd
@@ -179,17 +178,9 @@ with tab_verification:
     if audio_bytes:
         st.audio(audio_bytes, format={".ogg": "audio/ogg", ".mp3": "audio/mpeg", ".m4a": "audio/mp4", ".webm": "audio/webm"}.get(suffix, "audio/wav"))
     if st.button("Transcribe Urdu", disabled=not audio_bytes, key="transcribe_voice"):
-        audio_path = None
-        try:
-            with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as temporary:
-                audio_path = Path(temporary.name)
-                temporary.write(audio_bytes)
-            with st.spinner("Transcribing locally with cached Whisper weights…"):
-                result = transcribe_voice_note(str(audio_path))
-            st.session_state["voice_result"] = {"order_id": oid, "fingerprint": fingerprint, "result": result}
-        finally:
-            if audio_path is not None:
-                audio_path.unlink(missing_ok=True)
+        with st.spinner("Transcribing locally with cached Whisper weights…"):
+            result = transcribe_voice_note(audio_bytes, suffix=suffix)
+        st.session_state["voice_result"] = {"order_id": oid, "fingerprint": fingerprint, "result": result}
     preview = st.session_state.get("voice_result", {})
     if preview.get("order_id") == oid and preview.get("fingerprint") == fingerprint:
         result = preview["result"]

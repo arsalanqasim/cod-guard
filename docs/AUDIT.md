@@ -156,6 +156,15 @@ TestClient regression checks the median of five requests for a page of 50
 under one second and verifies one prediction batch per request. The dashboard
 test checks that changing pages scores only the visible 50 and 30 rows.
 
+### 8. Voice jobs
+
+The API queues bounded audio in memory and returns before inference. Two
+workers share one offline Whisper model per process. A barrier regression
+checks that two requests can enter inference together and construct the model
+once. The API test covers poll authorization, a paused worker, and the preview
+and explicit apply flow. PyAV decoding and verbatim transcript tests still run.
+The stage budget and fallback are documented in [Voice tests](VOICE_TEST.md).
+
 ## Round 2 addendum
 
 The Round 1 test IDs, 6,000 synthetic rows, model ID `cg-0328b4106253`, and

@@ -17,7 +17,7 @@ import re
 import unicodedata
 import os
 import threading
-from functools import lru_cache
+from io import BytesIO
 from pathlib import Path
 
 def parse_reply(text: str) -> str:
@@ -112,36 +112,43 @@ VOICE_LIMIT_BYTES = 12 * 1024 * 1024
 VOICE_LIMIT_SECONDS = 60
 VOICE_SUFFIXES = {".ogg", ".mp3", ".wav", ".m4a", ".webm"}
 _VOICE_LOCK = threading.Lock()
-
-
-@lru_cache(maxsize=1)
-def _whisper_model(name, cache, offline):
-    from faster_whisper import WhisperModel
-    return WhisperModel(name, device="cpu", compute_type="int8",
-                        download_root=cache, local_files_only=offline)
+_VOICE_MODEL = None
+VOICE_WORKERS = 2
 
 
 def prepare_voice_model(offline=False):
     """Download once explicitly; runtime defaults to cached/offline weights."""
+    global _VOICE_MODEL
     name = os.environ.get("COD_GUARD_WHISPER_MODEL", "small")
     cache = Path(os.environ.get("COD_GUARD_WHISPER_CACHE",
                                Path(__file__).resolve().parents[2] / "data/whisper"))
     cache.mkdir(parents=True, exist_ok=True)
     with _VOICE_LOCK:
-        return _whisper_model(name, str(cache), offline)
+        identity = (name, cache)
+        if _VOICE_MODEL is None or _VOICE_MODEL[0] != identity:
+            from faster_whisper import WhisperModel
+            model = WhisperModel(name, device="cpu", compute_type="int8", download_root=str(cache),
+                                 local_files_only=offline, num_workers=VOICE_WORKERS,
+                                 cpu_threads=min(4, max(1, (os.cpu_count() or 1) // VOICE_WORKERS)))
+            _VOICE_MODEL = (identity, model)
+        return _VOICE_MODEL[1]
 
 
-def transcribe_voice_note(path: str) -> dict:
+def transcribe_voice_note(audio: str | Path | bytes, *, suffix=None) -> dict:
     """Transcribe an Urdu voice note with Whisper (faster-whisper).
 
     Setup (on the demo machine):  pip install faster-whisper
     Returns {"ok": False, "reason": ...} instead of crashing when the
     package or model is unavailable, so the chat flow never breaks.
     """
-    path = Path(path)
-    if not path.is_file():
-        return {"ok": False, "error": "invalid_audio", "reason": f"Audio file does not exist: {path}"}
-    if path.suffix.lower() not in VOICE_SUFFIXES or not 0 < path.stat().st_size <= VOICE_LIMIT_BYTES:
+    if isinstance(audio, bytes):
+        size = len(audio)
+    else:
+        path = Path(audio)
+        if not path.is_file():
+            return {"ok": False, "error": "invalid_audio", "reason": f"Audio file does not exist: {path}"}
+        size, suffix = path.stat().st_size, path.suffix.lower()
+    if suffix not in VOICE_SUFFIXES or not 0 < size <= VOICE_LIMIT_BYTES:
         return {"ok": False, "error": "invalid_audio", "reason": "Use OGG/MP3/WAV/M4A/WebM audio up to 12 MiB"}
     try:
         import av
@@ -149,10 +156,10 @@ def transcribe_voice_note(path: str) -> dict:
         return {"ok": False, "error": "model_unavailable",
                 "reason": f"{type(exc).__name__}: {exc}. Install requirements.txt first."}
     try:
-        with av.open(str(path)) as audio:
-            if not audio.streams.audio or audio.duration is None:
+        with av.open(BytesIO(audio) if isinstance(audio, bytes) else str(path)) as container:
+            if not container.streams.audio or container.duration is None:
                 raise ValueError("Cannot determine audio duration; use a short OGG, MP3 or WAV clip")
-            duration = audio.duration / av.time_base
+            duration = container.duration / av.time_base
             if duration > VOICE_LIMIT_SECONDS:
                 raise ValueError("Voice notes must be 60 seconds or shorter; audio is never silently truncated")
     except Exception as exc:
@@ -164,10 +171,9 @@ def transcribe_voice_note(path: str) -> dict:
         return {"ok": False, "error": "model_unavailable",
                 "reason": f"{type(exc).__name__}: {exc}. Run python scripts/prepare_voice.py while online."}
     try:
-        with _VOICE_LOCK:
-            segments, _info = model.transcribe(str(path), language="ur", vad_filter=True,
-                                               condition_on_previous_text=False)
-            segments = list(segments)
+        segments, _info = model.transcribe(BytesIO(audio) if isinstance(audio, bytes) else str(path),
+                                           language="ur", vad_filter=True, condition_on_previous_text=False)
+        segments = list(segments)
         text = "".join(segment.text for segment in segments).strip()
         warning = None
         if not text:

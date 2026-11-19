@@ -1,6 +1,5 @@
 """Single-instance COD-Guard API for tenant-scoped shadow intake."""
 import sys
-import tempfile
 from pathlib import Path
 from typing import Annotated, Literal
 
@@ -9,15 +8,17 @@ from fastapi import Depends, FastAPI, File, Header, HTTPException, Query, Respon
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, field_validator
 import service
+from jobs import JobQueue, QueueFull
 from operators import Operator, require_operator, write_operator
 from order_intake import MAX_CSV_BYTES, IdempotencyConflict, import_orders
 from records import DEMO_TENANT, StateUnavailable
 from request_limits import RequestBodyLimit
 from verification import (parse_reply, transcribe_voice_note, VOICE_SUFFIXES,
-                          VOICE_LIMIT_BYTES)
+                          VOICE_LIMIT_BYTES, VOICE_WORKERS)
 
 app = FastAPI(title="COD-Guard — shadow intake", version="0.3")
 app.add_middleware(RequestBodyLimit, limit=VOICE_LIMIT_BYTES + 1024 * 1024)
+voice_jobs = JobQueue(workers=VOICE_WORKERS, capacity=4, ttl_seconds=600)
 
 
 def _order(order_id, operator):
@@ -117,7 +118,7 @@ def outcome(order_id: str, body: Outcome, operator: Operator = Depends(write_ope
             "learning": service.learning_status(operator.tenant_id)}
 
 
-@app.post("/orders/{order_id}/voice")
+@app.post("/orders/{order_id}/voice", status_code=202)
 def voice(order_id: str, file: UploadFile = File(...), commit_decision: bool = False,
           operator: Operator = Depends(write_operator)):
     order = _order(order_id, operator)
@@ -127,25 +128,32 @@ def voice(order_id: str, file: UploadFile = File(...), commit_decision: bool = F
     contents = file.file.read(VOICE_LIMIT_BYTES + 1)
     if not contents or len(contents) > VOICE_LIMIT_BYTES:
         raise HTTPException(status_code=422, detail="Audio must be nonempty and at most 12 MiB")
-    audio_path = None
+    service.record_access(operator.tenant_id, operator.actor, "voice_requested", order_id=order_id)
+
+    def transcribe():
+        result = transcribe_voice_note(contents, suffix=suffix)
+        if not result["ok"]:
+            raise ValueError(result["reason"])
+        intent = parse_reply(result["text"]) if not result.get("warning") else "UNCLEAR"
+        applied = commit_decision and intent != "UNCLEAR"
+        response = {**result, "intent": intent, "applied": applied, "needs_review": intent == "UNCLEAR"}
+        if applied:
+            response.update(service.verify_reply(order, result["text"], source="voice", actor=operator.actor,
+                                                 tenant_id=operator.tenant_id))
+        return response
+
     try:
-        with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as temporary:
-            audio_path = Path(temporary.name)
-            temporary.write(contents)
-        result = transcribe_voice_note(str(audio_path))
-    finally:
-        if audio_path is not None:
-            audio_path.unlink(missing_ok=True)
-    if not result["ok"]:
-        raise HTTPException(status_code=503 if result["error"] == "model_unavailable" else 422,
-                            detail=result["reason"])
-    applied = commit_decision and not result.get("warning")
-    intent = parse_reply(result["text"]) if not result.get("warning") else "UNCLEAR"
-    response = {**result, "intent": intent, "applied": applied}
-    if applied:
-        response.update(service.verify_reply(order, result["text"], source="voice", actor=operator.actor,
-                                             tenant_id=operator.tenant_id))
-    return response
+        return voice_jobs.submit(transcribe, scope=(operator, order_id))
+    except QueueFull as exc:
+        raise HTTPException(status_code=429, detail=str(exc)) from exc
+
+
+@app.get("/orders/{order_id}/voice/{job_id}")
+def voice_status(order_id: str, job_id: str, operator: Operator = Depends(require_operator)):
+    try:
+        return voice_jobs.get(job_id, scope=(operator, order_id))
+    except KeyError:
+        raise HTTPException(status_code=404, detail="Voice job not found") from None
 
 
 @app.get("/metrics")
