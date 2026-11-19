@@ -24,9 +24,9 @@ def parse_reply(text: str) -> str:
     """Conservative, offline intent rules; this is not an LLM classifier.
 
     Polite ``ji`` alone is not consent. Negated dispatch is a denial,
-    while negated cancellation and idioms such as ``no problem`` are
-    handled before looking for denial words. Unhandled questions and
-    conditional/future confirmations need a follow-up.
+    while negated cancellation requires a separate affirmative instruction.
+    Questions, partial orders, contradictions and conditional/future replies
+    need a follow-up.
     """
     if not isinstance(text, str) or not text.strip():
         return "UNCLEAR"
@@ -34,8 +34,29 @@ def parse_reply(text: str) -> str:
     t = t.translate(str.maketrans({"ي": "ی", "ك": "ک", "ى": "ی"}))
     t = " ".join("".join(c for c in t if not unicodedata.combining(c)).split())
 
+    def bounded(pattern):
+        return r"(?<!\w)(?:" + pattern + r")(?!\w)"
+
     def matches(pattern, value):
-        return re.search(r"(?<!\w)(?:" + pattern + r")(?!\w)", value) is not None
+        return re.search(bounded(pattern), value) is not None
+
+    question = r"^(?:can|could|would|what|when|where|why|how|is|are|did|have|کیا|کب|کیسے)(?!\w)"
+    partial_scope = (
+        r"only|except|just the|extra|some|part of|one of|item(?:s)?|address|price|size|colou?r"
+        r"|sirf|bas ek|siraf|rang|pata|صرف|سوائے|آئٹم|قیمت|پتہ|سائز|رنگ"
+    )
+    uncertainty = (
+        r"if|unless|maybe|perhaps|later|tomorrow|wait|agar|kal|baad|اگر|شاید|کل|بعد"
+        r"|will confirm|not sure|پتا نہیں"
+    )
+    reported_negation = (
+        r"(?:did(?:n't| not)|ha(?:ven't|ve not|sn't|s not)|was(?:n't| not)|never)"
+        r"\s+(?:say\s+(?:yes|no)|(?:actually\s+)?(?:confirm|cancel|send|ship|dispatch|deliver)\w*)"
+        r"|not\s+(?:yet\s+)?confirmed"
+    )
+    if (re.search(question, t) or "?" in t or "؟" in t
+            or any(matches(pattern, t) for pattern in (partial_scope, uncertainty, reported_negation))):
+        return "UNCLEAR"
 
     negated_cancel = (
         r"(?:(?:don't|do not|never)\s+cancel(?:\s+(?:it|the order|my order))?"
@@ -43,7 +64,7 @@ def parse_reply(text: str) -> str:
         r"|(?:کینسل|منسوخ)\s+(?:مت|نہ|نہیں)\s*(?:کریں|کرنا|کرو)?)"
     )
     keep_order = matches(negated_cancel, t)
-    t = re.sub(r"(?<!\w)" + negated_cancel + r"(?!\w)", " ", t)
+    t = re.sub(bounded(negated_cancel), " ", t)
     reassurance = r"no (?:problems?|issues?|worries)|not fake|(?:کوئی\s+)?(?:مسئلہ|دقت|اعتراض)\s+نہیں"
     t = re.sub(r"(?<!\w)(?:" + reassurance + r")(?!\w)", " ", t).strip()
 
@@ -58,27 +79,19 @@ def parse_reply(text: str) -> str:
         r"|(?:didn't|did not|never)\s+(?:place\s+)?(?:this\s+)?order(?:ed)?"
         r"|(?:don't|do not)\s+want\s+(?:it|(?:my|the|this)\s+order)"
     )
-    question = re.match(r"^(?:can|could|would|what|when|where|how|is|are|did|have|کیا|کب|کیسے)(?!\w)", t)
-    if question and not matches(r"cancel|منسوخ|کینسل", t):
-        return "UNCLEAR"
     direct_negative = re.match(r"^(?:(?:ji|جی|haan|yes|ہاں|bhai)\s*[,،]?\s*)*(?:no|nahi|nahin|nhi|nai|نہیں)(?!\w)", t)
     order_negative = (matches(r"no|nahi|nahin|nhi|nai|نہیں", t)
                       and matches(r"order\w*|آرڈر|منگو\w*|منگوا\w*|mangw\w*", t))
-    # A clear denial wins over politeness and positive tokens elsewhere.
-    if direct_negative or order_negative or matches(negated_dispatch, t) or matches(denial, t):
-        return "DENY"
-
-    uncertainty = (
-        r"if|unless|maybe|perhaps|later|tomorrow|wait|agar|kal|baad|اگر|شاید|کل|بعد"
-        r"|will confirm|not sure|پتا نہیں"
-    )
-    if matches(uncertainty, t) or question:
-        return "UNCLEAR"
     confirmation = (
         r"yes|confirm(?:ed)?|ok(?:ay)?|theek|thik|han|haan|ہاں|ٹھیک|کنفرم"
         r"|bhej\w*|بھیج\w*|(?:send|deliver|dispatch)\s+(?:it|(?:my|the|this)\s+order)"
     )
-    if keep_order or matches(confirmation, t):
+    denied = direct_negative or order_negative or matches(negated_dispatch, t) or matches(denial, t)
+    affirmative_text = re.sub(bounded(negated_dispatch), " ", t)
+    confirmed = matches(confirmation, affirmative_text)
+    if denied:
+        return "UNCLEAR" if confirmed or keep_order else "DENY"
+    if confirmed:
         return "CONFIRM"
     return "UNCLEAR"
 

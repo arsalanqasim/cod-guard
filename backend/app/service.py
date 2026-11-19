@@ -110,6 +110,8 @@ def verify_reply(order, reply_text, source="text"):
     with transaction(STATE_PATH) as state:
         previous = state["decisions"].get(order["order_id"])
         effective_intent = intent
+        if intent == "UNCLEAR":
+            result["why"] += ". Please clarify with the customer."
         if intent == "UNCLEAR" and previous and previous.get("intent") in ("CONFIRM", "DENY"):
             effective_intent = previous["intent"]
             result = {"decision": previous["decision"],
@@ -118,7 +120,7 @@ def verify_reply(order, reply_text, source="text"):
         state["messages"].setdefault(order["order_id"], []).append({
             "text": reply_text, "source": source, "intent": intent, **result,
             "at": datetime.now(timezone.utc).isoformat()})
-    return {"intent": intent, **result}
+    return {"intent": intent, "needs_review": intent == "UNCLEAR", **result}
 
 
 def conversation(order_id):
