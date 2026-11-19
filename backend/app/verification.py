@@ -14,26 +14,54 @@ LLM classifier can be layered behind parse_reply() later without
 changing the decision logic.
 """
 import re
-
-CONFIRM_PATTERNS = [
-    r"\byes\b", r"\bconfirm", r"\bok\b", r"\btheek\b", r"\bthik\b", r"\bji\b",
-    r"\bhan\b", r"\bhaan\b", r"\bbhej\b", r"\bsend\b", r"\bdeliver\b",
-    "جی", "ٹھیک", "ہاں", "بھیج",
-]
-DENY_PATTERNS = [
-    r"\bno\b", r"\bcancel\b", r"\bnot mine\b", r"\bdidn'?t order\b", r"\bnahi\b",
-    r"\bnahin\b", r"\bmat bhej", r"\bstop\b", r"\bfake\b",
-    "نہیں", "منسوخ", "کینسل",
-]
+import unicodedata
 
 def parse_reply(text: str) -> str:
-    """Return CONFIRM, DENY or UNCLEAR for a customer reply."""
-    t = f" {text.strip().lower()} "
-    deny = any(re.search(p, t) or p in t for p in DENY_PATTERNS)
-    confirm = any(re.search(p, t) or p in t for p in CONFIRM_PATTERNS)
-    if deny and not confirm:
+    """Conservative, offline intent rules; this is not an LLM classifier.
+
+    Polite ``ji`` alone is not consent. Negated dispatch is a denial,
+    while negated cancellation and idioms such as ``no problem`` are
+    handled before looking for denial words. Unhandled questions and
+    conditional/future confirmations need a follow-up.
+    """
+    if not isinstance(text, str) or not text.strip():
+        return "UNCLEAR"
+    t = unicodedata.normalize("NFKC", text).lower().replace("’", "'")
+    t = t.translate(str.maketrans({"ي": "ی", "ك": "ک", "ى": "ی"}))
+    t = " ".join("".join(c for c in t if not unicodedata.combining(c)).split())
+
+    def matches(pattern, value):
+        return re.search(r"(?<!\w)(?:" + pattern + r")(?!\w)", value) is not None
+
+    negated_cancel = r"(?:don't|do not|never)\s+cancel(?:\s+(?:it|the order|my order))?"
+    keep_order = matches(negated_cancel, t)
+    t = re.sub(r"(?<!\w)" + negated_cancel + r"(?!\w)", " ", t)
+    t = re.sub(r"(?<!\w)(?:no (?:problem|issue|worries)|not fake)(?!\w)", " ", t)
+
+    negated_dispatch = (
+        r"(?:don't|do not|never|cannot|can't)\s+(?:please\s+)?(?:send|confirm|deliver|dispatch)\w*"
+        r"|(?:mat|na)\s+bhej\w*|(?:مت|نہ)\s+بھیج\w*|بھیج\w*\s+(?:مت|نہیں)"
+    )
+    denial = (
+        r"no|cancel(?:led)?|stop|fake|not mine|not my order|nahi|nahin|nai|نہیں|منسوخ|کینسل"
+        r"|(?:didn't|did not|never)\s+(?:place\s+)?(?:this\s+)?order(?:ed)?"
+    )
+    # A clear denial wins over politeness and positive tokens elsewhere.
+    if matches(negated_dispatch, t) or matches(denial, t):
         return "DENY"
-    if confirm and not deny:
+
+    uncertainty = (
+        r"if|unless|maybe|perhaps|later|tomorrow|wait|agar|kal|baad|اگر|شاید|کل|بعد"
+        r"|will confirm|not sure|پتا نہیں"
+    )
+    question = re.match(r"^(?:can|could|would|what|when|where|how|کیا|کب|کیسے)(?!\w)", t)
+    if matches(uncertainty, t) or question:
+        return "UNCLEAR"
+    confirmation = (
+        r"yes|confirm(?:ed)?|ok(?:ay)?|theek|thik|han|haan|ہاں|ٹھیک|کنفرم"
+        r"|bhej\w*|بھیج\w*|(?:send|deliver|dispatch)\s+(?:it|(?:my|the|this)\s+order)"
+    )
+    if keep_order or matches(confirmation, t):
         return "CONFIRM"
     return "UNCLEAR"
 
@@ -51,10 +79,10 @@ def opening_message(order: dict) -> str:
 def apply_reply(zone: str, intent: str) -> dict:
     """Combine the risk zone with the customer's answer into a final decision."""
     if intent == "CONFIRM":
-        return {"decision": "SHIP", "why": "Customer confirmed the order on WhatsApp"}
+        return {"decision": "SHIP", "why": "Customer confirmed the order"}
     if intent == "DENY":
         return {"decision": "HOLD_CANCEL",
-                "why": "Customer says they did not place this order"}
+                "why": "Customer denied or cancelled the order"}
     # UNCLEAR / no reply
     if zone == "GREEN":
         return {"decision": "SHIP", "why": "Low risk; no denial received"}
