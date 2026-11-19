@@ -24,6 +24,7 @@ from threadpoolctl import threadpool_limits
 from risk_engine import assess
 from round2_evaluation import analyze_round2, render_round2
 from artifacts import active_version, atomic_write, publish
+from public_benchmark import benchmark_markdown
 
 ROOT = Path(__file__).resolve().parents[2]
 COST_FN, COST_FP = 650, 450
@@ -285,6 +286,7 @@ def main():
     markdown = render_report(report)
     atomic_write(ROOT / "data/evaluation.json", json.dumps(report, indent=2).encode("utf-8"))
     atomic_write(ROOT / "docs/EVAL_REPORT.md", markdown.encode("utf-8"))
+    atomic_write(ROOT / "docs/BENCHMARK.md", benchmark_markdown(report).encode("utf-8"))
     publish(bundle, report, markdown, model_path, expected=active_version(model_path))
     print(json.dumps({"model_id": bundle["model_id"], "model": bundle["model_name"],
                       "chosen": report["chosen"], "split": report["split"],

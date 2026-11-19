@@ -18,6 +18,7 @@ from verification import (parse_reply, transcribe_voice_note, VOICE_SUFFIXES,
 from woo_routes import router as woo_router
 from whatsapp_routes import router as whatsapp_router
 from courier_routes import router as courier_router
+from savings_report import seller_report
 
 app = FastAPI(title="COD-Guard — shadow intake", version="0.3")
 app.add_middleware(RequestBodyLimit, limit=VOICE_LIMIT_BYTES + 1024 * 1024)
@@ -165,6 +166,11 @@ def voice_status(order_id: str, job_id: str, operator: Operator = Depends(requir
 @app.get("/metrics")
 def metrics(operator: Operator = Depends(require_operator)):
     return service.live_metrics(operator.tenant_id)
+
+
+@app.get("/reports/savings")
+def savings(operator: Operator = Depends(require_operator)):
+    return seller_report(operator.tenant_id, service.latest_evaluation())
 
 
 @app.get("/evaluation")

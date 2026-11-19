@@ -16,6 +16,8 @@ from jobs import QueueFull
 from verification import transcribe_voice_note, parse_reply
 from woocommerce import WooCommerceError, configured_stores
 from connector_orders import connection_state
+from public_benchmark import benchmark_markdown, cohorts
+from savings_report import seller_report
 
 st.set_page_config(page_title="COD-Guard", page_icon="🛡️", layout="wide")
 st.markdown("""<style>
@@ -253,8 +255,24 @@ with tab_metrics:
                 st.write("• " + limitation)
         st.download_button("Download evaluation (JSON)", json.dumps(report, indent=2),
                            file_name=f"synthetic-evaluation-{report['model_id']}.json", mime="application/json")
+        with st.expander("Public benchmark by channel and language"):
+            try:
+                markdown = benchmark_markdown(report)
+            except (ValueError, KeyError, OSError):
+                st.warning("No public report matches the committed evaluation lock.")
+            else:
+                st.dataframe(pd.DataFrame(cohorts(report)), hide_index=True, width="stretch")
+                st.download_button("Download public benchmark (Markdown)", markdown,
+                                   file_name=f"benchmark-{report['model_id']}.md", mime="text/markdown")
     else:
         st.warning("No evaluation matches the active model. Run python backend/app/train_model.py.")
+    st.divider()
+    st.subheader("Seller savings evidence")
+    savings = seller_report("demo", report)
+    estimate = savings["estimated"]["benchmark_cost_difference_pkr"]
+    st.caption(f"Estimated · Synthetic cost difference versus ship-everything: PKR {estimate:,}."
+               if estimate is not None else "Estimated · No matching benchmark.")
+    st.caption("Measured savings · Not established. The demo has no paid courier outcomes or real comparison group.")
     st.divider()
     st.subheader("Marked demo outcomes")
     metrics = service.live_metrics()

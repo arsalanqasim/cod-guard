@@ -28,6 +28,7 @@ conversation is a local simulator; no WhatsApp messages are sent.
    evaluation holdout stays unchanged. Report updated measurements honestly,
    including worsening results.
 
+See the [public benchmark](BENCHMARK.md) for the locked baseline and method.
 On 1,184 synthetic test orders, baseline v1 has **16.47% FPR** and
 **59.23% FNR**. A flag is AMBER or RED before a reply. The uncapped any-signal baseline has lower illustrative cost
 (PKR 259,800 versus 274,600) and flags 907 of 1,184 orders. At an assumed

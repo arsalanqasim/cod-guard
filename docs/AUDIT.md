@@ -287,3 +287,11 @@ list-rate estimates are not reconciled charges. Daraz stays score-and-queue.
 evidence limits, the audited correction path, and non-publishing outcome-fed
 evaluation. Tests exercise replay, tenant isolation, tracking and the locked
 trainer. No courier credentials or field labels were used during verification.
+
+### Round 5 — WS-G: Public benchmark and savings evidence
+
+[Public benchmark](BENCHMARK.md) identifies the model and both holdout hashes,
+and leaves unobserved channel/language cohorts unevaluated. The dashboard
+renders its active matching report. The tenant savings endpoint separates
+synthetic estimates, observed outcomes and statement charges from savings,
+which remain unavailable without a counterfactual comparison.
