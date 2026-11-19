@@ -5,7 +5,7 @@
   "failure_rate": 0.507,
   "target_failure_rate": 0.51,
   "model_id": "cg-0328b4106253",
-  "trained_at": "2026-11-19T10:13:19.920860+00:00",
+  "trained_at": "2026-11-19T11:10:06.171908+00:00",
   "model_name": "regularized_gradient_boosting",
   "version": 1,
   "split": {
@@ -420,5 +420,1790 @@
     "Benchmark generator and cost assumptions do not reproduce any merchant population.",
     "Verification overrides are demonstrated by functional tests, not simulated as perfect human responses.",
     "Marked demo outcomes are demonstrations, not prospectively collected field evidence."
-  ]
+  ],
+  "round2": {
+    "data_source": "SYNTHETIC",
+    "verification_charge": 50,
+    "verification_sensitivity": {
+      "no_outreach": {
+        "green_attempt_rate": 0,
+        "genuine_confirm": 0,
+        "genuine_deny": 0,
+        "failed_confirm": 0,
+        "failed_deny": 0,
+        "tp": 245.0,
+        "fp": 96.0,
+        "fn": 356.0,
+        "tn": 487.0,
+        "fp_rate": 0.1646655231560892,
+        "fn_rate": 0.5923460898502496,
+        "contact_attempts": 0.0,
+        "contact_rate": 0.0,
+        "total_cost": 274600.0
+      },
+      "flags_only_low": {
+        "green_attempt_rate": 0,
+        "genuine_confirm": 0.35,
+        "genuine_deny": 0.02,
+        "failed_confirm": 0.08,
+        "failed_deny": 0.1,
+        "tp": 229.95999999999998,
+        "fp": 66.6,
+        "fn": 371.04,
+        "tn": 516.4,
+        "fp_rate": 0.11423670668953687,
+        "fn_rate": 0.6173710482529119,
+        "contact_attempts": 341.0,
+        "contact_rate": 0.28800675675675674,
+        "total_cost": 288196.0
+      },
+      "flags_only_mid": {
+        "green_attempt_rate": 0,
+        "genuine_confirm": 0.6,
+        "genuine_deny": 0.02,
+        "failed_confirm": 0.1,
+        "failed_deny": 0.25,
+        "tp": 226.2,
+        "fp": 45.6,
+        "fn": 374.8,
+        "tn": 537.4,
+        "fp_rate": 0.07821612349914236,
+        "fn_rate": 0.6236272878535774,
+        "contact_attempts": 341.0,
+        "contact_rate": 0.28800675675675674,
+        "total_cost": 281190.0
+      },
+      "limited_green_mid": {
+        "green_attempt_rate": 0.2,
+        "genuine_confirm": 0.6,
+        "genuine_deny": 0.02,
+        "failed_confirm": 0.1,
+        "failed_deny": 0.25,
+        "tp": 243.49999999999997,
+        "fp": 47.468,
+        "fn": 357.5,
+        "tn": 535.532,
+        "fp_rate": 0.08142024013722128,
+        "fn_rate": 0.5948419301164726,
+        "contact_attempts": 509.6,
+        "contact_rate": 0.43040540540540545,
+        "total_cost": 279215.6
+      },
+      "broad_outreach_mid": {
+        "green_attempt_rate": 1,
+        "genuine_confirm": 0.6,
+        "genuine_deny": 0.02,
+        "failed_confirm": 0.1,
+        "failed_deny": 0.25,
+        "tp": 312.7,
+        "fp": 54.940000000000005,
+        "fn": 288.3,
+        "tn": 528.0600000000001,
+        "fp_rate": 0.09423670668953686,
+        "fn_rate": 0.47970049916805324,
+        "contact_attempts": 1184.0,
+        "contact_rate": 1.0,
+        "total_cost": 271318.0
+      },
+      "broad_outreach_high": {
+        "green_attempt_rate": 1,
+        "genuine_confirm": 0.8,
+        "genuine_deny": 0.01,
+        "failed_confirm": 0.06,
+        "failed_deny": 0.45,
+        "tp": 389.42,
+        "fp": 33.47,
+        "fn": 211.58,
+        "tn": 549.53,
+        "fp_rate": 0.05740994854202401,
+        "fn_rate": 0.3520465890183028,
+        "contact_attempts": 1184.0,
+        "contact_rate": 1.0,
+        "total_cost": 211788.5
+      },
+      "broad_outreach_adverse": {
+        "green_attempt_rate": 1,
+        "genuine_confirm": 0.35,
+        "genuine_deny": 0.08,
+        "failed_confirm": 0.3,
+        "failed_deny": 0.08,
+        "tp": 216.28000000000003,
+        "fp": 103.96000000000001,
+        "fn": 384.72,
+        "tn": 479.04,
+        "fp_rate": 0.17831903945111494,
+        "fn_rate": 0.6401331114808653,
+        "contact_attempts": 1184.0,
+        "contact_rate": 1.0,
+        "total_cost": 356050.0
+      }
+    },
+    "capacity_comparison": [
+      {
+        "budget_pct": 10,
+        "verification_charge": 0,
+        "reception": "no_usable_reply",
+        "observed_test_winners": [
+          "served_capped",
+          "cod_guard_ml_ranked"
+        ],
+        "validation_winners": [
+          "served_capped",
+          "cod_guard_ml_ranked"
+        ],
+        "policies": {
+          "ship_everything": {
+            "validation_utilization_pct": 0,
+            "validation_cost": 390650.0,
+            "flagged": 0,
+            "flag_rate": 0.0,
+            "tp": 0.0,
+            "fp": 0.0,
+            "fn": 601.0,
+            "tn": 583.0,
+            "fp_rate": 0.0,
+            "fn_rate": 1.0,
+            "contact_attempts": 0.0,
+            "contact_rate": 0.0,
+            "total_cost": 390650.0
+          },
+          "any_signal_ranked": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 331550.0,
+            "flagged": 118,
+            "flag_rate": 0.09966216216216216,
+            "tp": 95.0,
+            "fp": 23.0,
+            "fn": 506.0,
+            "tn": 560.0,
+            "fp_rate": 0.03945111492281304,
+            "fn_rate": 0.8419301164725458,
+            "contact_attempts": 118.0,
+            "contact_rate": 0.09966216216216216,
+            "total_cost": 339250.0
+          },
+          "two_signal_rules_ranked": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 331550.0,
+            "flagged": 118,
+            "flag_rate": 0.09966216216216216,
+            "tp": 95.0,
+            "fp": 23.0,
+            "fn": 506.0,
+            "tn": 560.0,
+            "fp_rate": 0.03945111492281304,
+            "fn_rate": 0.8419301164725458,
+            "contact_attempts": 118.0,
+            "contact_rate": 0.09966216216216216,
+            "total_cost": 339250.0
+          },
+          "served_capped": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 329350.0,
+            "flagged": 118,
+            "flag_rate": 0.09966216216216216,
+            "tp": 101.0,
+            "fp": 17.0,
+            "fn": 500.0,
+            "tn": 566.0,
+            "fp_rate": 0.029159519725557463,
+            "fn_rate": 0.831946755407654,
+            "contact_attempts": 118.0,
+            "contact_rate": 0.09966216216216216,
+            "total_cost": 332650.0
+          },
+          "cod_guard_ml_ranked": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 329350.0,
+            "flagged": 118,
+            "flag_rate": 0.09966216216216216,
+            "tp": 101.0,
+            "fp": 17.0,
+            "fn": 500.0,
+            "tn": 566.0,
+            "fp_rate": 0.029159519725557463,
+            "fn_rate": 0.831946755407654,
+            "contact_attempts": 118.0,
+            "contact_rate": 0.09966216216216216,
+            "total_cost": 332650.0
+          }
+        }
+      },
+      {
+        "budget_pct": 10,
+        "verification_charge": 50,
+        "reception": "no_usable_reply",
+        "observed_test_winners": [
+          "served_capped",
+          "cod_guard_ml_ranked"
+        ],
+        "validation_winners": [
+          "served_capped",
+          "cod_guard_ml_ranked"
+        ],
+        "policies": {
+          "ship_everything": {
+            "validation_utilization_pct": 0,
+            "validation_cost": 390650.0,
+            "flagged": 0,
+            "flag_rate": 0.0,
+            "tp": 0.0,
+            "fp": 0.0,
+            "fn": 601.0,
+            "tn": 583.0,
+            "fp_rate": 0.0,
+            "fn_rate": 1.0,
+            "contact_attempts": 0.0,
+            "contact_rate": 0.0,
+            "total_cost": 390650.0
+          },
+          "any_signal_ranked": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 337450.0,
+            "flagged": 118,
+            "flag_rate": 0.09966216216216216,
+            "tp": 95.0,
+            "fp": 23.0,
+            "fn": 506.0,
+            "tn": 560.0,
+            "fp_rate": 0.03945111492281304,
+            "fn_rate": 0.8419301164725458,
+            "contact_attempts": 118.0,
+            "contact_rate": 0.09966216216216216,
+            "total_cost": 345150.0
+          },
+          "two_signal_rules_ranked": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 337450.0,
+            "flagged": 118,
+            "flag_rate": 0.09966216216216216,
+            "tp": 95.0,
+            "fp": 23.0,
+            "fn": 506.0,
+            "tn": 560.0,
+            "fp_rate": 0.03945111492281304,
+            "fn_rate": 0.8419301164725458,
+            "contact_attempts": 118.0,
+            "contact_rate": 0.09966216216216216,
+            "total_cost": 345150.0
+          },
+          "served_capped": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 335250.0,
+            "flagged": 118,
+            "flag_rate": 0.09966216216216216,
+            "tp": 101.0,
+            "fp": 17.0,
+            "fn": 500.0,
+            "tn": 566.0,
+            "fp_rate": 0.029159519725557463,
+            "fn_rate": 0.831946755407654,
+            "contact_attempts": 118.0,
+            "contact_rate": 0.09966216216216216,
+            "total_cost": 338550.0
+          },
+          "cod_guard_ml_ranked": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 335250.0,
+            "flagged": 118,
+            "flag_rate": 0.09966216216216216,
+            "tp": 101.0,
+            "fp": 17.0,
+            "fn": 500.0,
+            "tn": 566.0,
+            "fp_rate": 0.029159519725557463,
+            "fn_rate": 0.831946755407654,
+            "contact_attempts": 118.0,
+            "contact_rate": 0.09966216216216216,
+            "total_cost": 338550.0
+          }
+        }
+      },
+      {
+        "budget_pct": 10,
+        "verification_charge": 100,
+        "reception": "no_usable_reply",
+        "observed_test_winners": [
+          "served_capped",
+          "cod_guard_ml_ranked"
+        ],
+        "validation_winners": [
+          "served_capped",
+          "cod_guard_ml_ranked"
+        ],
+        "policies": {
+          "ship_everything": {
+            "validation_utilization_pct": 0,
+            "validation_cost": 390650.0,
+            "flagged": 0,
+            "flag_rate": 0.0,
+            "tp": 0.0,
+            "fp": 0.0,
+            "fn": 601.0,
+            "tn": 583.0,
+            "fp_rate": 0.0,
+            "fn_rate": 1.0,
+            "contact_attempts": 0.0,
+            "contact_rate": 0.0,
+            "total_cost": 390650.0
+          },
+          "any_signal_ranked": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 343350.0,
+            "flagged": 118,
+            "flag_rate": 0.09966216216216216,
+            "tp": 95.0,
+            "fp": 23.0,
+            "fn": 506.0,
+            "tn": 560.0,
+            "fp_rate": 0.03945111492281304,
+            "fn_rate": 0.8419301164725458,
+            "contact_attempts": 118.0,
+            "contact_rate": 0.09966216216216216,
+            "total_cost": 351050.0
+          },
+          "two_signal_rules_ranked": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 343350.0,
+            "flagged": 118,
+            "flag_rate": 0.09966216216216216,
+            "tp": 95.0,
+            "fp": 23.0,
+            "fn": 506.0,
+            "tn": 560.0,
+            "fp_rate": 0.03945111492281304,
+            "fn_rate": 0.8419301164725458,
+            "contact_attempts": 118.0,
+            "contact_rate": 0.09966216216216216,
+            "total_cost": 351050.0
+          },
+          "served_capped": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 341150.0,
+            "flagged": 118,
+            "flag_rate": 0.09966216216216216,
+            "tp": 101.0,
+            "fp": 17.0,
+            "fn": 500.0,
+            "tn": 566.0,
+            "fp_rate": 0.029159519725557463,
+            "fn_rate": 0.831946755407654,
+            "contact_attempts": 118.0,
+            "contact_rate": 0.09966216216216216,
+            "total_cost": 344450.0
+          },
+          "cod_guard_ml_ranked": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 341150.0,
+            "flagged": 118,
+            "flag_rate": 0.09966216216216216,
+            "tp": 101.0,
+            "fp": 17.0,
+            "fn": 500.0,
+            "tn": 566.0,
+            "fp_rate": 0.029159519725557463,
+            "fn_rate": 0.831946755407654,
+            "contact_attempts": 118.0,
+            "contact_rate": 0.09966216216216216,
+            "total_cost": 344450.0
+          }
+        }
+      },
+      {
+        "budget_pct": 20,
+        "verification_charge": 0,
+        "reception": "no_usable_reply",
+        "observed_test_winners": [
+          "served_capped",
+          "cod_guard_ml_ranked"
+        ],
+        "validation_winners": [
+          "served_capped",
+          "cod_guard_ml_ranked"
+        ],
+        "policies": {
+          "ship_everything": {
+            "validation_utilization_pct": 0,
+            "validation_cost": 390650.0,
+            "flagged": 0,
+            "flag_rate": 0.0,
+            "tp": 0.0,
+            "fp": 0.0,
+            "fn": 601.0,
+            "tn": 583.0,
+            "fp_rate": 0.0,
+            "fn_rate": 1.0,
+            "contact_attempts": 0.0,
+            "contact_rate": 0.0,
+            "total_cost": 390650.0
+          },
+          "any_signal_ranked": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 296650.0,
+            "flagged": 236,
+            "flag_rate": 0.19932432432432431,
+            "tp": 175.0,
+            "fp": 61.0,
+            "fn": 426.0,
+            "tn": 522.0,
+            "fp_rate": 0.10463121783876501,
+            "fn_rate": 0.7088186356073212,
+            "contact_attempts": 236.0,
+            "contact_rate": 0.19932432432432431,
+            "total_cost": 304350.0
+          },
+          "two_signal_rules_ranked": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 294450.0,
+            "flagged": 236,
+            "flag_rate": 0.19932432432432431,
+            "tp": 177.0,
+            "fp": 59.0,
+            "fn": 424.0,
+            "tn": 524.0,
+            "fp_rate": 0.10120068610634649,
+            "fn_rate": 0.7054908485856906,
+            "contact_attempts": 236.0,
+            "contact_rate": 0.19932432432432431,
+            "total_cost": 302150.0
+          },
+          "served_capped": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 284550.0,
+            "flagged": 236,
+            "flag_rate": 0.19932432432432431,
+            "tp": 185.0,
+            "fp": 51.0,
+            "fn": 416.0,
+            "tn": 532.0,
+            "fp_rate": 0.08747855917667238,
+            "fn_rate": 0.6921797004991681,
+            "contact_attempts": 236.0,
+            "contact_rate": 0.19932432432432431,
+            "total_cost": 293350.0
+          },
+          "cod_guard_ml_ranked": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 284550.0,
+            "flagged": 236,
+            "flag_rate": 0.19932432432432431,
+            "tp": 185.0,
+            "fp": 51.0,
+            "fn": 416.0,
+            "tn": 532.0,
+            "fp_rate": 0.08747855917667238,
+            "fn_rate": 0.6921797004991681,
+            "contact_attempts": 236.0,
+            "contact_rate": 0.19932432432432431,
+            "total_cost": 293350.0
+          }
+        }
+      },
+      {
+        "budget_pct": 20,
+        "verification_charge": 50,
+        "reception": "no_usable_reply",
+        "observed_test_winners": [
+          "served_capped",
+          "cod_guard_ml_ranked"
+        ],
+        "validation_winners": [
+          "served_capped",
+          "cod_guard_ml_ranked"
+        ],
+        "policies": {
+          "ship_everything": {
+            "validation_utilization_pct": 0,
+            "validation_cost": 390650.0,
+            "flagged": 0,
+            "flag_rate": 0.0,
+            "tp": 0.0,
+            "fp": 0.0,
+            "fn": 601.0,
+            "tn": 583.0,
+            "fp_rate": 0.0,
+            "fn_rate": 1.0,
+            "contact_attempts": 0.0,
+            "contact_rate": 0.0,
+            "total_cost": 390650.0
+          },
+          "any_signal_ranked": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 308450.0,
+            "flagged": 236,
+            "flag_rate": 0.19932432432432431,
+            "tp": 175.0,
+            "fp": 61.0,
+            "fn": 426.0,
+            "tn": 522.0,
+            "fp_rate": 0.10463121783876501,
+            "fn_rate": 0.7088186356073212,
+            "contact_attempts": 236.0,
+            "contact_rate": 0.19932432432432431,
+            "total_cost": 316150.0
+          },
+          "two_signal_rules_ranked": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 306250.0,
+            "flagged": 236,
+            "flag_rate": 0.19932432432432431,
+            "tp": 177.0,
+            "fp": 59.0,
+            "fn": 424.0,
+            "tn": 524.0,
+            "fp_rate": 0.10120068610634649,
+            "fn_rate": 0.7054908485856906,
+            "contact_attempts": 236.0,
+            "contact_rate": 0.19932432432432431,
+            "total_cost": 313950.0
+          },
+          "served_capped": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 296350.0,
+            "flagged": 236,
+            "flag_rate": 0.19932432432432431,
+            "tp": 185.0,
+            "fp": 51.0,
+            "fn": 416.0,
+            "tn": 532.0,
+            "fp_rate": 0.08747855917667238,
+            "fn_rate": 0.6921797004991681,
+            "contact_attempts": 236.0,
+            "contact_rate": 0.19932432432432431,
+            "total_cost": 305150.0
+          },
+          "cod_guard_ml_ranked": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 296350.0,
+            "flagged": 236,
+            "flag_rate": 0.19932432432432431,
+            "tp": 185.0,
+            "fp": 51.0,
+            "fn": 416.0,
+            "tn": 532.0,
+            "fp_rate": 0.08747855917667238,
+            "fn_rate": 0.6921797004991681,
+            "contact_attempts": 236.0,
+            "contact_rate": 0.19932432432432431,
+            "total_cost": 305150.0
+          }
+        }
+      },
+      {
+        "budget_pct": 20,
+        "verification_charge": 100,
+        "reception": "no_usable_reply",
+        "observed_test_winners": [
+          "served_capped",
+          "cod_guard_ml_ranked"
+        ],
+        "validation_winners": [
+          "served_capped",
+          "cod_guard_ml_ranked"
+        ],
+        "policies": {
+          "ship_everything": {
+            "validation_utilization_pct": 0,
+            "validation_cost": 390650.0,
+            "flagged": 0,
+            "flag_rate": 0.0,
+            "tp": 0.0,
+            "fp": 0.0,
+            "fn": 601.0,
+            "tn": 583.0,
+            "fp_rate": 0.0,
+            "fn_rate": 1.0,
+            "contact_attempts": 0.0,
+            "contact_rate": 0.0,
+            "total_cost": 390650.0
+          },
+          "any_signal_ranked": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 320250.0,
+            "flagged": 236,
+            "flag_rate": 0.19932432432432431,
+            "tp": 175.0,
+            "fp": 61.0,
+            "fn": 426.0,
+            "tn": 522.0,
+            "fp_rate": 0.10463121783876501,
+            "fn_rate": 0.7088186356073212,
+            "contact_attempts": 236.0,
+            "contact_rate": 0.19932432432432431,
+            "total_cost": 327950.0
+          },
+          "two_signal_rules_ranked": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 318050.0,
+            "flagged": 236,
+            "flag_rate": 0.19932432432432431,
+            "tp": 177.0,
+            "fp": 59.0,
+            "fn": 424.0,
+            "tn": 524.0,
+            "fp_rate": 0.10120068610634649,
+            "fn_rate": 0.7054908485856906,
+            "contact_attempts": 236.0,
+            "contact_rate": 0.19932432432432431,
+            "total_cost": 325750.0
+          },
+          "served_capped": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 308150.0,
+            "flagged": 236,
+            "flag_rate": 0.19932432432432431,
+            "tp": 185.0,
+            "fp": 51.0,
+            "fn": 416.0,
+            "tn": 532.0,
+            "fp_rate": 0.08747855917667238,
+            "fn_rate": 0.6921797004991681,
+            "contact_attempts": 236.0,
+            "contact_rate": 0.19932432432432431,
+            "total_cost": 316950.0
+          },
+          "cod_guard_ml_ranked": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 308150.0,
+            "flagged": 236,
+            "flag_rate": 0.19932432432432431,
+            "tp": 185.0,
+            "fp": 51.0,
+            "fn": 416.0,
+            "tn": 532.0,
+            "fp_rate": 0.08747855917667238,
+            "fn_rate": 0.6921797004991681,
+            "contact_attempts": 236.0,
+            "contact_rate": 0.19932432432432431,
+            "total_cost": 316950.0
+          }
+        }
+      },
+      {
+        "budget_pct": 30,
+        "verification_charge": 0,
+        "reception": "no_usable_reply",
+        "observed_test_winners": [
+          "cod_guard_ml_ranked"
+        ],
+        "validation_winners": [
+          "cod_guard_ml_ranked"
+        ],
+        "policies": {
+          "ship_everything": {
+            "validation_utilization_pct": 0,
+            "validation_cost": 390650.0,
+            "flagged": 0,
+            "flag_rate": 0.0,
+            "tp": 0.0,
+            "fp": 0.0,
+            "fn": 601.0,
+            "tn": 583.0,
+            "fp_rate": 0.0,
+            "fn_rate": 1.0,
+            "contact_attempts": 0.0,
+            "contact_rate": 0.0,
+            "total_cost": 390650.0
+          },
+          "any_signal_ranked": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 265500.0,
+            "flagged": 355,
+            "flag_rate": 0.2998310810810811,
+            "tp": 250.0,
+            "fp": 105.0,
+            "fn": 351.0,
+            "tn": 478.0,
+            "fp_rate": 0.18010291595197256,
+            "fn_rate": 0.5840266222961731,
+            "contact_attempts": 355.0,
+            "contact_rate": 0.2998310810810811,
+            "total_cost": 275400.0
+          },
+          "two_signal_rules_ranked": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 278700.0,
+            "flagged": 355,
+            "flag_rate": 0.2998310810810811,
+            "tp": 242.0,
+            "fp": 113.0,
+            "fn": 359.0,
+            "tn": 470.0,
+            "fp_rate": 0.19382504288164665,
+            "fn_rate": 0.5973377703826955,
+            "contact_attempts": 355.0,
+            "contact_rate": 0.2998310810810811,
+            "total_cost": 284200.0
+          },
+          "served_capped": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 265700.0,
+            "flagged": 341,
+            "flag_rate": 0.28800675675675674,
+            "tp": 245.0,
+            "fp": 96.0,
+            "fn": 356.0,
+            "tn": 487.0,
+            "fp_rate": 0.1646655231560892,
+            "fn_rate": 0.5923460898502496,
+            "contact_attempts": 341.0,
+            "contact_rate": 0.28800675675675674,
+            "total_cost": 274600.0
+          },
+          "cod_guard_ml_ranked": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 263300.0,
+            "flagged": 355,
+            "flag_rate": 0.2998310810810811,
+            "tp": 252.0,
+            "fp": 103.0,
+            "fn": 349.0,
+            "tn": 480.0,
+            "fp_rate": 0.17667238421955403,
+            "fn_rate": 0.5806988352745425,
+            "contact_attempts": 355.0,
+            "contact_rate": 0.2998310810810811,
+            "total_cost": 273200.0
+          }
+        }
+      },
+      {
+        "budget_pct": 30,
+        "verification_charge": 50,
+        "reception": "no_usable_reply",
+        "observed_test_winners": [
+          "cod_guard_ml_ranked"
+        ],
+        "validation_winners": [
+          "cod_guard_ml_ranked"
+        ],
+        "policies": {
+          "ship_everything": {
+            "validation_utilization_pct": 0,
+            "validation_cost": 390650.0,
+            "flagged": 0,
+            "flag_rate": 0.0,
+            "tp": 0.0,
+            "fp": 0.0,
+            "fn": 601.0,
+            "tn": 583.0,
+            "fp_rate": 0.0,
+            "fn_rate": 1.0,
+            "contact_attempts": 0.0,
+            "contact_rate": 0.0,
+            "total_cost": 390650.0
+          },
+          "any_signal_ranked": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 283250.0,
+            "flagged": 355,
+            "flag_rate": 0.2998310810810811,
+            "tp": 250.0,
+            "fp": 105.0,
+            "fn": 351.0,
+            "tn": 478.0,
+            "fp_rate": 0.18010291595197256,
+            "fn_rate": 0.5840266222961731,
+            "contact_attempts": 355.0,
+            "contact_rate": 0.2998310810810811,
+            "total_cost": 293150.0
+          },
+          "two_signal_rules_ranked": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 296450.0,
+            "flagged": 355,
+            "flag_rate": 0.2998310810810811,
+            "tp": 242.0,
+            "fp": 113.0,
+            "fn": 359.0,
+            "tn": 470.0,
+            "fp_rate": 0.19382504288164665,
+            "fn_rate": 0.5973377703826955,
+            "contact_attempts": 355.0,
+            "contact_rate": 0.2998310810810811,
+            "total_cost": 301950.0
+          },
+          "served_capped": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 283350.0,
+            "flagged": 341,
+            "flag_rate": 0.28800675675675674,
+            "tp": 245.0,
+            "fp": 96.0,
+            "fn": 356.0,
+            "tn": 487.0,
+            "fp_rate": 0.1646655231560892,
+            "fn_rate": 0.5923460898502496,
+            "contact_attempts": 341.0,
+            "contact_rate": 0.28800675675675674,
+            "total_cost": 291650.0
+          },
+          "cod_guard_ml_ranked": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 281050.0,
+            "flagged": 355,
+            "flag_rate": 0.2998310810810811,
+            "tp": 252.0,
+            "fp": 103.0,
+            "fn": 349.0,
+            "tn": 480.0,
+            "fp_rate": 0.17667238421955403,
+            "fn_rate": 0.5806988352745425,
+            "contact_attempts": 355.0,
+            "contact_rate": 0.2998310810810811,
+            "total_cost": 290950.0
+          }
+        }
+      },
+      {
+        "budget_pct": 30,
+        "verification_charge": 100,
+        "reception": "no_usable_reply",
+        "observed_test_winners": [
+          "served_capped",
+          "cod_guard_ml_ranked"
+        ],
+        "validation_winners": [
+          "cod_guard_ml_ranked"
+        ],
+        "policies": {
+          "ship_everything": {
+            "validation_utilization_pct": 0,
+            "validation_cost": 390650.0,
+            "flagged": 0,
+            "flag_rate": 0.0,
+            "tp": 0.0,
+            "fp": 0.0,
+            "fn": 601.0,
+            "tn": 583.0,
+            "fp_rate": 0.0,
+            "fn_rate": 1.0,
+            "contact_attempts": 0.0,
+            "contact_rate": 0.0,
+            "total_cost": 390650.0
+          },
+          "any_signal_ranked": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 301000.0,
+            "flagged": 355,
+            "flag_rate": 0.2998310810810811,
+            "tp": 250.0,
+            "fp": 105.0,
+            "fn": 351.0,
+            "tn": 478.0,
+            "fp_rate": 0.18010291595197256,
+            "fn_rate": 0.5840266222961731,
+            "contact_attempts": 355.0,
+            "contact_rate": 0.2998310810810811,
+            "total_cost": 310900.0
+          },
+          "two_signal_rules_ranked": {
+            "validation_utilization_pct": 75,
+            "validation_cost": 311450.0,
+            "flagged": 266,
+            "flag_rate": 0.22466216216216217,
+            "tp": 197.0,
+            "fp": 69.0,
+            "fn": 404.0,
+            "tn": 514.0,
+            "fp_rate": 0.1183533447684391,
+            "fn_rate": 0.6722129783693843,
+            "contact_attempts": 266.0,
+            "contact_rate": 0.22466216216216217,
+            "total_cost": 320250.0
+          },
+          "served_capped": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 301000.0,
+            "flagged": 341,
+            "flag_rate": 0.28800675675675674,
+            "tp": 245.0,
+            "fp": 96.0,
+            "fn": 356.0,
+            "tn": 487.0,
+            "fp_rate": 0.1646655231560892,
+            "fn_rate": 0.5923460898502496,
+            "contact_attempts": 341.0,
+            "contact_rate": 0.28800675675675674,
+            "total_cost": 308700.0
+          },
+          "cod_guard_ml_ranked": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 298800.0,
+            "flagged": 355,
+            "flag_rate": 0.2998310810810811,
+            "tp": 252.0,
+            "fp": 103.0,
+            "fn": 349.0,
+            "tn": 480.0,
+            "fp_rate": 0.17667238421955403,
+            "fn_rate": 0.5806988352745425,
+            "contact_attempts": 355.0,
+            "contact_rate": 0.2998310810810811,
+            "total_cost": 308700.0
+          }
+        }
+      },
+      {
+        "budget_pct": 10,
+        "verification_charge": 0,
+        "reception": "flags_only_mid",
+        "observed_test_winners": [
+          "served_capped",
+          "cod_guard_ml_ranked"
+        ],
+        "validation_winners": [
+          "served_capped",
+          "cod_guard_ml_ranked"
+        ],
+        "policies": {
+          "ship_everything": {
+            "validation_utilization_pct": 0,
+            "validation_cost": 390650.0,
+            "flagged": 0,
+            "flag_rate": 0.0,
+            "tp": 0.0,
+            "fp": 0.0,
+            "fn": 601.0,
+            "tn": 583.0,
+            "fp_rate": 0.0,
+            "fn_rate": 1.0,
+            "contact_attempts": 0.0,
+            "contact_rate": 0.0,
+            "total_cost": 390650.0
+          },
+          "any_signal_ranked": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 332934.99999999994,
+            "flagged": 118,
+            "flag_rate": 0.09966216216216216,
+            "tp": 87.9,
+            "fp": 12.799999999999999,
+            "fn": 513.1,
+            "tn": 570.2,
+            "fp_rate": 0.021955403087478557,
+            "fn_rate": 0.8537437603993345,
+            "contact_attempts": 118.0,
+            "contact_rate": 0.09966216216216216,
+            "total_cost": 339275.0
+          },
+          "two_signal_rules_ranked": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 332934.99999999994,
+            "flagged": 118,
+            "flag_rate": 0.09966216216216216,
+            "tp": 87.9,
+            "fp": 12.799999999999999,
+            "fn": 513.1,
+            "tn": 570.2,
+            "fp_rate": 0.021955403087478557,
+            "fn_rate": 0.8537437603993345,
+            "contact_attempts": 118.0,
+            "contact_rate": 0.09966216216216216,
+            "total_cost": 339275.0
+          },
+          "served_capped": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 331350.0,
+            "flagged": 118,
+            "flag_rate": 0.09966216216216216,
+            "tp": 94.1,
+            "fp": 9.8,
+            "fn": 506.9,
+            "tn": 573.2,
+            "fp_rate": 0.016809605488850774,
+            "fn_rate": 0.8434276206322795,
+            "contact_attempts": 118.0,
+            "contact_rate": 0.09966216216216216,
+            "total_cost": 333895.0
+          },
+          "cod_guard_ml_ranked": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 331350.0,
+            "flagged": 118,
+            "flag_rate": 0.09966216216216216,
+            "tp": 94.1,
+            "fp": 9.8,
+            "fn": 506.9,
+            "tn": 573.2,
+            "fp_rate": 0.016809605488850774,
+            "fn_rate": 0.8434276206322795,
+            "contact_attempts": 118.0,
+            "contact_rate": 0.09966216216216216,
+            "total_cost": 333895.0
+          }
+        }
+      },
+      {
+        "budget_pct": 10,
+        "verification_charge": 50,
+        "reception": "flags_only_mid",
+        "observed_test_winners": [
+          "served_capped",
+          "cod_guard_ml_ranked"
+        ],
+        "validation_winners": [
+          "served_capped",
+          "cod_guard_ml_ranked"
+        ],
+        "policies": {
+          "ship_everything": {
+            "validation_utilization_pct": 0,
+            "validation_cost": 390650.0,
+            "flagged": 0,
+            "flag_rate": 0.0,
+            "tp": 0.0,
+            "fp": 0.0,
+            "fn": 601.0,
+            "tn": 583.0,
+            "fp_rate": 0.0,
+            "fn_rate": 1.0,
+            "contact_attempts": 0.0,
+            "contact_rate": 0.0,
+            "total_cost": 390650.0
+          },
+          "any_signal_ranked": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 338834.99999999994,
+            "flagged": 118,
+            "flag_rate": 0.09966216216216216,
+            "tp": 87.9,
+            "fp": 12.799999999999999,
+            "fn": 513.1,
+            "tn": 570.2,
+            "fp_rate": 0.021955403087478557,
+            "fn_rate": 0.8537437603993345,
+            "contact_attempts": 118.0,
+            "contact_rate": 0.09966216216216216,
+            "total_cost": 345175.0
+          },
+          "two_signal_rules_ranked": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 338834.99999999994,
+            "flagged": 118,
+            "flag_rate": 0.09966216216216216,
+            "tp": 87.9,
+            "fp": 12.799999999999999,
+            "fn": 513.1,
+            "tn": 570.2,
+            "fp_rate": 0.021955403087478557,
+            "fn_rate": 0.8537437603993345,
+            "contact_attempts": 118.0,
+            "contact_rate": 0.09966216216216216,
+            "total_cost": 345175.0
+          },
+          "served_capped": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 337250.0,
+            "flagged": 118,
+            "flag_rate": 0.09966216216216216,
+            "tp": 94.1,
+            "fp": 9.8,
+            "fn": 506.9,
+            "tn": 573.2,
+            "fp_rate": 0.016809605488850774,
+            "fn_rate": 0.8434276206322795,
+            "contact_attempts": 118.0,
+            "contact_rate": 0.09966216216216216,
+            "total_cost": 339795.0
+          },
+          "cod_guard_ml_ranked": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 337250.0,
+            "flagged": 118,
+            "flag_rate": 0.09966216216216216,
+            "tp": 94.1,
+            "fp": 9.8,
+            "fn": 506.9,
+            "tn": 573.2,
+            "fp_rate": 0.016809605488850774,
+            "fn_rate": 0.8434276206322795,
+            "contact_attempts": 118.0,
+            "contact_rate": 0.09966216216216216,
+            "total_cost": 339795.0
+          }
+        }
+      },
+      {
+        "budget_pct": 10,
+        "verification_charge": 100,
+        "reception": "flags_only_mid",
+        "observed_test_winners": [
+          "served_capped",
+          "cod_guard_ml_ranked"
+        ],
+        "validation_winners": [
+          "served_capped",
+          "cod_guard_ml_ranked"
+        ],
+        "policies": {
+          "ship_everything": {
+            "validation_utilization_pct": 0,
+            "validation_cost": 390650.0,
+            "flagged": 0,
+            "flag_rate": 0.0,
+            "tp": 0.0,
+            "fp": 0.0,
+            "fn": 601.0,
+            "tn": 583.0,
+            "fp_rate": 0.0,
+            "fn_rate": 1.0,
+            "contact_attempts": 0.0,
+            "contact_rate": 0.0,
+            "total_cost": 390650.0
+          },
+          "any_signal_ranked": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 344734.99999999994,
+            "flagged": 118,
+            "flag_rate": 0.09966216216216216,
+            "tp": 87.9,
+            "fp": 12.799999999999999,
+            "fn": 513.1,
+            "tn": 570.2,
+            "fp_rate": 0.021955403087478557,
+            "fn_rate": 0.8537437603993345,
+            "contact_attempts": 118.0,
+            "contact_rate": 0.09966216216216216,
+            "total_cost": 351075.0
+          },
+          "two_signal_rules_ranked": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 344734.99999999994,
+            "flagged": 118,
+            "flag_rate": 0.09966216216216216,
+            "tp": 87.9,
+            "fp": 12.799999999999999,
+            "fn": 513.1,
+            "tn": 570.2,
+            "fp_rate": 0.021955403087478557,
+            "fn_rate": 0.8537437603993345,
+            "contact_attempts": 118.0,
+            "contact_rate": 0.09966216216216216,
+            "total_cost": 351075.0
+          },
+          "served_capped": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 343150.0,
+            "flagged": 118,
+            "flag_rate": 0.09966216216216216,
+            "tp": 94.1,
+            "fp": 9.8,
+            "fn": 506.9,
+            "tn": 573.2,
+            "fp_rate": 0.016809605488850774,
+            "fn_rate": 0.8434276206322795,
+            "contact_attempts": 118.0,
+            "contact_rate": 0.09966216216216216,
+            "total_cost": 345695.0
+          },
+          "cod_guard_ml_ranked": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 343150.0,
+            "flagged": 118,
+            "flag_rate": 0.09966216216216216,
+            "tp": 94.1,
+            "fp": 9.8,
+            "fn": 506.9,
+            "tn": 573.2,
+            "fp_rate": 0.016809605488850774,
+            "fn_rate": 0.8434276206322795,
+            "contact_attempts": 118.0,
+            "contact_rate": 0.09966216216216216,
+            "total_cost": 345695.0
+          }
+        }
+      },
+      {
+        "budget_pct": 20,
+        "verification_charge": 0,
+        "reception": "flags_only_mid",
+        "observed_test_winners": [
+          "served_capped",
+          "cod_guard_ml_ranked"
+        ],
+        "validation_winners": [
+          "served_capped",
+          "cod_guard_ml_ranked"
+        ],
+        "policies": {
+          "ship_everything": {
+            "validation_utilization_pct": 0,
+            "validation_cost": 390650.0,
+            "flagged": 0,
+            "flag_rate": 0.0,
+            "tp": 0.0,
+            "fp": 0.0,
+            "fn": 601.0,
+            "tn": 583.0,
+            "fp_rate": 0.0,
+            "fn_rate": 1.0,
+            "contact_attempts": 0.0,
+            "contact_rate": 0.0,
+            "total_cost": 390650.0
+          },
+          "any_signal_ranked": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 291985.0,
+            "flagged": 236,
+            "flag_rate": 0.19932432432432431,
+            "tp": 162.8,
+            "fp": 31.6,
+            "fn": 438.2,
+            "tn": 551.4,
+            "fp_rate": 0.054202401372212695,
+            "fn_rate": 0.7291181364392678,
+            "contact_attempts": 236.0,
+            "contact_rate": 0.19932432432432431,
+            "total_cost": 299050.0
+          },
+          "two_signal_rules_ranked": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 290389.99999999994,
+            "flagged": 236,
+            "flag_rate": 0.19932432432432431,
+            "tp": 164.5,
+            "fp": 30.800000000000004,
+            "fn": 436.5,
+            "tn": 552.1999999999999,
+            "fp_rate": 0.0528301886792453,
+            "fn_rate": 0.7262895174708819,
+            "contact_attempts": 236.0,
+            "contact_rate": 0.19932432432432431,
+            "total_cost": 297585.0
+          },
+          "served_capped": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 283634.99999999994,
+            "flagged": 236,
+            "flag_rate": 0.19932432432432431,
+            "tp": 171.9,
+            "fp": 25.8,
+            "fn": 429.1,
+            "tn": 557.2,
+            "fp_rate": 0.04425385934819897,
+            "fn_rate": 0.7139767054908486,
+            "contact_attempts": 236.0,
+            "contact_rate": 0.19932432432432431,
+            "total_cost": 290525.0
+          },
+          "cod_guard_ml_ranked": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 283634.99999999994,
+            "flagged": 236,
+            "flag_rate": 0.19932432432432431,
+            "tp": 171.9,
+            "fp": 25.8,
+            "fn": 429.1,
+            "tn": 557.2,
+            "fp_rate": 0.04425385934819897,
+            "fn_rate": 0.7139767054908486,
+            "contact_attempts": 236.0,
+            "contact_rate": 0.19932432432432431,
+            "total_cost": 290525.0
+          }
+        }
+      },
+      {
+        "budget_pct": 20,
+        "verification_charge": 50,
+        "reception": "flags_only_mid",
+        "observed_test_winners": [
+          "served_capped",
+          "cod_guard_ml_ranked"
+        ],
+        "validation_winners": [
+          "served_capped",
+          "cod_guard_ml_ranked"
+        ],
+        "policies": {
+          "ship_everything": {
+            "validation_utilization_pct": 0,
+            "validation_cost": 390650.0,
+            "flagged": 0,
+            "flag_rate": 0.0,
+            "tp": 0.0,
+            "fp": 0.0,
+            "fn": 601.0,
+            "tn": 583.0,
+            "fp_rate": 0.0,
+            "fn_rate": 1.0,
+            "contact_attempts": 0.0,
+            "contact_rate": 0.0,
+            "total_cost": 390650.0
+          },
+          "any_signal_ranked": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 303785.0,
+            "flagged": 236,
+            "flag_rate": 0.19932432432432431,
+            "tp": 162.8,
+            "fp": 31.6,
+            "fn": 438.2,
+            "tn": 551.4,
+            "fp_rate": 0.054202401372212695,
+            "fn_rate": 0.7291181364392678,
+            "contact_attempts": 236.0,
+            "contact_rate": 0.19932432432432431,
+            "total_cost": 310850.0
+          },
+          "two_signal_rules_ranked": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 302189.99999999994,
+            "flagged": 236,
+            "flag_rate": 0.19932432432432431,
+            "tp": 164.5,
+            "fp": 30.800000000000004,
+            "fn": 436.5,
+            "tn": 552.1999999999999,
+            "fp_rate": 0.0528301886792453,
+            "fn_rate": 0.7262895174708819,
+            "contact_attempts": 236.0,
+            "contact_rate": 0.19932432432432431,
+            "total_cost": 309385.0
+          },
+          "served_capped": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 295434.99999999994,
+            "flagged": 236,
+            "flag_rate": 0.19932432432432431,
+            "tp": 171.9,
+            "fp": 25.8,
+            "fn": 429.1,
+            "tn": 557.2,
+            "fp_rate": 0.04425385934819897,
+            "fn_rate": 0.7139767054908486,
+            "contact_attempts": 236.0,
+            "contact_rate": 0.19932432432432431,
+            "total_cost": 302325.0
+          },
+          "cod_guard_ml_ranked": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 295434.99999999994,
+            "flagged": 236,
+            "flag_rate": 0.19932432432432431,
+            "tp": 171.9,
+            "fp": 25.8,
+            "fn": 429.1,
+            "tn": 557.2,
+            "fp_rate": 0.04425385934819897,
+            "fn_rate": 0.7139767054908486,
+            "contact_attempts": 236.0,
+            "contact_rate": 0.19932432432432431,
+            "total_cost": 302325.0
+          }
+        }
+      },
+      {
+        "budget_pct": 20,
+        "verification_charge": 100,
+        "reception": "flags_only_mid",
+        "observed_test_winners": [
+          "served_capped",
+          "cod_guard_ml_ranked"
+        ],
+        "validation_winners": [
+          "served_capped",
+          "cod_guard_ml_ranked"
+        ],
+        "policies": {
+          "ship_everything": {
+            "validation_utilization_pct": 0,
+            "validation_cost": 390650.0,
+            "flagged": 0,
+            "flag_rate": 0.0,
+            "tp": 0.0,
+            "fp": 0.0,
+            "fn": 601.0,
+            "tn": 583.0,
+            "fp_rate": 0.0,
+            "fn_rate": 1.0,
+            "contact_attempts": 0.0,
+            "contact_rate": 0.0,
+            "total_cost": 390650.0
+          },
+          "any_signal_ranked": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 315585.0,
+            "flagged": 236,
+            "flag_rate": 0.19932432432432431,
+            "tp": 162.8,
+            "fp": 31.6,
+            "fn": 438.2,
+            "tn": 551.4,
+            "fp_rate": 0.054202401372212695,
+            "fn_rate": 0.7291181364392678,
+            "contact_attempts": 236.0,
+            "contact_rate": 0.19932432432432431,
+            "total_cost": 322650.0
+          },
+          "two_signal_rules_ranked": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 313989.99999999994,
+            "flagged": 236,
+            "flag_rate": 0.19932432432432431,
+            "tp": 164.5,
+            "fp": 30.800000000000004,
+            "fn": 436.5,
+            "tn": 552.1999999999999,
+            "fp_rate": 0.0528301886792453,
+            "fn_rate": 0.7262895174708819,
+            "contact_attempts": 236.0,
+            "contact_rate": 0.19932432432432431,
+            "total_cost": 321185.0
+          },
+          "served_capped": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 307234.99999999994,
+            "flagged": 236,
+            "flag_rate": 0.19932432432432431,
+            "tp": 171.9,
+            "fp": 25.8,
+            "fn": 429.1,
+            "tn": 557.2,
+            "fp_rate": 0.04425385934819897,
+            "fn_rate": 0.7139767054908486,
+            "contact_attempts": 236.0,
+            "contact_rate": 0.19932432432432431,
+            "total_cost": 314125.0
+          },
+          "cod_guard_ml_ranked": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 307234.99999999994,
+            "flagged": 236,
+            "flag_rate": 0.19932432432432431,
+            "tp": 171.9,
+            "fp": 25.8,
+            "fn": 429.1,
+            "tn": 557.2,
+            "fp_rate": 0.04425385934819897,
+            "fn_rate": 0.7139767054908486,
+            "contact_attempts": 236.0,
+            "contact_rate": 0.19932432432432431,
+            "total_cost": 314125.0
+          }
+        }
+      },
+      {
+        "budget_pct": 30,
+        "verification_charge": 0,
+        "reception": "flags_only_mid",
+        "observed_test_winners": [
+          "cod_guard_ml_ranked"
+        ],
+        "validation_winners": [
+          "cod_guard_ml_ranked"
+        ],
+        "policies": {
+          "ship_everything": {
+            "validation_utilization_pct": 0,
+            "validation_cost": 390650.0,
+            "flagged": 0,
+            "flag_rate": 0.0,
+            "tp": 0.0,
+            "fp": 0.0,
+            "fn": 601.0,
+            "tn": 583.0,
+            "fp_rate": 0.0,
+            "fn_rate": 1.0,
+            "contact_attempts": 0.0,
+            "contact_rate": 0.0,
+            "total_cost": 390650.0
+          },
+          "any_signal_ranked": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 256364.99999999994,
+            "flagged": 355,
+            "flag_rate": 0.2998310810810811,
+            "tp": 231.3,
+            "fp": 52.199999999999996,
+            "fn": 369.7,
+            "tn": 530.8,
+            "fp_rate": 0.0895368782161235,
+            "fn_rate": 0.6151414309484193,
+            "contact_attempts": 355.0,
+            "contact_rate": 0.2998310810810811,
+            "total_cost": 263795.0
+          },
+          "two_signal_rules_ranked": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 266865.0,
+            "flagged": 355,
+            "flag_rate": 0.2998310810810811,
+            "tp": 223.7,
+            "fp": 57.2,
+            "fn": 377.29999999999995,
+            "tn": 525.8,
+            "fp_rate": 0.09811320754716982,
+            "fn_rate": 0.6277870216306156,
+            "contact_attempts": 355.0,
+            "contact_rate": 0.2998310810810811,
+            "total_cost": 270985.0
+          },
+          "served_capped": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 255119.99999999994,
+            "flagged": 341,
+            "flag_rate": 0.28800675675675674,
+            "tp": 226.2,
+            "fp": 45.6,
+            "fn": 374.8,
+            "tn": 537.4,
+            "fp_rate": 0.07821612349914236,
+            "fn_rate": 0.6236272878535774,
+            "contact_attempts": 341.0,
+            "contact_rate": 0.28800675675675674,
+            "total_cost": 264140.0
+          },
+          "cod_guard_ml_ranked": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 252980.00000000003,
+            "flagged": 355,
+            "flag_rate": 0.2998310810810811,
+            "tp": 232.4,
+            "fp": 47.8,
+            "fn": 368.6,
+            "tn": 535.2,
+            "fp_rate": 0.08198970840480274,
+            "fn_rate": 0.6133111480865225,
+            "contact_attempts": 355.0,
+            "contact_rate": 0.2998310810810811,
+            "total_cost": 261100.00000000003
+          }
+        }
+      },
+      {
+        "budget_pct": 30,
+        "verification_charge": 50,
+        "reception": "flags_only_mid",
+        "observed_test_winners": [
+          "cod_guard_ml_ranked"
+        ],
+        "validation_winners": [
+          "cod_guard_ml_ranked"
+        ],
+        "policies": {
+          "ship_everything": {
+            "validation_utilization_pct": 0,
+            "validation_cost": 390650.0,
+            "flagged": 0,
+            "flag_rate": 0.0,
+            "tp": 0.0,
+            "fp": 0.0,
+            "fn": 601.0,
+            "tn": 583.0,
+            "fp_rate": 0.0,
+            "fn_rate": 1.0,
+            "contact_attempts": 0.0,
+            "contact_rate": 0.0,
+            "total_cost": 390650.0
+          },
+          "any_signal_ranked": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 274114.99999999994,
+            "flagged": 355,
+            "flag_rate": 0.2998310810810811,
+            "tp": 231.3,
+            "fp": 52.199999999999996,
+            "fn": 369.7,
+            "tn": 530.8,
+            "fp_rate": 0.0895368782161235,
+            "fn_rate": 0.6151414309484193,
+            "contact_attempts": 355.0,
+            "contact_rate": 0.2998310810810811,
+            "total_cost": 281545.0
+          },
+          "two_signal_rules_ranked": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 284615.0,
+            "flagged": 355,
+            "flag_rate": 0.2998310810810811,
+            "tp": 223.7,
+            "fp": 57.2,
+            "fn": 377.29999999999995,
+            "tn": 525.8,
+            "fp_rate": 0.09811320754716982,
+            "fn_rate": 0.6277870216306156,
+            "contact_attempts": 355.0,
+            "contact_rate": 0.2998310810810811,
+            "total_cost": 288735.0
+          },
+          "served_capped": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 272769.99999999994,
+            "flagged": 341,
+            "flag_rate": 0.28800675675675674,
+            "tp": 226.2,
+            "fp": 45.6,
+            "fn": 374.8,
+            "tn": 537.4,
+            "fp_rate": 0.07821612349914236,
+            "fn_rate": 0.6236272878535774,
+            "contact_attempts": 341.0,
+            "contact_rate": 0.28800675675675674,
+            "total_cost": 281190.0
+          },
+          "cod_guard_ml_ranked": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 270730.0,
+            "flagged": 355,
+            "flag_rate": 0.2998310810810811,
+            "tp": 232.4,
+            "fp": 47.8,
+            "fn": 368.6,
+            "tn": 535.2,
+            "fp_rate": 0.08198970840480274,
+            "fn_rate": 0.6133111480865225,
+            "contact_attempts": 355.0,
+            "contact_rate": 0.2998310810810811,
+            "total_cost": 278850.0
+          }
+        }
+      },
+      {
+        "budget_pct": 30,
+        "verification_charge": 100,
+        "reception": "flags_only_mid",
+        "observed_test_winners": [
+          "cod_guard_ml_ranked"
+        ],
+        "validation_winners": [
+          "cod_guard_ml_ranked"
+        ],
+        "policies": {
+          "ship_everything": {
+            "validation_utilization_pct": 0,
+            "validation_cost": 390650.0,
+            "flagged": 0,
+            "flag_rate": 0.0,
+            "tp": 0.0,
+            "fp": 0.0,
+            "fn": 601.0,
+            "tn": 583.0,
+            "fp_rate": 0.0,
+            "fn_rate": 1.0,
+            "contact_attempts": 0.0,
+            "contact_rate": 0.0,
+            "total_cost": 390650.0
+          },
+          "any_signal_ranked": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 291864.99999999994,
+            "flagged": 355,
+            "flag_rate": 0.2998310810810811,
+            "tp": 231.3,
+            "fp": 52.199999999999996,
+            "fn": 369.7,
+            "tn": 530.8,
+            "fp_rate": 0.0895368782161235,
+            "fn_rate": 0.6151414309484193,
+            "contact_attempts": 355.0,
+            "contact_rate": 0.2998310810810811,
+            "total_cost": 299295.0
+          },
+          "two_signal_rules_ranked": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 302365.0,
+            "flagged": 355,
+            "flag_rate": 0.2998310810810811,
+            "tp": 223.7,
+            "fp": 57.2,
+            "fn": 377.29999999999995,
+            "tn": 525.8,
+            "fp_rate": 0.09811320754716982,
+            "fn_rate": 0.6277870216306156,
+            "contact_attempts": 355.0,
+            "contact_rate": 0.2998310810810811,
+            "total_cost": 306485.0
+          },
+          "served_capped": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 290419.99999999994,
+            "flagged": 341,
+            "flag_rate": 0.28800675675675674,
+            "tp": 226.2,
+            "fp": 45.6,
+            "fn": 374.8,
+            "tn": 537.4,
+            "fp_rate": 0.07821612349914236,
+            "fn_rate": 0.6236272878535774,
+            "contact_attempts": 341.0,
+            "contact_rate": 0.28800675675675674,
+            "total_cost": 298240.0
+          },
+          "cod_guard_ml_ranked": {
+            "validation_utilization_pct": 100,
+            "validation_cost": 288480.0,
+            "flagged": 355,
+            "flag_rate": 0.2998310810810811,
+            "tp": 232.4,
+            "fp": 47.8,
+            "fn": 368.6,
+            "tn": 535.2,
+            "fp_rate": 0.08198970840480274,
+            "fn_rate": 0.6133111480865225,
+            "contact_attempts": 355.0,
+            "contact_rate": 0.2998310810810811,
+            "total_cost": 296600.0
+          }
+        }
+      }
+    ],
+    "predictability": {
+      "validation": {
+        "flag_count": 353,
+        "flag_rate": 0.2981418918918919,
+        "served_expected_recall": 0.4106344649498046,
+        "oracle_two_signal_expected_recall": 0.4157562872891907,
+        "oracle_unrestricted_expected_recall": 0.4311710758951842,
+        "ordinary_noise_variance_share": 0.8861520025635724,
+        "ordinary_signal_variance_share": 0.1138479974364276,
+        "ordinary_oracle_at_20_pct_recall": 0.2864451800078584,
+        "ordinary_outreach_rate": 0.19961051606621227,
+        "strata": {
+          "ordinary": {
+            "orders": 1027,
+            "observed_failures": 464,
+            "observed_fn": 340,
+            "expected_failures": 485.20860880684677,
+            "expected_fn": 359.2220995518793
+          },
+          "latent_cluster": {
+            "orders": 157,
+            "observed_failures": 137,
+            "observed_fn": 3,
+            "expected_failures": 132.91663705357976,
+            "expected_fn": 5.079616702684575
+          }
+        }
+      },
+      "test": {
+        "flag_count": 341,
+        "flag_rate": 0.28800675675675674,
+        "served_expected_recall": 0.4056953629218045,
+        "oracle_two_signal_expected_recall": 0.41059983153566815,
+        "oracle_unrestricted_expected_recall": 0.4239873782510723,
+        "ordinary_noise_variance_share": 0.8878168682140235,
+        "ordinary_signal_variance_share": 0.1121831317859765,
+        "ordinary_oracle_at_20_pct_recall": 0.28748534855717073,
+        "ordinary_outreach_rate": 0.19921875,
+        "strata": {
+          "ordinary": {
+            "orders": 1024,
+            "observed_failures": 467,
+            "observed_fn": 352,
+            "expected_failures": 471.31146657152857,
+            "expected_fn": 357.2185725827359
+          },
+          "latent_cluster": {
+            "orders": 160,
+            "observed_failures": 134,
+            "observed_fn": 4,
+            "expected_failures": 135.45644540492202,
+            "expected_fn": 3.38641113512305
+          }
+        }
+      }
+    }
+  }
 }
