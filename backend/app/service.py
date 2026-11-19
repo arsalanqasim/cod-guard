@@ -16,12 +16,15 @@ import pandas as pd
 from risk_engine import assess as rule_assess
 from verification import parse_reply, apply_reply, opening_message
 from storage import read_state, transaction
+from artifacts import active_version
+from jobs import JobQueue
 
 ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = Path(os.environ.get("COD_GUARD_DATA_DIR", ROOT / "data"))
 STATE_PATH = DATA_DIR / "state.json"
 MODEL_PATH = Path(os.environ.get("COD_GUARD_MODEL_PATH", ROOT / "backend/app/model.pkl"))
 OUTCOMES = ("delivered", "returned", "refused")
+RETRAIN_JOBS = JobQueue(workers=1, capacity=1)
 
 
 def _load_state():
@@ -37,11 +40,16 @@ def _cached_bundle(path, modified_ns, size):
     return bundle
 
 
-def _bundle():
-    if not MODEL_PATH.exists():
+def _read_bundle(path):
+    if not path.exists():
         return None
-    stat = MODEL_PATH.stat()
-    return _cached_bundle(str(MODEL_PATH), stat.st_mtime_ns, stat.st_size)
+    stat = path.stat()
+    return _cached_bundle(str(path), stat.st_mtime_ns, stat.st_size)
+
+
+def _bundle():
+    version = active_version(MODEL_PATH)
+    return _read_bundle(version / "model.pkl" if version else MODEL_PATH)
 
 
 def model_status():
@@ -165,6 +173,11 @@ def live_metrics():
 
 
 def latest_evaluation():
+    version = active_version(MODEL_PATH)
+    if version is not None:
+        bundle = _read_bundle(version / "model.pkl")
+        report = json.loads((version / "evaluation.json").read_text(encoding="utf-8"))
+        return report if bundle and report.get("model_id") == bundle.get("model_id") else None
     status = model_status()
     for path in [STATE_PATH.parent / "latest_evaluation.json", ROOT / "data/evaluation.json"]:
         if path.exists():
@@ -187,29 +200,23 @@ def learning_status():
 
 
 def retrain_model():
-    """Consume marked demo outcomes; keep validation/test identities fixed.
-
-    The transaction prevents simultaneous retraining jobs from publishing
-    competing versions. Feedback arriving later remains pending for the next run.
-    """
-    from train_model import fit_and_evaluate, publish
+    """Fit from a state snapshot. Feedback arriving later remains pending."""
+    from train_model import fit_and_evaluate, publish, render_report
     orders = load_orders()
     known = set(orders["order_id"])
-    with transaction(STATE_PATH) as state:
-        feedback = {key: value for key, value in sorted(state["outcomes"].items())
-                    if key in known and value in OUTCOMES}
-        current = _bundle()
-        trained = (current or {}).get("feedback", {})
-        if not feedback or feedback == trained:
-            raise ValueError("No new or corrected demo outcomes to learn from")
-        observed = orders[orders["order_id"].isin(feedback)].copy()
-        observed["label_failed"] = observed["order_id"].map(lambda key: int(feedback[key] != "delivered"))
-        benchmark = pd.read_csv(ROOT / "data/benchmark_orders.csv")
-        bundle, report = fit_and_evaluate(benchmark, observed, feedback,
-                                         previous_version=(current or {}).get("version", 0))
-        publish(bundle, report, MODEL_PATH, STATE_PATH.parent / "latest_evaluation.json")
-        state["training"] = {"model_id": bundle["model_id"], "feedback": feedback,
-                             "trained_at": bundle["trained_at"]}
+    state = _load_state()
+    feedback = {key: value for key, value in sorted(state["outcomes"].items())
+                if key in known and value in OUTCOMES}
+    version = active_version(MODEL_PATH)
+    current = _read_bundle(version / "model.pkl" if version else MODEL_PATH) or {}
+    if not feedback or feedback == current.get("feedback", {}):
+        raise ValueError("No new or corrected demo outcomes to learn from")
+    observed = orders[orders["order_id"].isin(feedback)].copy()
+    observed["label_failed"] = observed["order_id"].map(lambda key: int(feedback[key] != "delivered"))
+    benchmark = pd.read_csv(ROOT / "data/benchmark_orders.csv")
+    bundle, report = fit_and_evaluate(benchmark, observed, feedback,
+                                      previous_version=current.get("version", 0))
+    publish(bundle, report, render_report(report), MODEL_PATH, expected=version)
     return {"ok": True, "model_id": bundle["model_id"], "version": bundle["version"],
             "feedback_count": len(feedback), "training_rows": report["split"]["training"],
             "test": report["chosen"], "source": "Marked SYNTHETIC demo outcomes"}

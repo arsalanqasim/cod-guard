@@ -157,3 +157,21 @@ against the fixed generator. Model inputs and serialized weights contain
 only the existing features. The routine outcome-retraining report continues
 to describe its own model and split. The baseline JSON contains the full
 Round 2 tables.
+
+## Round 4 addendum
+
+### 2. Model publication and retraining
+
+The active pointer selects one immutable directory containing the model, JSON
+evaluation and rendered report. Failed writes leave the old pointer and pending
+feedback intact. Publishers compare the version they trained against under a
+separate short lock. Fitting uses an order-state snapshot while writes continue.
+The API and dashboard expose queued, running, done and failed states. Job status
+is held by the process that accepted it and is lost on restart. Serving resumes
+from the last activated version on disk.
+
+`test_every_publish_write_failure_keeps_old_pair_active_and_feedback_pending`
+injects each artifact or pointer write failure. The learning integration test
+checks a successful publish and restart. `test_background_training_leaves_order_writes_available`
+pauses the fit, verifies API status and duplicate-job rejection, then commits a
+reply before the fit resumes and fails.

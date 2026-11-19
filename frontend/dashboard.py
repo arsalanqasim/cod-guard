@@ -11,6 +11,7 @@ import streamlit as st
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "backend/app"))
 import service
+from jobs import QueueFull
 from verification import transcribe_voice_note, parse_reply
 
 st.set_page_config(page_title="COD-Guard", page_icon="🛡️", layout="wide")
@@ -248,15 +249,36 @@ with tab_metrics:
     st.subheader("Learn from marked outcomes")
     st.write(f"**{learning['recorded']} recorded · {learning['trained_outcomes']} in the model · {learning['pending']} pending**")
     st.caption("Retraining consumes marked demo outcomes and publishes a new version. The evaluation holdout stays fixed; metrics may improve or worsen.")
-    if st.button("Retrain from marked outcomes", disabled=learning["pending"] == 0, key="retrain", type="primary"):
+    active_job = st.session_state.get("training_job")
+    if st.button("Retrain from marked outcomes", disabled=learning["pending"] == 0 or bool(active_job),
+                 key="retrain", type="primary"):
         try:
-            with st.spinner("Training candidates and evaluating the unchanged holdout…"):
-                result = service.retrain_model()
-            st.session_state["last_training"] = result
-            st.session_state["notice"] = f"Published {result['model_id']} (v{result['version']}) using {result['feedback_count']} marked demo outcome(s)."
+            job = service.RETRAIN_JOBS.submit(service.retrain_model)
+            st.session_state["training_job"] = job["job_id"]
+            st.session_state.pop("training_error", None)
             st.rerun()
-        except ValueError as exc:
+        except QueueFull as exc:
             st.error(str(exc))
+
+    @st.fragment(run_every=1 if active_job else None)
+    def show_training_job():
+        if not active_job:
+            return
+        job = service.RETRAIN_JOBS.get(active_job)
+        if job["status"] in ("queued", "running"):
+            st.info(f"Retraining {job['status']}")
+            return
+        del st.session_state["training_job"]
+        if job["status"] == "done":
+            st.session_state["last_training"] = job["result"]
+            st.session_state["notice"] = f"Published {job['result']['model_id']} (v{job['result']['version']})."
+        else:
+            st.session_state["training_error"] = job["error"]
+        st.rerun()
+
+    show_training_job()
+    if "training_error" in st.session_state:
+        st.error(st.session_state["training_error"])
     if "last_training" in st.session_state:
         result = st.session_state["last_training"]
         st.info(f"Last run: {result['model_id']} · {result['training_rows']} training rows · "

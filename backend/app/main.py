@@ -12,6 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from pydantic import BaseModel, Field, field_validator
 import service
+from jobs import QueueFull
 from verification import (parse_reply, transcribe_voice_note, VOICE_SUFFIXES,
                           VOICE_LIMIT_BYTES)
 
@@ -120,9 +121,17 @@ def model():
     return {**service.model_status(), "learning": service.learning_status()}
 
 
-@app.post("/model/retrain")
+@app.post("/model/retrain", status_code=202)
 def retrain():
     try:
-        return service.retrain_model()
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return service.RETRAIN_JOBS.submit(service.retrain_model)
+    except QueueFull as exc:
+        raise HTTPException(status_code=429, detail=str(exc)) from exc
+
+
+@app.get("/model/retrain/{job_id}")
+def retrain_status(job_id: str):
+    try:
+        return service.RETRAIN_JOBS.get(job_id)
+    except KeyError:
+        raise HTTPException(status_code=404, detail="Retraining job not found") from None

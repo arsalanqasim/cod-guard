@@ -7,10 +7,7 @@ outcome can feed training without contaminating the evaluation holdout.
 """
 import hashlib
 import json
-import os
-import pickle
 import sys
-import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -26,6 +23,7 @@ from threadpoolctl import threadpool_limits
 
 from risk_engine import assess
 from round2_evaluation import analyze_round2, render_round2
+from artifacts import active_version, atomic_write, publish
 
 ROOT = Path(__file__).resolve().parents[2]
 COST_FN, COST_FP = 650, 450
@@ -253,27 +251,6 @@ def render_report(report):
     return "\n".join(lines) + "\n"
 
 
-def _atomic_write(path, content):
-    path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = None
-    try:
-        with tempfile.NamedTemporaryFile(dir=path.parent, prefix=path.name + ".", suffix=".tmp", delete=False) as handle:
-            temporary = Path(handle.name)
-            handle.write(content)
-        os.replace(temporary, path)
-    finally:
-        if temporary is not None and temporary.exists():
-            temporary.unlink()
-
-
-def publish(bundle, report, model_path, evaluation_path, report_path=None):
-    _atomic_write(model_path, pickle.dumps(bundle))
-    _atomic_write(evaluation_path, json.dumps(report, indent=2).encode("utf-8"))
-    if report_path is not None:
-        _atomic_write(report_path, render_report(report).encode("utf-8"))
-
-
 def main():
     sys.path.insert(0, str(ROOT))
     from data.generate_benchmark import generate_benchmark
@@ -283,11 +260,15 @@ def main():
     if not benchmark.equals(generated):
         raise ValueError("Benchmark differs from the generator. Run data/generate_benchmark.py before training.")
     bundle, report = fit_and_evaluate(benchmark, oracle=oracle.set_index("order_id"))
-    publish(bundle, report, ROOT / "backend/app/model.pkl", ROOT / "data/evaluation.json", ROOT / "docs/EVAL_REPORT.md")
+    model_path = ROOT / "backend/app/model.pkl"
+    markdown = render_report(report)
+    atomic_write(ROOT / "data/evaluation.json", json.dumps(report, indent=2).encode("utf-8"))
+    atomic_write(ROOT / "docs/EVAL_REPORT.md", markdown.encode("utf-8"))
+    publish(bundle, report, markdown, model_path, expected=active_version(model_path))
     print(json.dumps({"model_id": bundle["model_id"], "model": bundle["model_name"],
                       "chosen": report["chosen"], "split": report["split"],
                       "baselines": report["baselines"]}, indent=2))
-    print("Wrote docs/EVAL_REPORT.md, data/evaluation.json and backend/app/model.pkl (SYNTHETIC)")
+    print("Wrote the synthetic baseline report and activated its model/evaluation version")
 
 
 if __name__ == "__main__":
