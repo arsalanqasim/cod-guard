@@ -2,6 +2,7 @@ import json
 import sys
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 import pandas as pd
 
@@ -9,6 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "backend/app"))
 from train_model import split_benchmark, feature_frame, fit_and_evaluate
 import service
+import train_model
 
 
 class EvaluationTests(unittest.TestCase):
@@ -47,6 +49,28 @@ class EvaluationTests(unittest.TestCase):
         bundle = service._bundle()
         probability = bundle["model"].predict_proba(feature_frame(pd.DataFrame([order]), bundle["columns"]))[0][1]
         self.assertAlmostEqual(service._ml_probability(order), probability)
+
+    def test_test_split_id_or_label_changes_abort_before_fitting(self):
+        train, validation, test, demo = split_benchmark(self.benchmark)
+        for field, value in (("order_id", "replacement-id"), ("label_failed", 1 - test.iloc[0]["label_failed"])):
+            with self.subTest(field=field):
+                changed = test.copy()
+                changed.loc[test.index[0], field] = value
+                with patch.object(train_model, "split_benchmark", return_value=(train, validation, changed, demo)), \
+                     patch.object(train_model.HistGradientBoostingClassifier, "fit", side_effect=AssertionError("fit was called")):
+                    with self.assertRaisesRegex(ValueError, "Test split lock mismatch"):
+                        fit_and_evaluate(self.benchmark)
+
+    def test_committed_evaluation_records_the_id_and_label_digests(self):
+        report = json.loads((ROOT / "data/evaluation.json").read_text(encoding="utf-8"))
+        committed = json.loads(train_model.TEST_LOCK_PATH.read_text(encoding="utf-8"))
+        self.assertEqual({key: report["split"][key] for key in committed}, committed)
+
+    def test_outcome_fed_report_has_its_own_version_section(self):
+        baseline = json.loads((ROOT / "data/evaluation.json").read_text(encoding="utf-8"))
+        followup = {**baseline, "version": 2, "split": {**baseline["split"], "feedback": 1}}
+        self.assertIn("## Outcome-fed version 2", train_model.render_report(followup))
+        self.assertNotIn("Outcome-fed version", train_model.render_report(baseline))
 
 
 if __name__ == "__main__":

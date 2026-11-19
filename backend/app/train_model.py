@@ -7,10 +7,7 @@ outcome can feed training without contaminating the evaluation holdout.
 """
 import hashlib
 import json
-import os
-import pickle
 import sys
-import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -26,6 +23,7 @@ from threadpoolctl import threadpool_limits
 
 from risk_engine import assess
 from round2_evaluation import analyze_round2, render_round2
+from artifacts import active_version, atomic_write, publish
 
 ROOT = Path(__file__).resolve().parents[2]
 COST_FN, COST_FP = 650, 450
@@ -34,6 +32,7 @@ FEATURES = ["phone_valid", "phone_fraud_history", "phone_velocity_24h",
             "order_hour", "is_repeat_customer", "customer_past_delivered",
             "customer_past_refusals"]
 THRESHOLDS = [round(float(t), 2) for t in np.arange(0.25, 0.86, 0.05)]
+TEST_LOCK_PATH = ROOT / "data/test_split.lock.json"
 
 
 def evaluate(y_true, y_flag):
@@ -76,8 +75,24 @@ def _digest(value):
     return hashlib.sha256(json.dumps(value, sort_keys=True).encode("utf-8")).hexdigest()
 
 
+def verify_test_lock(test):
+    try:
+        expected = json.loads(TEST_LOCK_PATH.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        raise ValueError("Committed test split lock is unavailable") from exc
+    if not test["label_failed"].isin((0, 1)).all():
+        raise ValueError("Test split lock requires binary labels")
+    ids = sorted(test["order_id"])
+    labels = sorted((order_id, int(label)) for order_id, label in zip(test["order_id"], test["label_failed"]))
+    actual = {"test_ids_sha256": _digest(ids), "test_labels_sha256": _digest(labels)}
+    if actual != expected:
+        raise ValueError("Test split lock mismatch. Review benchmark IDs and labels before training.")
+    return actual
+
+
 def fit_and_evaluate(df, feedback_rows=None, feedback=None, previous_version=0, *, oracle=None):
     train, validation, test, demo = split_benchmark(df)
+    test_lock = verify_test_lock(test)
     train = train.copy()
     feedback = feedback or {}
     if set(df.get("data_source", [])) != {"SYNTHETIC"}:
@@ -166,7 +181,7 @@ def fit_and_evaluate(df, feedback_rows=None, feedback=None, previous_version=0, 
               "split": {"training": len(train), "validation": len(validation), "test": len(test),
                         "reserved_demo": len(demo), "feedback": len(feedback),
                         "validation_ids_sha256": _digest(sorted(validation["order_id"])),
-                        "test_ids_sha256": _digest(sorted(test["order_id"]))},
+                        **test_lock},
               "cost_assumptions_pkr": {"false_negative": COST_FN, "false_positive": COST_FP},
               "selection": "model and threshold chosen on validation cost only; test labels are not used for selection",
               "validation_candidates": selections, "chosen": chosen, "test_threshold_sweep": test_sweep,
@@ -188,10 +203,10 @@ def render_report(report):
     split = report["split"]
     lines = ["# COD-Guard — FP/FN evaluation", "",
              "**SYNTHETIC BENCHMARK — no real merchant records or pilots.**", "",
-             "Reference figures supplied in the mission brief: OrderNation (~170k orders), "
-             "37.3% COD cancelled and ~49/100 cash collected. These are different measures. "
-             "We target 51% expected non-collection, not 37.3% cancellation. "
-             "Individual feature relationships remain synthetic assumptions.", "",
+             "OrderNation reports approximately 49–57 cash collections per 100 COD orders "
+             "and 37.3% COD cancellation across different measurement windows at one retailer. "
+             "The generator uses the low end of the cash-collection range to target 51% expected non-collection. "
+             "Feature relationships are simulation assumptions.", "",
              f"Generated rows: {report['benchmark_rows']}; empirical failure rate: {report['failure_rate']:.4%}. "
              f"Benchmark SHA-256: `{report['benchmark_sha256']}`.", "",
              f"Model `{report['model_id']}`: {report['model_name']}, version {report['version']}. "
@@ -200,10 +215,10 @@ def render_report(report):
              f"{split['feedback']} marked demo outcomes added to training.", "",
              "## Method", "",
              "Models and operating thresholds are selected on **validation only**. "
-             "The test split is untouched during selection. The reported flag is the actual serving policy: "
-             "rules + the saved ML threshold + the two-independent-signal guard. "
-             "Both address checks count as one signal. A lone signal cannot hold or require verification; "
-             "ML alone is not another independent signal. Confirmation overrides a flag; denial overrides a pass.", "",
+             "The test split is untouched during selection. Any AMBER or RED recommendation before a reply "
+             "counts as a flag. With complete features the serving policy requires two distinct adverse signal groups. "
+             "Both address checks share one group. ML refines the estimate. "
+             "Confirmation overrides a flag and a denial overrides a pass.", "",
              f"Cost assumptions: false negative PKR {COST_FN}; false positive PKR {COST_FP}. "
              "These are illustrative costs, not measured merchant losses. Any non-GREEN recommendation is "
              "counted as flagged, even though verification can later recover a genuine order.", "",
@@ -241,6 +256,10 @@ def render_report(report):
     lines += ["", "| City | Rows | FPR | FNR |", "|---|---:|---:|---:|"]
     for entry in report["city_segments"]:
         lines.append(f"| {entry['city']} | {entry['rows']} | {entry['fp_rate']:.3f} | {entry['fn_rate']:.3f} |")
+    if split["feedback"]:
+        lines += ["", f"## Outcome-fed version {report['version']}", "",
+                  f"This version added {split['feedback']} marked demo outcomes to training. "
+                  "Compare with the separately retained baseline v1 on the same locked test split."]
     if "round2" in report:
         lines += render_round2(report["round2"])
     lines += ["", "## Limits and brief conflicts", ""]
@@ -253,27 +272,6 @@ def render_report(report):
     return "\n".join(lines) + "\n"
 
 
-def _atomic_write(path, content):
-    path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = None
-    try:
-        with tempfile.NamedTemporaryFile(dir=path.parent, prefix=path.name + ".", suffix=".tmp", delete=False) as handle:
-            temporary = Path(handle.name)
-            handle.write(content)
-        os.replace(temporary, path)
-    finally:
-        if temporary is not None and temporary.exists():
-            temporary.unlink()
-
-
-def publish(bundle, report, model_path, evaluation_path, report_path=None):
-    _atomic_write(model_path, pickle.dumps(bundle))
-    _atomic_write(evaluation_path, json.dumps(report, indent=2).encode("utf-8"))
-    if report_path is not None:
-        _atomic_write(report_path, render_report(report).encode("utf-8"))
-
-
 def main():
     sys.path.insert(0, str(ROOT))
     from data.generate_benchmark import generate_benchmark
@@ -283,11 +281,15 @@ def main():
     if not benchmark.equals(generated):
         raise ValueError("Benchmark differs from the generator. Run data/generate_benchmark.py before training.")
     bundle, report = fit_and_evaluate(benchmark, oracle=oracle.set_index("order_id"))
-    publish(bundle, report, ROOT / "backend/app/model.pkl", ROOT / "data/evaluation.json", ROOT / "docs/EVAL_REPORT.md")
+    model_path = ROOT / "backend/app/model.pkl"
+    markdown = render_report(report)
+    atomic_write(ROOT / "data/evaluation.json", json.dumps(report, indent=2).encode("utf-8"))
+    atomic_write(ROOT / "docs/EVAL_REPORT.md", markdown.encode("utf-8"))
+    publish(bundle, report, markdown, model_path, expected=active_version(model_path))
     print(json.dumps({"model_id": bundle["model_id"], "model": bundle["model_name"],
                       "chosen": report["chosen"], "split": report["split"],
                       "baselines": report["baselines"]}, indent=2))
-    print("Wrote docs/EVAL_REPORT.md, data/evaluation.json and backend/app/model.pkl (SYNTHETIC)")
+    print("Wrote the synthetic baseline report and activated its model/evaluation version")
 
 
 if __name__ == "__main__":

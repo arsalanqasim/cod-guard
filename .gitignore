@@ -1,7 +1,11 @@
 __pycache__/
 *.pyc
 backend/app/model.pkl
+backend/app/model.active
+backend/app/model.versions/
+backend/app/model.publish.sqlite3*
 data/state.json
+data/state.json.archive
 .venv/
 data/*.sqlite3*
 data/whisper/

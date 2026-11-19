@@ -172,3 +172,97 @@ Regression coverage: `test_negated_scoped_and_contradictory_replies_abstain`
 replays the review's exact strings alongside adversarial replies.
 `test_ambiguous_scope_routes_to_operator_without_flipping_prior_decision`
 checks both directions of the service override on existing decisions.
+The dashboard regression checks that the follow-up remains visible. The
+storage migration test checks review-flag backfill for existing records.
+
+### 2. Model publication and retraining
+
+The active pointer selects one immutable directory containing the model, JSON
+evaluation and rendered report. Failed writes leave the old pointer and pending
+feedback intact. Publishers compare the version they trained against under a
+separate short lock. Fitting uses an order-state snapshot while writes continue.
+The API and dashboard expose queued, running, done and failed states. Job status
+is held by the process that accepted it and is lost on restart. Serving resumes
+from the last activated version on disk.
+
+`test_every_publish_write_failure_keeps_old_pair_active_and_feedback_pending`
+injects each artifact or pointer write failure. The learning integration test
+checks a successful publish and restart. `test_background_training_leaves_order_writes_available`
+pauses the fit, verifies API status and duplicate-job rejection, then commits a
+reply before the fit resumes and fails.
+
+### 3. Decision snapshots
+
+Outcome marking reads and freezes the latest decision within the transaction.
+The decision and outcome trail records revision, time and actor. Outcome
+corrections append a revision tied to the original frozen decision. Legacy
+outcomes with missing snapshots are counted as unscored.
+
+`test_outcome_freezes_denial_committed_before_outcome_transaction` reproduces
+the review's SHIP → denial → outcome interleaving. The correction and legacy
+regressions cover durable revision references and unscored outcomes.
+
+### 5. Storage and recovery
+
+Indexed SQLite tables store seeded orders, decision and outcome revisions,
+messages, model metadata and audit events. Migration uses the existing SQLite
+state when present and otherwise imports the legacy JSON once, then archives
+the file. Malformed state leaves the original recoverable. The storage tests
+exercise both migration sources, 80 distinct events across eight concurrent
+writers, exception rollback, and online backup restored into a new location.
+
+### 4 and 7. API contracts, shadow intake and privacy
+
+`test_pilot_api` injects the review's unusable threshold, wrong model shape,
+corrupt SQLite and malformed legacy JSON. It also verifies streamed body
+limits, write throttling, authenticated CSV row errors and idempotency,
+cross-tenant isolation, masked lists, audited full-phone reads, write actors
+and raw reply expiry. `test_empty_order_requires_verification` protects the
+unknown-feature path. The dashboard remains limited to the synthetic demo
+tenant. See [shadow intake and retention](SHADOW_INTAKE.md).
+
+### 6. Order queue latency
+
+The API and dashboard read a bounded page and its current decision and
+outcome projections in one SQLite snapshot, then score the page in one
+prediction batch. The API exposes the total in `X-Total-Count`. The 10,000-row
+TestClient regression checks the median of five requests for a page of 50
+under one second and verifies one prediction batch per request. The dashboard
+test checks that changing pages scores only the visible 50 and 30 rows.
+
+### 8. Voice jobs
+
+The API queues bounded audio in memory and returns before inference. Two
+workers share one offline Whisper model per process. A barrier regression
+checks that two requests can enter inference together and construct the model
+once. The API test covers poll authorization, a paused worker, and the preview
+and explicit apply flow. PyAV decoding and verbatim transcript tests still run.
+The stage budget and fallback are documented in [Voice tests](VOICE_TEST.md).
+
+### 9. Claims and demo copy
+
+The README, demo, dashboard and generated baseline explain the pre-reply
+flag, distinguish the synthetic baseline from learned versions, document the
+source funnel's range and sampling limits, and give the offline budget results
+with actual utilization. The generator docstring describes assumptions. Claim
+regressions check the active wording and generated report parity. The original
+review and brief retain their wording as historical records.
+
+### 10. Evaluation governance
+
+The committed lock hashes both the test IDs and the ID/label pairs. Training
+checks it before fitting and records both digests in every evaluation. The
+regressions change IDs and labels separately and assert that neither mutation
+reaches fitting. They also check the committed evaluation and require a
+separate section for an outcome-fed version. The tuning and reporting rules
+are in the [metric protocol](METRIC_PROTOCOL.md).
+
+### Round 4 scope decisions
+
+The pilot remains single-instance. The API scopes orders and writes by
+operator and tenant. The dashboard shows the synthetic tenant. The model is
+trained on the synthetic benchmark and marked demo outcomes. Real CSV orders
+can be reviewed in shadow mode by the tenant's operator. A design partner,
+courier integration, consented voice evaluation, field outcomes and pricing
+evidence still require separate work. Failed legacy outcomes without a frozen
+decision cannot be reconstructed and remain unscored.

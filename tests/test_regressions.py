@@ -34,6 +34,10 @@ class ServiceRegressionTests(unittest.TestCase):
             active = patch.object(service, target, return_value=value)
             active.start()
             self.addCleanup(active.stop)
+        def get_fixture(order_id, tenant_id):
+            return {"TEST-1": self.order}[order_id]
+
+        self.enterContext(patch.object(service, "get_order", side_effect=get_fixture))
 
     def test_observed_outcome_replaces_synthetic_label_in_live_metrics(self):
         service.verify_reply(self.order, "Yes confirm")

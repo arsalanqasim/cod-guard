@@ -67,10 +67,11 @@ The model is cached in memory after its first use in each process.
 
 ## What to demonstrate
 
-- **Orders & risk:** plain-language reasons, rules score, ML estimate, current
-  decision and risk-zone filters. Two independent adverse signals are required
-  before holding or requiring verification; both address checks count together.
-  ML probability is not counted as an independent adverse signal.
+- **Orders & risk.** The paginated queue shows reasons, rule score, ML estimate,
+  current decision and risk zones. With complete features, the pre-reply policy
+  requires two distinct adverse signal groups to flag an order. The address
+  checks share a group. ML refines the estimate. Missing features require
+  verification, and a customer denial can also stop a GREEN order.
 - **Verification:** select a RED order and confirm it → SHIP. Select a GREEN
   order and deny it → HOLD_CANCEL. History is durable; an unclear follow-up cannot
   erase an explicit answer. Upload, record, or transcribe the attributed Urdu sample.
@@ -82,24 +83,26 @@ The model is cached in memory after its first use in each process.
 ## Measured performance and limits
 
 See [the generated evaluation](docs/EVAL_REPORT.md) and `data/evaluation.json`.
-The current **synthetic**, 1,184-order test split measures TP=245, FP=96, FN=356,
-TN=487: **FPR 16.47%, FNR 59.23%** at validation-selected threshold 0.50.
+**Baseline v1** on 1,184 synthetic test orders has **FPR 16.47% and FNR
+59.23%** at validation-selected threshold 0.50. A flag is any AMBER or RED
+recommendation before a reply. The counts were TP=245, FP=96, FN=356 and TN=487.
 Illustrative loss is PKR 274,600, versus PKR 390,650 for shipping everything and
 PKR 259,800 for blocking on any adverse signal. **It does not beat that aggressive
 baseline on cost, and low FP plus low FN has not been established.** The dashboard
 shows this limitation openly. Failed labels cover non-collection, not proven fraud.
 
-The generator targets 51% expected non-collection (49/100 cash collected) and
-produces 50.7% failed labels. These reference figures come from the mission brief's
-OrderNation study (~170k orders, 37.3% COD cancelled). Cancellation and cash
-collection are separate measures; synthetic feature relationships remain assumptions.
-No individual merchant records were used.
+The generator produces 50.7% failed labels and targets 51% expected
+non-collection. It uses the low end of OrderNation's approximate range of
+49–57 cash collections per 100 COD orders. The study reflects one retailer
+and mixes measurement windows. Its 37.3% cancellation figure measures a
+different stage of the funnel. Feature relationships are simulation assumptions.
 
 Model/threshold selection uses validation only. Evaluation calls the same policy
 as serving. All 80 demo orders are reserved outside training/validation/test, so
-marked demo outcomes can enter training without leaking into the holdout. Live
-demo metrics use the **marked outcome** and a frozen pre-outcome recommendation,
-not the hidden benchmark label. They are not prospective merchant evidence.
+marked demo outcomes can enter training without leaking into the holdout. The
+marked-outcome comparison uses the decision revision frozen with the first
+outcome. Corrections retain that revision. Older records without a frozen
+decision remain unscored. These are retrospective demo measurements.
 
 ## Optional API and local state
 
@@ -107,15 +110,15 @@ not the hidden benchmark label. They are not prospective merchant evidence.
 .\.venv\Scripts\python.exe -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000
 ```
 
-API docs: `http://127.0.0.1:8000/docs`. Includes orders, text/voice verification,
-validated outcomes, evaluation, model status and retraining. Voice defaults to
-preview; `commit_decision=true` explicitly applies an eligible transcript.
+Open the API docs at `http://127.0.0.1:8000/docs`. Configure operator keys
+and a separate tenant for authenticated CSV intake. Voice returns a job ID to
+poll for the transcript. The default is preview, and `commit_decision=true`
+applies an eligible transcript. [Shadow intake and retention](docs/SHADOW_INTAKE.md)
 
-The API and dashboard share transactional SQLite state in `data/state.sqlite3`.
-An existing `data/state.json` is imported once and retained. Unknown order IDs
-return 404; invalid outcomes and blank replies return 422. This is an unauthenticated
-**localhost demo**, not a public deployment. Order intake is the seeded CSV;
-live courier/Shopify/WhatsApp integrations are not implemented.
+The API and synthetic dashboard share transactional SQLite state in
+`data/state.sqlite3`. An existing `data/state.json` is imported once and
+archived. The reserved `demo` tenant uses the bundled seed. The API runs on
+loopback for a single-instance shadow workflow with human review.
 
 For isolated checks, set `COD_GUARD_DATA_DIR` and `COD_GUARD_MODEL_PATH` to an
 alternate state directory and a copy of a trained model. Set the same variables

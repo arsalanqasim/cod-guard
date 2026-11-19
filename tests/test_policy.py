@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "backend/app"))
-from risk_engine import assess
+from risk_engine import DEFAULTS, assess
 
 
 class PolicyTests(unittest.TestCase):
@@ -14,10 +14,10 @@ class PolicyTests(unittest.TestCase):
                    {"amount_pkr": 60000}, {"order_hour": 1}]
         for signal in signals:
             with self.subTest(signal=signal):
-                self.assertEqual(assess(signal, 0.99)["zone"], "GREEN")
+                self.assertEqual(assess({**DEFAULTS, **signal}, 0.99)["zone"], "GREEN")
 
     def test_two_signals_can_be_held_and_threshold_controls_ml(self):
-        order = {"amount_pkr": 21000, "order_hour": 1}
+        order = {**DEFAULTS, "amount_pkr": 21000, "order_hour": 1}
         self.assertEqual(assess(order, 0.65, 0.60)["zone"], "AMBER")
         self.assertEqual(assess(order, 0.65, 0.70)["zone"], "GREEN")
 
@@ -27,6 +27,11 @@ class PolicyTests(unittest.TestCase):
                       {"order_hour": 24}, {"customer_past_refusals": -1}]:
             with self.subTest(order=order), self.assertRaises(ValueError):
                 assess(order)
+
+    def test_empty_order_requires_verification(self):
+        result = assess({})
+        self.assertEqual(result["zone"], "AMBER")
+        self.assertTrue(any("Missing risk features" in reason for reason in result["reasons"]))
 
 
 if __name__ == "__main__":

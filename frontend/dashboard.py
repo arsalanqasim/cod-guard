@@ -2,7 +2,6 @@
 import hashlib
 import json
 import sys
-import tempfile
 from pathlib import Path
 
 import pandas as pd
@@ -11,6 +10,8 @@ import streamlit as st
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "backend/app"))
 import service
+from records import StateUnavailable
+from jobs import QueueFull
 from verification import transcribe_voice_note, parse_reply
 
 st.set_page_config(page_title="COD-Guard", page_icon="🛡️", layout="wide")
@@ -31,19 +32,27 @@ if notice:
     st.success(notice)
 
 try:
-    data = service.load_orders()
-    orders = {row["order_id"]: row for row in data.to_dict("records")}
-    assessments = {oid: service.assess_order(order) for oid, order in orders.items()}
+    page_size = 50
+    page = st.session_state.get("dispatch_page", 1)
+    page_rows, page_scores, total = service.order_page(limit=page_size, offset=(page - 1) * page_size)
+    orders = {row["order_id"]: row for row in page_rows}
+    assessments = {score["order_id"]: score for score in page_scores}
     model = service.model_status()
     learning = service.learning_status()
-except (FileNotFoundError, ValueError) as exc:
+except (FileNotFoundError, StateUnavailable, ValueError) as exc:
     st.error(f"Demo setup is incomplete: {exc}")
     st.code("python data/generate_benchmark.py\npython backend/app/train_model.py\npython scripts/seed_demo.py")
+    st.stop()
+
+if not orders:
+    st.info("No demo orders are available on this page.")
     st.stop()
 
 with st.sidebar:
     st.subheader("Exhibition control")
     st.caption("LOCAL CONVERSATION SIMULATOR")
+    st.number_input("Order page", min_value=1, max_value=max(1, (total + page_size - 1) // page_size),
+                    step=1, key="dispatch_page")
     st.write("No WhatsApp messages are sent. Reply intent uses offline rules; Urdu audio uses Whisper.")
     st.divider()
     st.write("**Risk model**")
@@ -61,9 +70,10 @@ with st.sidebar:
 
 counts = {decision: sum(a["decision"] == decision for a in assessments.values())
           for decision in ["SHIP", "VERIFY_FIRST", "HOLD", "HOLD_CANCEL"]}
-for column, label, count in zip(st.columns(4),
-                               ["Ready to ship", "Verify first", "On hold / cancelled", "Marked demo outcomes"],
-                               [counts["SHIP"], counts["VERIFY_FIRST"], counts["HOLD"] + counts["HOLD_CANCEL"], learning["recorded"]]):
+st.caption(f"Orders {(page - 1) * page_size + 1}–{min(page * page_size, total)} of {total}")
+for column, label, count in zip(st.columns(3),
+                               ["Ready to ship on page", "Verify first on page", "Held / cancelled on page"],
+                               [counts["SHIP"], counts["VERIFY_FIRST"], counts["HOLD"] + counts["HOLD_CANCEL"]]):
     column.metric(label, count)
 
 order_ids = list(orders)
@@ -84,6 +94,8 @@ def decision_message(assessment):
         st.warning(text)
     else:
         st.error(text)
+    if assessment["needs_review"]:
+        st.warning("Clarify the last reply with the customer.")
 
 
 tab_orders, tab_verification, tab_metrics = st.tabs(
@@ -94,7 +106,7 @@ with tab_orders:
     st.caption("A lone adverse signal cannot hold an order or require verification. Both address checks count together as one signal.")
     filter_column, search_column = st.columns([1, 2])
     zones = filter_column.multiselect("Risk zones", ["GREEN", "AMBER", "RED"], default=["GREEN", "AMBER", "RED"])
-    search = search_column.text_input("Search order or customer", placeholder="Order ID, customer, product or city").casefold()
+    search = search_column.text_input("Search this page", placeholder="Order ID, customer, product or city").casefold()
     rows = []
     for oid, order in orders.items():
         risk = assessments[oid]
@@ -103,7 +115,8 @@ with tab_orders:
         rows.append({"Order": oid, "Customer": order["customer_name"], "Product": order["product"],
                      "City": order["city"], "PKR": order["amount_pkr"], "Rule score": risk["rule_score"],
                      "ML estimate": risk["ml_probability"], "Zone": risk["zone"],
-                     "Decision": risk["decision"], "Outcome": risk["outcome"] or "Unmarked"})
+                     "Decision": risk["decision"], "Follow-up": "Clarify reply" if risk["needs_review"] else "",
+                     "Outcome": risk["outcome"] or "Unmarked"})
     if rows:
         frame = pd.DataFrame(rows)
         colors = {"GREEN": "background-color:#E5F4EB;color:#17613B", "AMBER": "background-color:#FFF2D5;color:#805500", "RED": "background-color:#FDE7E7;color:#963431"}
@@ -118,7 +131,7 @@ with tab_orders:
     left, right = st.columns([1, 2])
     with left:
         decision_message(detail)
-        st.write(f"**{detail['signal_count']} independent adverse signal(s)**")
+        st.write(f"**{detail['signal_count']} distinct adverse signal groups**")
         st.caption(f"Rule score {detail['rule_score']}/100 · ML failure estimate {percent(detail['ml_probability'])}")
     with right:
         st.write("**Why this recommendation?**")
@@ -136,7 +149,7 @@ with tab_verification:
         st.write(service.opening_message(order))
     for message in service.conversation(oid):
         with st.chat_message("user"):
-            st.write(message["text"])
+            st.write(message["text"] or "Reply text expired")
             st.caption("Urdu voice transcript" if message["source"] == "voice" else "Customer text reply")
         with st.chat_message("assistant"):
             st.write(f"**{message['intent']} → {message['decision']}**")
@@ -169,17 +182,9 @@ with tab_verification:
     if audio_bytes:
         st.audio(audio_bytes, format={".ogg": "audio/ogg", ".mp3": "audio/mpeg", ".m4a": "audio/mp4", ".webm": "audio/webm"}.get(suffix, "audio/wav"))
     if st.button("Transcribe Urdu", disabled=not audio_bytes, key="transcribe_voice"):
-        audio_path = None
-        try:
-            with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as temporary:
-                audio_path = Path(temporary.name)
-                temporary.write(audio_bytes)
-            with st.spinner("Transcribing locally with cached Whisper weights…"):
-                result = transcribe_voice_note(str(audio_path))
-            st.session_state["voice_result"] = {"order_id": oid, "fingerprint": fingerprint, "result": result}
-        finally:
-            if audio_path is not None:
-                audio_path.unlink(missing_ok=True)
+        with st.spinner("Transcribing locally with cached Whisper weights…"):
+            result = transcribe_voice_note(audio_bytes, suffix=suffix)
+        st.session_state["voice_result"] = {"order_id": oid, "fingerprint": fingerprint, "result": result}
     preview = st.session_state.get("voice_result", {})
     if preview.get("order_id") == oid and preview.get("fingerprint") == fingerprint:
         result = preview["result"]
@@ -201,6 +206,8 @@ with tab_metrics:
     report = service.latest_evaluation()
     if report:
         chosen = report["chosen"]
+        report_label = "Baseline v1" if not report["split"]["feedback"] else f"Outcome-fed version {report['version']}"
+        st.caption(f"{report_label} · AMBER and RED count as pre-reply flags.")
         for column, label, value in zip(st.columns(4), ["False-positive rate", "False-negative rate", "Precision", "Recall"],
                                        [chosen["fp_rate"], chosen["fn_rate"], chosen["precision"], chosen["recall"]]):
             column.metric(label, percent(value))
@@ -236,8 +243,9 @@ with tab_metrics:
     for column, label, value in zip(st.columns(4), ["TP · failed held", "FP · delivered held", "FN · failed passed", "TN · delivered passed"],
                                    [metrics["tp"], metrics["fp"], metrics["fn"], metrics["tn"]]):
         column.metric(label, value)
-    st.caption(f"{metrics['marked']} scored outcomes · FPR {percent(metrics['fp_rate'])} · FNR {percent(metrics['fn_rate'])}. "
-               "Uses marked outcomes and frozen recommendations; this is a demo comparison, not prospective field evidence.")
+    st.caption(f"{metrics['marked']} scored outcomes · {metrics['unscored']} without a frozen decision · "
+               f"FPR {percent(metrics['fp_rate'])} · FNR {percent(metrics['fn_rate'])}. "
+               "Each scored outcome uses the decision revision saved with its first outcome.")
     outcome_order = st.selectbox("Order outcome to record", order_ids, format_func=order_label, key="outcome_order")
     selected_outcome = st.radio("Actual demo outcome", service.OUTCOMES, horizontal=True, key="outcome_value")
     if st.button("Save outcome", key="save_outcome"):
@@ -248,15 +256,39 @@ with tab_metrics:
     st.subheader("Learn from marked outcomes")
     st.write(f"**{learning['recorded']} recorded · {learning['trained_outcomes']} in the model · {learning['pending']} pending**")
     st.caption("Retraining consumes marked demo outcomes and publishes a new version. The evaluation holdout stays fixed; metrics may improve or worsen.")
-    if st.button("Retrain from marked outcomes", disabled=learning["pending"] == 0, key="retrain", type="primary"):
+    active_job = st.session_state.get("training_job")
+    if st.button("Retrain from marked outcomes", disabled=learning["pending"] == 0 or bool(active_job),
+                 key="retrain", type="primary"):
         try:
-            with st.spinner("Training candidates and evaluating the unchanged holdout…"):
-                result = service.retrain_model()
-            st.session_state["last_training"] = result
-            st.session_state["notice"] = f"Published {result['model_id']} (v{result['version']}) using {result['feedback_count']} marked demo outcome(s)."
+            job = service.RETRAIN_JOBS.submit(service.retrain_model)
+            st.session_state["training_job"] = job["job_id"]
+            st.session_state.pop("training_error", None)
             st.rerun()
-        except ValueError as exc:
+        except QueueFull as exc:
             st.error(str(exc))
+
+    @st.fragment(run_every=1 if active_job else None)
+    def show_training_job():
+        if not active_job:
+            return
+        try:
+            job = service.RETRAIN_JOBS.get(active_job)
+        except KeyError:
+            job = {"status": "failed", "error": "Job status expired. Check the active model before retrying."}
+        if job["status"] in ("queued", "running"):
+            st.info(f"Retraining {job['status']}")
+            return
+        del st.session_state["training_job"]
+        if job["status"] == "done":
+            st.session_state["last_training"] = job["result"]
+            st.session_state["notice"] = f"Published {job['result']['model_id']} (v{job['result']['version']})."
+        else:
+            st.session_state["training_error"] = job["error"]
+        st.rerun()
+
+    show_training_job()
+    if "training_error" in st.session_state:
+        st.error(st.session_state["training_error"])
     if "last_training" in st.session_state:
         result = st.session_state["last_training"]
         st.info(f"Last run: {result['model_id']} · {result['training_rows']} training rows · "

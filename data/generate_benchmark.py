@@ -1,17 +1,15 @@
 """Generate the COD-Guard benchmark dataset.
 
 SYNTHETIC data, calibrated to published Pakistani COD statistics
-(OrderNation study of ~170k orders from one Pakistani retailer:
-37.3% of COD orders cancelled; only ~49 of 100 COD orders end in cash
-collected). This is NOT real merchant data and must never be presented
-as such. It exists so the risk engine can be trained and its false
-positives / false negatives measured honestly.
+(OrderNation's single-retailer funnel reports approximately 49–57 cash
+collections per 100 COD orders across different measurement windows and
+37.3% COD cancellation). The low end sets the simulation's non-collection
+target. The generated records support synthetic model evaluation.
 
-Structure (how fake COD orders actually behave): a minority cluster of
-organised fake orders (fraud phone history, several orders in a day,
-thin address, late-night placement) that fail ~85% of the time, plus
-ordinary orders whose failures are refusals/cancellations driven by
-weaker signals. Label: 1 = failed/fake/refused, 0 = delivered.
+The generator assumes a small high-risk cluster with correlated phone,
+velocity, address, and timing features, plus ordinary orders with weaker
+features. Label 1 represents simulated non-collection. Label 0 represents
+simulated delivery.
 
 Run:  python data/generate_benchmark.py
 Out:  data/benchmark_orders.csv
@@ -21,7 +19,7 @@ import pandas as pd
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-TARGET_FAILURE_RATE = 0.51  # 49/100 cash collected; not the separate 37.3% cancellation rate
+TARGET_FAILURE_RATE = 0.51  # Low cash-collection estimate implies 51% non-collection.
 
 N = 6000
 
