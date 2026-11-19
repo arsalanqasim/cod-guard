@@ -19,7 +19,9 @@ with that key returns 409. The import accepts 1 MiB and 2,000 data rows.
 
 Order lists mask phone numbers. Authenticated order detail logs full-phone
 access. Reply and outcome writes retain the actor and tenant. Synthetic
-retraining is restricted to the demo tenant. `/health` checks the process and
+retraining is restricted to the demo tenant and returns a job ID. Its
+submitting operator can poll `GET /model/retrain/{job_id}` in that process.
+`/health` checks the process and
 `/ready` checks SQLite and the risk model. Write requests are limited to 60
 per operator per minute in one process. The API accepts at most 13 MiB per
 request, including multipart framing.

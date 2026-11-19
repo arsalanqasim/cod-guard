@@ -176,11 +176,19 @@ def model(operator: Operator = Depends(require_operator)):
     return {**status, "learning": service.learning_status(operator.tenant_id)}
 
 
-@app.post("/model/retrain")
+@app.post("/model/retrain", status_code=202)
 def retrain(operator: Operator = Depends(write_operator)):
     if operator.tenant_id != DEMO_TENANT:
         raise HTTPException(status_code=403, detail="Retraining is restricted to synthetic demo outcomes")
     try:
-        return service.retrain_model(actor=operator.actor)
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return service.RETRAIN_JOBS.submit(lambda: service.retrain_model(actor=operator.actor), scope=operator)
+    except QueueFull as exc:
+        raise HTTPException(status_code=429, detail=str(exc)) from exc
+
+
+@app.get("/model/retrain/{job_id}")
+def retrain_status(job_id: str, operator: Operator = Depends(require_operator)):
+    try:
+        return service.RETRAIN_JOBS.get(job_id, scope=operator)
+    except KeyError:
+        raise HTTPException(status_code=404, detail="Retraining job not found") from None
