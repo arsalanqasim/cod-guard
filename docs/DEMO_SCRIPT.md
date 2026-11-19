@@ -1,15 +1,39 @@
-# COD-Guard — 2-minute exhibition demo script
+# COD-Guard — exhibition walkthrough
 
-Setup: dashboard open on the Orders tab; benchmark + eval report already generated.
+All displayed orders and measured benchmark results are **SYNTHETIC**. The
+conversation is a local simulator; no WhatsApp messages are sent.
 
-0:00–0:25 — THE PROBLEM. "In Pakistan most online orders are Cash on Delivery. Industry data from ~170,000 real orders shows only about 49 of every 100 COD orders end in money collected — the rest are fake, refused, or returned, and the seller pays the courier both ways. COD-Guard stops the loss BEFORE dispatch."
+1. Open **Orders & risk**. Filter RED and explain the independent adverse signals.
+   A lone signal, including an ML estimate, cannot stop dispatch. A rules score
+   is not a probability.
+2. In **Verification**, select a RED order and enter `Ji theek hai, bhej dein`.
+   Show SHIP and the durable reply history. Select a GREEN order and enter
+   `جی نہیں`. Show HOLD_CANCEL. A denial overrides a pass and confirmation
+   overrides a flag. `Kal bataunga` needs clarification and cannot erase an
+   earlier explicit reply.
+3. Under voice, select **Bundled Urdu sample**, then **Transcribe Urdu**.
+   Explain that this is a CC BY 4.0 FLEURS read-speech example, not a customer
+   note. Show the actual imperfect transcript and UNCLEAR intent. Alternatively,
+   let the judge record or upload a short Urdu order reply. Previewing does not
+   alter the order; **Apply transcript to this order** is explicit.
+4. In **Metrics & learning**, show BOTH FPR and FNR and the confusion matrix.
+   Threshold selection used validation data; the shown threshold curve is a
+   test diagnostic. State the current metrics as displayed, including the high
+   FN rate and any baseline the model does not beat. Do not quote the original
+   brief's subset recall as overall recall or claim real-world accuracy.
+5. Mark a demo outcome, show the pending-learning count, then click **Retrain
+   from marked outcomes**. Show the new model ID/version and consumed outcome
+   count. The 80 demo orders were reserved outside training/validation/test; the
+   evaluation holdout stays unchanged. Report updated measurements honestly,
+   including worsening results.
 
-0:25–0:55 — RISK ENGINE. Orders tab: point at a 🔴 row, read its plain-words reasons (fraud-linked phone, 3 orders in a day, thin address). "Every order gets a risk score from rules plus a machine-learning model. No single signal can block an order alone — that is deliberate, so real customers are not wrongly blocked."
+The baseline model has FPR 16.47%, FNR 59.23%; illustrative cost PKR 274,600 on
+1,184 synthetic test orders. It beats ship-everything (PKR 390,650), but not the
+aggressive any-signal baseline (PKR 259,800). Outcome-fed versions can differ.
+These are modelled costs using FN=PKR 650 and FP=PKR 450, not merchant losses.
 
-0:55–1:30 — VERIFICATION AGENT (the FP/FN answer). Verification tab: pick the 🔴 order, type the customer reply "Ji theek hai, bhej dein" → decision flips to SHIP. Then pick a 🟢 order, type "Nahi, mera order nahi hai" → decision HOLD_CANCEL. "The model catches patterns; the customer conversation catches the rest. A confirmation rescues a flagged real order — that kills false positives. A denial stops a passed fake order — that kills false negatives. It understands English, Roman Urdu, Urdu script, and Urdu voice notes."
-
-1:30–1:50 — MEASURED, NOT CLAIMED. Metrics tab + EVAL_REPORT: "We measured both error types on a 6,000-order benchmark calibrated to published COD statistics: false-positive rate under 5% at our operating point, organised fakes caught at 87%, and total seller loss down 29% versus shipping everything."
-
-1:50–2:00 — CLOSED LOOP. Mark one outcome (delivered/returned). "Every real outcome is recorded and retrains the next model version — the system learns from courier results, which is our difference from the confirmation tools already in the market, like Tasdeek and OrderWitness, that never learn from outcomes."
-
-If asked about data honesty: "The benchmark is synthetic, calibrated to the OrderNation study — we say so openly. The method is what we are demonstrating; with one real seller's order history, the same pipeline trains on real data."
+Competitors exist: **Tasdeek, Botaura, OrderWitness, DukaanFlow**. Do not claim
+being first or make unverified claims about their capabilities. This build
+actually demonstrates outcome-fed retraining plus Urdu voice transcription;
+there are no merchant pilots. Reference COD statistics from the mission brief
+must remain distinguished from this project's generated data.

@@ -1,0 +1,15 @@
+{
+  "dataset": "Google FLEURS",
+  "configuration": "ur_pk",
+  "split": "test",
+  "row_index": 0,
+  "id": 1806,
+  "language": "Urdu",
+  "license": "CC BY 4.0",
+  "source": "https://huggingface.co/datasets/google/fleurs",
+  "license_url": "https://creativecommons.org/licenses/by/4.0/",
+  "reference_transcript": "ان کے دور میں خفیف تلوُّث ایزا مسئلہ نہیں تھا جیسا کہ وہ آج ہے۔ ان کی سکونت ایسے شہروں یا حوزات میں ہے جہا ں تک بآسانی پہنچا جا سکتا ہے بہ نسبت ان مقامات کے جو ماڈرن زمانے میں تعمیر کئے گئے۔",
+  "changes": "Original WAV transcoded to OGG/Opus; no speech content edited.",
+  "purpose": "General Urdu read speech, not a COD customer reply or merchant record.",
+  "sha256": "019f7ce92439f03723cdfecd71d0ad37bb0463eeeb1b5ba91b4e88aab163087e"
+}

@@ -18,6 +18,10 @@ Out:  data/benchmark_orders.csv
 """
 import numpy as np
 import pandas as pd
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+TARGET_FAILURE_RATE = 0.51  # 49/100 cash collected; not the separate 37.3% cancellation rate
 
 RNG = np.random.default_rng(42)
 N = 6000
@@ -68,7 +72,17 @@ logit = np.where(
     + 0.25 * late_night
     + RNG.normal(0, 0.40, N),
 )
-p_fail = 1 / (1 + np.exp(-logit))
+# Calibrate expected aggregate non-collection to 51%, keeping the latent
+# organised cluster unchanged. This is a synthetic modelling assumption,
+# not a fit to individual merchant records or a claim about fraud prevalence.
+low, high = -10.0, 10.0
+for _ in range(70):
+    offset = (low + high) / 2
+    p_fail = 1 / (1 + np.exp(-np.where(fc, logit, logit + offset)))
+    if p_fail.mean() < TARGET_FAILURE_RATE:
+        low = offset
+    else:
+        high = offset
 label = (RNG.random(N) < p_fail).astype(int)
 
 df = pd.DataFrame({
@@ -86,8 +100,10 @@ df = pd.DataFrame({
     "customer_past_delivered": past_delivered,
     "customer_past_refusals": past_refusals,
     "label_failed": label,
+    "data_source": "SYNTHETIC",
 })
-df.to_csv("data/benchmark_orders.csv", index=False)
+df.to_csv(ROOT / "data/benchmark_orders.csv", index=False)
 print(f"rows={len(df)}  failed_rate={df.label_failed.mean():.3f}  "
       f"delivered_rate={1 - df.label_failed.mean():.3f}")
+print(f"Expected non-collection target={TARGET_FAILURE_RATE:.3f}; all records and labels are SYNTHETIC")
 print("Saved data/benchmark_orders.csv  (SYNTHETIC, calibrated to OrderNation stats)")

@@ -1,0 +1,11 @@
+fastapi==0.165.0
+uvicorn==0.54.0
+streamlit==1.67.0
+scikit-learn==1.9.1
+pandas==3.1.1
+numpy==2.5.5
+faster-whisper==1.2.1
+httpx==0.28.1
+# PyAV 19 removed metadata_errors, which faster-whisper 1.2.1 still passes.
+av==16.1.0
+threadpoolctl==3.8.0

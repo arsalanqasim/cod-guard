@@ -3,3 +3,6 @@ __pycache__/
 backend/app/model.pkl
 data/state.json
 .venv/
+data/*.sqlite3*
+data/whisper/
+data/latest_evaluation.json
