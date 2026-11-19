@@ -56,6 +56,17 @@ SCHEMA = (
         receipt TEXT NOT NULL, PRIMARY KEY (tenant_id, idempotency_key))""",
     "CREATE TABLE settings (key TEXT PRIMARY KEY)",
 )
+CONNECTOR_SCHEMA = (
+    """CREATE TABLE IF NOT EXISTS external_orders (
+        tenant_id TEXT NOT NULL, channel TEXT NOT NULL, account TEXT NOT NULL,
+        external_id TEXT NOT NULL, order_id TEXT NOT NULL,
+        PRIMARY KEY (tenant_id, channel, account, external_id), UNIQUE (tenant_id, order_id),
+        FOREIGN KEY (tenant_id, order_id) REFERENCES orders(tenant_id, order_id))""",
+    """CREATE TABLE IF NOT EXISTS connector_state (
+        tenant_id TEXT NOT NULL, channel TEXT NOT NULL, account TEXT NOT NULL,
+        cursor TEXT, last_poll TEXT, last_webhook TEXT, last_error TEXT,
+        PRIMARY KEY (tenant_id, channel, account))""",
+)
 
 
 class StateUnavailable(RuntimeError):
@@ -179,7 +190,9 @@ def _initialize(connection, legacy):
         connection.execute("ALTER TABLE decisions ADD COLUMN needs_review INTEGER NOT NULL DEFAULT 0")
         connection.execute("""UPDATE decisions SET needs_review=1 WHERE default_snapshot=0
                             AND (intent='UNCLEAR' OR why LIKE 'Reply unclear;%')""")
-    connection.execute("PRAGMA user_version=2")
+    for statement in CONNECTOR_SCHEMA:
+        connection.execute(statement)
+    connection.execute("PRAGMA user_version=3")
     connection.commit()
 
 
@@ -193,9 +206,9 @@ def connect(path):
             connection.execute("PRAGMA foreign_keys=ON")
             try:
                 version = connection.execute("PRAGMA user_version").fetchone()[0]
-                if version in (0, 1):
+                if version in (0, 1, 2):
                     _initialize(connection, legacy)
-                elif version != 2:
+                elif version != 3:
                     raise ValueError("Unsupported state schema version")
             except (ValueError, KeyError, TypeError, AttributeError) as exc:
                 raise StateUnavailable("State migration is unavailable") from exc

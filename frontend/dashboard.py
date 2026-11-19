@@ -1,6 +1,7 @@
 """COD-Guard local exhibition dashboard; all displayed orders are SYNTHETIC."""
 import hashlib
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -13,6 +14,8 @@ import service
 from records import StateUnavailable
 from jobs import QueueFull
 from verification import transcribe_voice_note, parse_reply
+from woocommerce import WooCommerceError, configured_stores
+from connector_orders import connection_state
 
 st.set_page_config(page_title="COD-Guard", page_icon="🛡️", layout="wide")
 st.markdown("""<style>
@@ -67,6 +70,21 @@ with st.sidebar:
     st.write("**Demo honesty**")
     st.caption("All orders and benchmark labels are SYNTHETIC. No merchant pilots or production accuracy claims.")
     st.caption("Competitors: Tasdeek, Botaura, OrderWitness, DukaanFlow.")
+    if os.environ.get("COD_GUARD_WOO_HEALTH_LOCAL") == "1":
+        with st.expander("WooCommerce connection health"):
+            try:
+                stores = configured_stores()
+                if not stores:
+                    st.caption("No stores configured.")
+                for account, store in stores.items():
+                    state = connection_state(service.STATE_PATH, store.identity)
+                    st.text(account)
+                    st.caption(f"Last poll: {state['last_poll'] or 'Not yet run'}")
+                    st.caption(f"Last webhook: {state['last_webhook'] or 'None received'}")
+                    if state["last_error"]:
+                        st.warning(state["last_error"])
+            except (StateUnavailable, WooCommerceError):
+                st.warning("WooCommerce connection health is unavailable.")
 
 counts = {decision: sum(a["decision"] == decision for a in assessments.values())
           for decision in ["SHIP", "VERIFY_FIRST", "HOLD", "HOLD_CANCEL"]}

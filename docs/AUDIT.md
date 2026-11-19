@@ -266,3 +266,10 @@ can be reviewed in shadow mode by the tenant's operator. A design partner,
 courier integration, consented voice evaluation, field outcomes and pricing
 evidence still require separate work. Failed legacy outcomes without a frozen
 decision cannot be reconstructed and remain unscored.
+
+### Round 5 — WS-B: WooCommerce connector
+
+[WooCommerce setup](WOOCOMMERCE.md) maps HTTPS/permalink/auth checks, WP-Cron
+fallback, signed webhooks, polling and tenant-scoped health. The order identity
+table deduplicates webhook/poll deliveries. Outcome write-back is an explicit
+operator action against the linked store. Tests use fixtures, not merchant data.
