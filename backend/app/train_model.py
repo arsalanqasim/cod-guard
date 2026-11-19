@@ -34,6 +34,7 @@ FEATURES = ["phone_valid", "phone_fraud_history", "phone_velocity_24h",
             "order_hour", "is_repeat_customer", "customer_past_delivered",
             "customer_past_refusals"]
 THRESHOLDS = [round(float(t), 2) for t in np.arange(0.25, 0.86, 0.05)]
+TEST_LOCK_PATH = ROOT / "data/test_split.lock.json"
 
 
 def evaluate(y_true, y_flag):
@@ -76,8 +77,24 @@ def _digest(value):
     return hashlib.sha256(json.dumps(value, sort_keys=True).encode("utf-8")).hexdigest()
 
 
+def verify_test_lock(test):
+    try:
+        expected = json.loads(TEST_LOCK_PATH.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        raise ValueError("Committed test split lock is unavailable") from exc
+    if not test["label_failed"].isin((0, 1)).all():
+        raise ValueError("Test split lock requires binary labels")
+    ids = sorted(test["order_id"])
+    labels = sorted((order_id, int(label)) for order_id, label in zip(test["order_id"], test["label_failed"]))
+    actual = {"test_ids_sha256": _digest(ids), "test_labels_sha256": _digest(labels)}
+    if actual != expected:
+        raise ValueError("Test split lock mismatch. Review benchmark IDs and labels before training.")
+    return actual
+
+
 def fit_and_evaluate(df, feedback_rows=None, feedback=None, previous_version=0, *, oracle=None):
     train, validation, test, demo = split_benchmark(df)
+    test_lock = verify_test_lock(test)
     train = train.copy()
     feedback = feedback or {}
     if set(df.get("data_source", [])) != {"SYNTHETIC"}:
@@ -166,7 +183,7 @@ def fit_and_evaluate(df, feedback_rows=None, feedback=None, previous_version=0, 
               "split": {"training": len(train), "validation": len(validation), "test": len(test),
                         "reserved_demo": len(demo), "feedback": len(feedback),
                         "validation_ids_sha256": _digest(sorted(validation["order_id"])),
-                        "test_ids_sha256": _digest(sorted(test["order_id"]))},
+                        **test_lock},
               "cost_assumptions_pkr": {"false_negative": COST_FN, "false_positive": COST_FP},
               "selection": "model and threshold chosen on validation cost only; test labels are not used for selection",
               "validation_candidates": selections, "chosen": chosen, "test_threshold_sweep": test_sweep,
@@ -241,6 +258,10 @@ def render_report(report):
     lines += ["", "| City | Rows | FPR | FNR |", "|---|---:|---:|---:|"]
     for entry in report["city_segments"]:
         lines.append(f"| {entry['city']} | {entry['rows']} | {entry['fp_rate']:.3f} | {entry['fn_rate']:.3f} |")
+    if split["feedback"]:
+        lines += ["", f"## Outcome-fed version {report['version']}", "",
+                  f"This version added {split['feedback']} marked demo outcomes to training. "
+                  "Compare with the separately retained baseline v1 on the same locked test split."]
     if "round2" in report:
         lines += render_round2(report["round2"])
     lines += ["", "## Limits and brief conflicts", ""]

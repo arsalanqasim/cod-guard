@@ -165,6 +165,15 @@ once. The API test covers poll authorization, a paused worker, and the preview
 and explicit apply flow. PyAV decoding and verbatim transcript tests still run.
 The stage budget and fallback are documented in [Voice tests](VOICE_TEST.md).
 
+### 10. Evaluation governance
+
+The committed lock hashes both the test IDs and the ID/label pairs. Training
+checks it before fitting and records both digests in every evaluation. The
+regressions change IDs and labels separately and assert that neither mutation
+reaches fitting. They also check the committed evaluation and require a
+separate section for an outcome-fed version. The tuning and reporting rules
+are in the [metric protocol](METRIC_PROTOCOL.md).
+
 ## Round 2 addendum
 
 The Round 1 test IDs, 6,000 synthetic rows, model ID `cg-0328b4106253`, and

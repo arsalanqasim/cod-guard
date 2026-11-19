@@ -15,7 +15,8 @@
     "reserved_demo": 80,
     "feedback": 0,
     "validation_ids_sha256": "52f5e00c9626e99d2b0ba70646bb440580081a3459cde7f8dea27449d32ecbd4",
-    "test_ids_sha256": "6c114ac0be4bb578a40dcc0a0ea2ce778e0193fc067eb08542170057c5841974"
+    "test_ids_sha256": "6c114ac0be4bb578a40dcc0a0ea2ce778e0193fc067eb08542170057c5841974",
+    "test_labels_sha256": "4ee23108aa72894f25630057a0ec6cf836651f7164c2558e9a706a64f59bb5ab"
   },
   "cost_assumptions_pkr": {
     "false_negative": 650,
