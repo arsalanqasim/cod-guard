@@ -48,14 +48,9 @@ def _ml_probability(order: dict):
 def assess_order(order: dict) -> dict:
     """Rules zone + ML probability, blended: ML can raise a zone, the
     rules' plain-words reasons always stay visible."""
-    r = rule_assess(order)
     p = _ml_probability(order)
+    r = rule_assess(order, ml_probability=p)
     zone = r["zone"]
-    if p is not None:
-        if p >= 0.60 and zone == "GREEN":
-            zone = "AMBER"
-        elif p >= 0.80 and zone == "AMBER":
-            zone = "RED"
     state = _load_state()
     saved = state["decisions"].get(order["order_id"])
     return {"order_id": order["order_id"], "rule_score": r["risk_score"],
