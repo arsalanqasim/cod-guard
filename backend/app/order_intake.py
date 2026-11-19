@@ -56,7 +56,7 @@ def _parse(contents):
         raise ValueError("Upload a valid UTF-8 CSV file") from exc
 
 
-def import_orders(path, tenant_id, actor, key, contents):
+def import_orders(path, tenant_id, actor, key, contents, *, source="SHADOW"):
     digest = hashlib.sha256(contents).hexdigest()
     rows, errors = _parse(contents)
     with write(path) as connection:
@@ -73,7 +73,7 @@ def import_orders(path, tenant_id, actor, key, contents):
                                   (tenant_id, row["order_id"])).fetchone():
                 errors.append({"row": index, "error": "Order ID already exists"})
                 continue
-            insert_order(connection, tenant_id, row)
+            insert_order(connection, tenant_id, {**row, "data_source": source})
             inserted += 1
         receipt = {"imported": inserted, "errors": sorted(errors, key=lambda error: error["row"])}
         connection.execute("INSERT INTO imports VALUES (?, ?, ?, ?)",

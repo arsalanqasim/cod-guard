@@ -302,3 +302,9 @@ which remain unavailable without a counterfactual comparison.
 signature verification, merchant/order deduplication and distribution limits.
 Fixture tests cover redacted payloads, the COD filter and tenant isolation.
 No live store installed, App Store submission, or billing integration.
+
+### Round 5 — WS-F: Seller-reviewed social intake
+
+[Social intake](SOCIAL_INTAKE.md) maps transient extraction, editable review,
+explicit save, scoped CSV ingestion from a private Sheets export, and the
+deferred Meta review path. Tests exercise API storage and the review screen.
