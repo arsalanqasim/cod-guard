@@ -61,6 +61,10 @@ class ServiceRegressionTests(unittest.TestCase):
         service.verify_reply(self.order, "No, cancel")
         self.assertEqual(service.live_metrics()["tn"], 1)
 
+    def test_unclear_reply_cannot_erase_an_explicit_denial(self):
+        service.verify_reply(self.order, "No, cancel")
+        self.assertEqual(service.verify_reply(self.order, "Kal bataunga")["decision"], "HOLD_CANCEL")
+
     def test_concurrent_state_updates_do_not_lose_messages(self):
         from concurrent.futures import ThreadPoolExecutor
         with ThreadPoolExecutor(max_workers=4) as pool:
