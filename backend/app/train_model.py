@@ -1,104 +1,273 @@
-"""Train the ML risk model and produce the FP/FN evaluation report.
+"""Leakage-controlled synthetic evaluation and outcome-fed model training.
 
-Positive class = failed/fake/refused order, predicted = flagged (held for
-verification or blocked). So:
-  FP = a genuine order flagged  -> seller may lose a real sale
-  FN = a fake order passed      -> seller ships and pays courier + return
-Costs (labelled assumptions): FN = PKR 650 (delivery + return charges),
-FP = PKR 450 (average lost profit margin on a blocked genuine order).
-
-Run:  python backend/app/train_model.py
-Out:  docs/EVAL_REPORT.md, backend/app/model.pkl
+The operating policy is risk_engine.assess(), also used by the service.
+Candidates and thresholds are chosen ONLY on validation data. All 80 demo
+orders are reserved outside training/validation/test so marking a demo
+outcome can feed training without contaminating the evaluation holdout.
 """
-import json, pickle, sys
+import hashlib
+import json
+import os
+import pickle
+import tempfile
+from datetime import datetime, timezone
 from pathlib import Path
+
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import HistGradientBoostingClassifier
-from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import confusion_matrix, precision_score, recall_score
+from sklearn.model_selection import train_test_split
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
+from threadpoolctl import threadpool_limits
+
+from risk_engine import assess
 
 ROOT = Path(__file__).resolve().parents[2]
 COST_FN, COST_FP = 650, 450
 FEATURES = ["phone_valid", "phone_fraud_history", "phone_velocity_24h",
-            "address_words", "address_has_landmark", "amount_pkr",
-            "items_count", "order_hour", "is_repeat_customer",
-            "customer_past_delivered", "customer_past_refusals"]
+            "address_words", "address_has_landmark", "amount_pkr", "items_count",
+            "order_hour", "is_repeat_customer", "customer_past_delivered",
+            "customer_past_refusals"]
+THRESHOLDS = [round(float(t), 2) for t in np.arange(0.25, 0.86, 0.05)]
+
 
 def evaluate(y_true, y_flag):
     tn, fp, fn, tp = confusion_matrix(y_true, y_flag, labels=[0, 1]).ravel()
     return {"tp": int(tp), "fp": int(fp), "fn": int(fn), "tn": int(tn),
-            "fp_rate": fp / max(1, fp + tn), "fn_rate": fn / max(1, fn + tp),
-            "precision": precision_score(y_true, y_flag, zero_division=0),
-            "recall": recall_score(y_true, y_flag, zero_division=0),
+            "fp_rate": float(fp / (fp + tn)) if fp + tn else None,
+            "fn_rate": float(fn / (fn + tp)) if fn + tp else None,
+            "precision": float(precision_score(y_true, y_flag, zero_division=0)),
+            "recall": float(recall_score(y_true, y_flag, zero_division=0)),
             "total_cost": int(fp * COST_FP + fn * COST_FN)}
 
+
+def split_benchmark(df):
+    if not df["order_id"].is_unique:
+        raise ValueError("Benchmark order IDs must be unique")
+    demo = df.sample(min(80, len(df)), random_state=3)
+    pool = df.drop(demo.index)
+    train, holdout = train_test_split(pool, test_size=0.40, random_state=7,
+                                     stratify=pool["label_failed"])
+    validation, test = train_test_split(holdout, test_size=0.50, random_state=8,
+                                       stratify=holdout["label_failed"])
+    return train, validation, test, demo
+
+
+def feature_frame(df, columns=None):
+    frame = pd.get_dummies(df[FEATURES + ["city"]], columns=["city"], dtype=float)
+    if columns is not None:
+        frame = frame.reindex(columns=columns, fill_value=0)
+    if not np.isfinite(frame.to_numpy(dtype=float)).all():
+        raise ValueError("Model features must be finite numeric values")
+    return frame
+
+
+def policy_flags(rows, probabilities, threshold):
+    return np.array([assess(order, float(p), threshold)["zone"] != "GREEN"
+                     for order, p in zip(rows, probabilities)], dtype=int)
+
+
+def _digest(value):
+    return hashlib.sha256(json.dumps(value, sort_keys=True).encode("utf-8")).hexdigest()
+
+
+def fit_and_evaluate(df, feedback_rows=None, feedback=None, previous_version=0):
+    train, validation, test, demo = split_benchmark(df)
+    train = train.copy()
+    feedback = feedback or {}
+    if set(df.get("data_source", [])) != {"SYNTHETIC"}:
+        raise ValueError("The benchmark must explicitly label every row SYNTHETIC")
+    if feedback_rows is not None and len(feedback_rows):
+        if not feedback_rows["order_id"].is_unique:
+            raise ValueError("Each order can contribute only one current outcome")
+        protected = set(pd.concat([train, validation, test])["order_id"])
+        if protected.intersection(feedback_rows["order_id"]):
+            raise ValueError("Feedback cannot overlap benchmark training/validation/test IDs; use reserved demo orders")
+        if not set(feedback_rows["label_failed"]).issubset({0, 1}):
+            raise ValueError("Feedback labels must be binary observed outcomes")
+        train = pd.concat([train, feedback_rows], ignore_index=True)
+    X_train = feature_frame(train)
+    columns = list(X_train.columns)
+    X_validation = feature_frame(validation, columns)
+    X_test = feature_frame(test, columns)
+    validation_rows = validation.to_dict("records")
+    test_rows = test.to_dict("records")
+    candidates = {
+        "regularized_gradient_boosting": HistGradientBoostingClassifier(
+            max_leaf_nodes=7, max_iter=120, learning_rate=0.05,
+            min_samples_leaf=40, l2_regularization=15, random_state=7),
+        "gradient_boosting": HistGradientBoostingClassifier(
+            max_leaf_nodes=15, max_iter=100, l2_regularization=8, random_state=7),
+        "logistic_regression": make_pipeline(StandardScaler(),
+            LogisticRegression(C=1.0, max_iter=1000, random_state=7)),
+    }
+    selections = []
+    fitted = {}
+    with threadpool_limits(limits=1):
+        for name, model in candidates.items():
+            model.fit(X_train, train["label_failed"])
+            fitted[name] = model
+            probabilities = model.predict_proba(X_validation)[:, 1]
+            sweep = [{"threshold": threshold,
+                      **evaluate(validation["label_failed"], policy_flags(validation_rows, probabilities, threshold))}
+                     for threshold in THRESHOLDS]
+            choice = min(sweep, key=lambda entry: (entry["total_cost"], entry["fp_rate"] + entry["fn_rate"]))
+            selections.append({"model_name": name, **choice})
+        selected = min(selections, key=lambda entry: (entry["total_cost"], entry["fp_rate"] + entry["fn_rate"]))
+        model = fitted[selected["model_name"]]
+        probabilities = model.predict_proba(X_test)[:, 1]
+    test_sweep = [{"threshold": threshold,
+                   **evaluate(test["label_failed"], policy_flags(test_rows, probabilities, threshold))}
+                  for threshold in THRESHOLDS]
+    chosen = next(entry for entry in test_sweep if entry["threshold"] == selected["threshold"])
+    flags = policy_flags(test_rows, probabilities, selected["threshold"])
+    rules = [assess(row) for row in test_rows]
+    any_signal = np.array([entry["signal_count"] > 0 for entry in rules], dtype=int)
+    baselines = {
+        "ship_everything": evaluate(test["label_failed"], np.zeros(len(test), dtype=int)),
+        "block_any_adverse_signal": evaluate(test["label_failed"], any_signal),
+        "rules_only_two_signal_policy": evaluate(test["label_failed"],
+            np.array([entry["zone"] != "GREEN" for entry in rules], dtype=int)),
+    }
+    pattern = ((test["phone_fraud_history"] >= 1) | (test["phone_velocity_24h"] >= 3)).to_numpy()
+    pattern_metrics = evaluate(test["label_failed"].to_numpy()[pattern], flags[pattern]) if pattern.any() else None
+    segments = []
+    for city in sorted(test["city"].unique()):
+        mask = (test["city"] == city).to_numpy()
+        segments.append({"city": city, "rows": int(mask.sum()),
+                         **evaluate(test["label_failed"].to_numpy()[mask], flags[mask])})
+    benchmark_hash = hashlib.sha256(df.to_csv(index=False).encode("utf-8")).hexdigest()
+    model_id = "cg-" + _digest({"benchmark": benchmark_hash, "feedback": feedback,
+                              "model": selected["model_name"], "threshold": selected["threshold"],
+                              "version": previous_version + 1})[:12]
+    trained_at = datetime.now(timezone.utc).isoformat()
+    bundle = {"model": model, "columns": columns, "threshold": selected["threshold"],
+              "format_version": 2, "version": previous_version + 1,
+              "model_id": model_id, "model_name": selected["model_name"],
+              "trained_at": trained_at, "feedback": feedback,
+              "data_source": "SYNTHETIC benchmark + marked demo outcomes"}
+    report = {"data_source": "SYNTHETIC", "benchmark_rows": len(df),
+              "benchmark_sha256": benchmark_hash, "failure_rate": float(df["label_failed"].mean()),
+              "target_failure_rate": 0.51, "model_id": model_id, "trained_at": trained_at,
+              "model_name": selected["model_name"], "version": bundle["version"],
+              "split": {"training": len(train), "validation": len(validation), "test": len(test),
+                        "reserved_demo": len(demo), "feedback": len(feedback),
+                        "validation_ids_sha256": _digest(sorted(validation["order_id"])),
+                        "test_ids_sha256": _digest(sorted(test["order_id"]))},
+              "cost_assumptions_pkr": {"false_negative": COST_FN, "false_positive": COST_FP},
+              "selection": "model and threshold chosen on validation cost only; test labels are not used for selection",
+              "validation_candidates": selections, "chosen": chosen, "test_threshold_sweep": test_sweep,
+              "baselines": baselines, "pattern_segment": {"rows": int(pattern.sum()), "metrics": pattern_metrics},
+              "city_segments": segments,
+              "limitations": ["All examples are synthetic; there are no merchant pilots or production accuracy claims.",
+                              "Failed labels combine non-collection/refusal/cancellation; they do not establish deliberate fraud.",
+                              "Benchmark generator and cost assumptions do not reproduce any merchant population.",
+                              "Verification overrides are demonstrated by functional tests, not simulated as perfect human responses.",
+                              "Marked demo outcomes are demonstrations, not prospectively collected field evidence."]}
+    return bundle, report
+
+
+def render_report(report):
+    chosen = report["chosen"]
+    split = report["split"]
+    lines = ["# COD-Guard — FP/FN evaluation", "",
+             "**SYNTHETIC BENCHMARK — no real merchant records or pilots.**", "",
+             "Reference figures supplied in the mission brief: OrderNation (~170k orders), "
+             "37.3% COD cancelled and ~49/100 cash collected. These are different measures. "
+             "We target 51% expected non-collection, not 37.3% cancellation. "
+             "Individual feature relationships remain synthetic assumptions.", "",
+             f"Generated rows: {report['benchmark_rows']}; empirical failure rate: {report['failure_rate']:.4%}. "
+             f"Benchmark SHA-256: `{report['benchmark_sha256']}`.", "",
+             f"Model `{report['model_id']}`: {report['model_name']}, version {report['version']}. "
+             f"Training {split['training']} / validation {split['validation']} / test {split['test']}. "
+             f"{split['reserved_demo']} demo orders reserved outside all three splits; "
+             f"{split['feedback']} marked demo outcomes added to training.", "",
+             "## Method", "",
+             "Models and operating thresholds are selected on **validation only**. "
+             "The test split is untouched during selection. The reported flag is the actual serving policy: "
+             "rules + the saved ML threshold + the two-independent-signal guard. "
+             "Both address checks count as one signal. A lone signal cannot hold or require verification; "
+             "ML alone is not another independent signal. Confirmation overrides a flag; denial overrides a pass.", "",
+             f"Cost assumptions: false negative PKR {COST_FN}; false positive PKR {COST_FP}. "
+             "These are illustrative costs, not measured merchant losses. Any non-GREEN recommendation is "
+             "counted as flagged, even though verification can later recover a genuine order.", "",
+             "## Frozen operating point on the test split", "",
+             f"Validation-selected threshold **{chosen['threshold']:.2f}**. "
+             f"TP={chosen['tp']}, FP={chosen['fp']}, FN={chosen['fn']}, TN={chosen['tn']}. "
+             f"FPR **{chosen['fp_rate']:.2%}**; FNR **{chosen['fn_rate']:.2%}**; "
+             f"precision {chosen['precision']:.2%}; recall {chosen['recall']:.2%}. "
+             f"Illustrative cost PKR {chosen['total_cost']:,}.", "",
+             "## Baselines on the same test orders", "",
+             "| Policy | TP | FP | FN | TN | FPR | FNR | Illustrative cost PKR |",
+             "|---|---:|---:|---:|---:|---:|---:|---:|",]
+    for name, entry in {**report["baselines"], "serving_policy": chosen}.items():
+        lines.append(f"| {name} | {entry['tp']} | {entry['fp']} | {entry['fn']} | {entry['tn']} | "
+                     f"{entry['fp_rate']:.3f} | {entry['fn_rate']:.3f} | {entry['total_cost']:,} |")
+    lines += ["", "## Test threshold trade-off (diagnostic, not used to select the threshold)", "",
+              "| Threshold | TP | FP | FN | TN | FPR | FNR | Illustrative cost PKR |",
+              "|---|---:|---:|---:|---:|---:|---:|---:|"]
+    for entry in report["test_threshold_sweep"]:
+        lines.append(f"| {entry['threshold']:.2f} | {entry['tp']} | {entry['fp']} | {entry['fn']} | {entry['tn']} | "
+                     f"{entry['fp_rate']:.3f} | {entry['fn_rate']:.3f} | {entry['total_cost']:,} |")
+    lines += ["", "## Validation candidate comparison", "",
+              "| Model | Selected threshold | Validation FPR | Validation FNR | Validation cost PKR |",
+              "|---|---:|---:|---:|---:|"]
+    for entry in report["validation_candidates"]:
+        lines.append(f"| {entry['model_name']} | {entry['threshold']:.2f} | {entry['fp_rate']:.3f} | "
+                     f"{entry['fn_rate']:.3f} | {entry['total_cost']:,} |")
+    lines += ["", "## Pattern and city checks", "",
+              "The fraud-linked-phone / 3+ orders-per-day segment is an observable pattern, "
+              "not ground truth that an order is deliberately fraudulent."]
+    pattern = report["pattern_segment"]
+    if pattern["metrics"]:
+        lines.append(f"Pattern n={pattern['rows']}, recall={pattern['metrics']['recall']:.3f}, "
+                     f"FNR={pattern['metrics']['fn_rate']:.3f}.")
+    lines += ["", "| City | Rows | FPR | FNR |", "|---|---:|---:|---:|"]
+    for entry in report["city_segments"]:
+        lines.append(f"| {entry['city']} | {entry['rows']} | {entry['fp_rate']:.3f} | {entry['fn_rate']:.3f} |")
+    lines += ["", "## Limits and brief conflicts", ""]
+    lines += ["- " + limitation for limitation in report["limitations"]]
+    lines += ["- The original generator produced 27.5% failure despite its calibration claim; "
+              "its 4.88% FPR / 62.23% FNR report selected a threshold on test data and did not evaluate the served policy. "
+              "The new calibration and split differ, so old and new percentages are not a like-for-like improvement claim.",
+              "- No low-FP-and-low-FN production claim is supported. Unpredictable refusals remain a material false-negative risk.",
+              "- Competitors: Tasdeek, Botaura, OrderWitness, DukaanFlow. No claim of being first or of competitor capabilities."]
+    return "\n".join(lines) + "\n"
+
+
+def _atomic_write(path, content):
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(dir=path.parent, prefix=path.name + ".", suffix=".tmp", delete=False) as handle:
+            temporary = Path(handle.name)
+            handle.write(content)
+        os.replace(temporary, path)
+    finally:
+        if temporary is not None and temporary.exists():
+            temporary.unlink()
+
+
+def publish(bundle, report, model_path, evaluation_path, report_path=None):
+    _atomic_write(model_path, pickle.dumps(bundle))
+    _atomic_write(evaluation_path, json.dumps(report, indent=2).encode("utf-8"))
+    if report_path is not None:
+        _atomic_write(report_path, render_report(report).encode("utf-8"))
+
+
 def main():
-    df = pd.read_csv(ROOT / "data/benchmark_orders.csv")
-    X = pd.get_dummies(df[FEATURES + ["city"]], columns=["city"])
-    y = df["label_failed"]
-    Xtr, Xte, ytr, yte = train_test_split(X, y, test_size=0.25, random_state=7, stratify=y)
-    model = HistGradientBoostingClassifier(random_state=7)
-    model.fit(Xtr, ytr)
-    proba = model.predict_proba(Xte)[:, 1]
+    benchmark = pd.read_csv(ROOT / "data/benchmark_orders.csv")
+    bundle, report = fit_and_evaluate(benchmark)
+    publish(bundle, report, ROOT / "backend/app/model.pkl", ROOT / "data/evaluation.json", ROOT / "docs/EVAL_REPORT.md")
+    print(json.dumps({"model_id": bundle["model_id"], "model": bundle["model_name"],
+                      "chosen": report["chosen"], "split": report["split"],
+                      "baselines": report["baselines"]}, indent=2))
+    print("Wrote docs/EVAL_REPORT.md, data/evaluation.json and backend/app/model.pkl (SYNTHETIC)")
 
-    sweep = []
-    for t in np.arange(0.30, 0.81, 0.05):
-        m = evaluate(yte.values, (proba >= t).astype(int))
-        m["threshold"] = round(float(t), 2)
-        sweep.append(m)
-    best = min(sweep, key=lambda m: m["total_cost"])
-
-    ship_all = evaluate(yte.values, np.zeros(len(yte), dtype=int))
-    block_flagged = evaluate(yte.values, (proba >= 0.30).astype(int))
-
-    with open(ROOT / "backend/app/model.pkl", "wb") as f:
-        pickle.dump({"model": model, "columns": list(X.columns),
-                     "threshold": best["threshold"]}, f)
-
-    lines = ["# COD-Guard — FP/FN Evaluation Report", "",
-             "Dataset: SYNTHETIC benchmark calibrated to OrderNation stats "
-             "(~170k real orders: 37.3% COD cancelled, ~49/100 end in cash). "
-             "Held-out test split: 25%.", "",
-             f"Cost assumptions: FN (fake order shipped) = PKR {COST_FN}; "
-             f"FP (genuine order blocked) = PKR {COST_FP}.", "",
-             "## Baselines (test split)",
-             f"- Ship everything: FP={ship_all['fp']}, FN={ship_all['fn']}, "
-             f"total cost = PKR {ship_all['total_cost']:,}",
-             f"- Flag at loose threshold 0.30: FP={block_flagged['fp']}, "
-             f"FN={block_flagged['fn']}, total cost = PKR {block_flagged['total_cost']:,}", "",
-             "## Threshold sweep (FP vs FN trade-off)", "",
-             "| threshold | TP | FP | FN | TN | FP rate | FN rate | precision | recall | total cost (PKR) |",
-             "|---|---|---|---|---|---|---|---|---|---|"]
-    for m in sweep:
-        lines.append(f"| {m['threshold']:.2f} | {m['tp']} | {m['fp']} | {m['fn']} | {m['tn']} | "
-                     f"{m['fp_rate']:.3f} | {m['fn_rate']:.3f} | {m['precision']:.3f} | "
-                     f"{m['recall']:.3f} | {m['total_cost']:,} |")
-    # Segment check: organised-fake pattern (fraud-linked phone or 3+ orders/day)
-    te = df.loc[Xte.index]
-    strong = ((te["phone_fraud_history"] >= 1) | (te["phone_velocity_24h"] >= 3)).values
-    seg = evaluate(yte.values[strong], (proba[strong] >= best["threshold"]).astype(int)) if strong.sum() else None
-
-    lines += ["", f"## Chosen operating point: threshold {best['threshold']:.2f} "
-              f"(lowest total cost)", "",
-              f"Confusion matrix: TP={best['tp']}, FP={best['fp']}, "
-              f"FN={best['fn']}, TN={best['tn']}. "
-              f"vs ship-everything, total loss falls from PKR {ship_all['total_cost']:,} "
-              f"to PKR {best['total_cost']:,} on the test split "
-              f"({100 * (1 - best['total_cost'] / ship_all['total_cost']):.0f}% reduction).", "",
-              (f"Segment check - organised-fake pattern orders (fraud-linked phone or "
-               f"3+ orders/day, n={int(strong.sum())}): recall {seg['recall']:.2f}, "
-               f"FN rate {seg['fn_rate']:.2f}. Ordinary refusals are intrinsically "
-               f"harder to predict pre-dispatch; those are what the verification "
-               f"agent exists to catch." if seg else "Segment check unavailable."), "",
-              "Note: AMBER-zone orders are verified with the customer before any "
-              "block, so a model FP does not automatically lose the sale — the "
-              "verification step is the FP-recovery path, and a denied/unreachable "
-              "confirmation on a high-risk order is the FN-recovery path."]
-    (ROOT / "docs/EVAL_REPORT.md").write_text("\n".join(lines))
-    print(json.dumps({"best_threshold": best["threshold"], "best": best,
-                      "ship_all_cost": ship_all["total_cost"]}, indent=1))
-    print("Wrote docs/EVAL_REPORT.md and backend/app/model.pkl")
 
 if __name__ == "__main__":
     main()

@@ -1,33 +1,83 @@
-# COD-Guard — FP/FN Evaluation Report
+# COD-Guard — FP/FN evaluation
 
-Dataset: SYNTHETIC benchmark calibrated to OrderNation stats (~170k real orders: 37.3% COD cancelled, ~49/100 end in cash). Held-out test split: 25%.
+**SYNTHETIC BENCHMARK — no real merchant records or pilots.**
 
-Cost assumptions: FN (fake order shipped) = PKR 650; FP (genuine order blocked) = PKR 450.
+Reference figures supplied in the mission brief: OrderNation (~170k orders), 37.3% COD cancelled and ~49/100 cash collected. These are different measures. We target 51% expected non-collection, not 37.3% cancellation. Individual feature relationships remain synthetic assumptions.
 
-## Baselines (test split)
-- Ship everything: FP=0, FN=413, total cost = PKR 268,450
-- Flag at loose threshold 0.30: FP=228, FN=183, total cost = PKR 221,550
+Generated rows: 6000; empirical failure rate: 50.7000%. Benchmark SHA-256: `b03474a56979d6f86a0b1794ddaefcd2d4925ab63ea1f622942c3211854719b7`.
 
-## Threshold sweep (FP vs FN trade-off)
+Model `cg-0328b4106253`: regularized_gradient_boosting, version 1. Training 3552 / validation 1184 / test 1184. 80 demo orders reserved outside all three splits; 0 marked demo outcomes added to training.
 
-| threshold | TP | FP | FN | TN | FP rate | FN rate | precision | recall | total cost (PKR) |
-|---|---|---|---|---|---|---|---|---|---|
-| 0.30 | 230 | 228 | 183 | 859 | 0.210 | 0.443 | 0.502 | 0.557 | 221,550 |
-| 0.35 | 213 | 175 | 200 | 912 | 0.161 | 0.484 | 0.549 | 0.516 | 208,750 |
-| 0.40 | 199 | 134 | 214 | 953 | 0.123 | 0.518 | 0.598 | 0.482 | 199,400 |
-| 0.45 | 187 | 107 | 226 | 980 | 0.098 | 0.547 | 0.636 | 0.453 | 195,050 |
-| 0.50 | 176 | 89 | 237 | 998 | 0.082 | 0.574 | 0.664 | 0.426 | 194,100 |
-| 0.55 | 167 | 69 | 246 | 1018 | 0.063 | 0.596 | 0.708 | 0.404 | 190,950 |
-| 0.60 | 156 | 53 | 257 | 1034 | 0.049 | 0.622 | 0.746 | 0.378 | 190,900 |
-| 0.65 | 145 | 45 | 268 | 1042 | 0.041 | 0.649 | 0.763 | 0.351 | 194,450 |
-| 0.70 | 133 | 40 | 280 | 1047 | 0.037 | 0.678 | 0.769 | 0.322 | 200,000 |
-| 0.75 | 116 | 32 | 297 | 1055 | 0.029 | 0.719 | 0.784 | 0.281 | 207,450 |
-| 0.80 | 101 | 24 | 312 | 1063 | 0.022 | 0.755 | 0.808 | 0.245 | 213,600 |
+## Method
 
-## Chosen operating point: threshold 0.60 (lowest total cost)
+Models and operating thresholds are selected on **validation only**. The test split is untouched during selection. The reported flag is the actual serving policy: rules + the saved ML threshold + the two-independent-signal guard. Both address checks count as one signal. A lone signal cannot hold or require verification; ML alone is not another independent signal. Confirmation overrides a flag; denial overrides a pass.
 
-Confusion matrix: TP=156, FP=53, FN=257, TN=1034. vs ship-everything, total loss falls from PKR 268,450 to PKR 190,900 on the test split (29% reduction).
+Cost assumptions: false negative PKR 650; false positive PKR 450. These are illustrative costs, not measured merchant losses. Any non-GREEN recommendation is counted as flagged, even though verification can later recover a genuine order.
 
-Segment check - organised-fake pattern orders (fraud-linked phone or 3+ orders/day, n=269): recall 0.87, FN rate 0.13. Ordinary refusals are intrinsically harder to predict pre-dispatch; those are what the verification agent exists to catch.
+## Frozen operating point on the test split
 
-Note: AMBER-zone orders are verified with the customer before any block, so a model FP does not automatically lose the sale — the verification step is the FP-recovery path, and a denied/unreachable confirmation on a high-risk order is the FN-recovery path.
+Validation-selected threshold **0.50**. TP=245, FP=96, FN=356, TN=487. FPR **16.47%**; FNR **59.23%**; precision 71.85%; recall 40.77%. Illustrative cost PKR 274,600.
+
+## Baselines on the same test orders
+
+| Policy | TP | FP | FN | TN | FPR | FNR | Illustrative cost PKR |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| ship_everything | 0 | 0 | 601 | 583 | 0.000 | 1.000 | 390,650 |
+| block_any_adverse_signal | 490 | 417 | 111 | 166 | 0.715 | 0.185 | 259,800 |
+| rules_only_two_signal_policy | 194 | 65 | 407 | 518 | 0.111 | 0.677 | 293,800 |
+| serving_policy | 245 | 96 | 356 | 487 | 0.165 | 0.592 | 274,600 |
+
+## Test threshold trade-off (diagnostic, not used to select the threshold)
+
+| Threshold | TP | FP | FN | TN | FPR | FNR | Illustrative cost PKR |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| 0.25 | 269 | 130 | 332 | 453 | 0.223 | 0.552 | 274,300 |
+| 0.30 | 262 | 116 | 339 | 467 | 0.199 | 0.564 | 272,550 |
+| 0.35 | 257 | 110 | 344 | 473 | 0.189 | 0.572 | 273,100 |
+| 0.40 | 252 | 110 | 349 | 473 | 0.189 | 0.581 | 276,350 |
+| 0.45 | 247 | 106 | 354 | 477 | 0.182 | 0.589 | 277,800 |
+| 0.50 | 245 | 96 | 356 | 487 | 0.165 | 0.592 | 274,600 |
+| 0.55 | 233 | 93 | 368 | 490 | 0.160 | 0.612 | 281,050 |
+| 0.60 | 226 | 81 | 375 | 502 | 0.139 | 0.624 | 280,200 |
+| 0.65 | 209 | 73 | 392 | 510 | 0.125 | 0.652 | 287,650 |
+| 0.70 | 202 | 67 | 399 | 516 | 0.115 | 0.664 | 289,500 |
+| 0.75 | 198 | 65 | 403 | 518 | 0.111 | 0.671 | 291,200 |
+| 0.80 | 195 | 65 | 406 | 518 | 0.111 | 0.676 | 293,150 |
+| 0.85 | 194 | 65 | 407 | 518 | 0.111 | 0.677 | 293,800 |
+
+## Validation candidate comparison
+
+| Model | Selected threshold | Validation FPR | Validation FNR | Validation cost PKR |
+|---|---:|---:|---:|---:|
+| regularized_gradient_boosting | 0.50 | 0.163 | 0.571 | 265,700 |
+| gradient_boosting | 0.45 | 0.170 | 0.569 | 266,850 |
+| logistic_regression | 0.55 | 0.153 | 0.582 | 267,550 |
+
+## Pattern and city checks
+
+The fraud-linked-phone / 3+ orders-per-day segment is an observable pattern, not ground truth that an order is deliberately fraudulent.
+Pattern n=233, recall=0.919, FNR=0.081.
+
+| City | Rows | FPR | FNR |
+|---|---:|---:|---:|
+| Faisalabad | 129 | 0.111 | 0.627 |
+| Hyderabad | 113 | 0.185 | 0.542 |
+| Islamabad | 127 | 0.127 | 0.656 |
+| Karachi | 107 | 0.250 | 0.582 |
+| Lahore | 126 | 0.103 | 0.588 |
+| Multan | 129 | 0.232 | 0.483 |
+| Peshawar | 89 | 0.163 | 0.700 |
+| Quetta | 134 | 0.151 | 0.492 |
+| Rawalpindi | 112 | 0.143 | 0.694 |
+| Sialkot | 118 | 0.188 | 0.600 |
+
+## Limits and brief conflicts
+
+- All examples are synthetic; there are no merchant pilots or production accuracy claims.
+- Failed labels combine non-collection/refusal/cancellation; they do not establish deliberate fraud.
+- Benchmark generator and cost assumptions do not reproduce any merchant population.
+- Verification overrides are demonstrated by functional tests, not simulated as perfect human responses.
+- Marked demo outcomes are demonstrations, not prospectively collected field evidence.
+- The original generator produced 27.5% failure despite its calibration claim; its 4.88% FPR / 62.23% FNR report selected a threshold on test data and did not evaluate the served policy. The new calibration and split differ, so old and new percentages are not a like-for-like improvement claim.
+- No low-FP-and-low-FN production claim is supported. Unpredictable refusals remain a material false-negative risk.
+- Competitors: Tasdeek, Botaura, OrderWitness, DukaanFlow. No claim of being first or of competitor capabilities.
