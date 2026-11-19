@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+backend/app/model.pkl
+data/state.json
+.venv/

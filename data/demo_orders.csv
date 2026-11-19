@@ -1,0 +1,81 @@
+order_id,city,phone_valid,phone_fraud_history,phone_velocity_24h,address_words,address_has_landmark,amount_pkr,items_count,order_hour,is_repeat_customer,customer_past_delivered,customer_past_refusals,label_failed,customer_name,product,phone
+CG-00203,Peshawar,1,0,1,12,1,1181,2,13,0,0,0,0,Ali Raza,Wireless Earbuds,03200000000
+CG-01173,Lahore,1,1,0,6,1,1131,6,20,1,2,1,1,Fatima Noor,Winter Jacket,03200137913
+CG-01842,Hyderabad,1,0,0,8,1,3514,6,12,1,5,1,1,Usman Tariq,Skincare Set,03200275826
+CG-03446,Rawalpindi,1,0,2,4,1,1189,4,17,0,0,0,0,Ayesha Khan,Running Shoes,03200413739
+CG-00456,Lahore,1,0,1,6,0,4090,3,3,1,11,0,0,Bilal Ahmed,Smart Watch,03200551652
+CG-02738,Faisalabad,1,0,2,4,0,19038,4,16,0,0,0,1,Zainab Bibi,Cotton Kurti,03200689565
+CG-02096,Sialkot,1,0,0,5,1,3666,6,17,1,2,0,0,Hassan Javed,Phone Cover + Glass,03200827478
+CG-00544,Hyderabad,1,0,1,12,0,1206,2,18,0,0,0,0,Mahnoor Aslam,Hair Dryer,03200965391
+CG-00904,Faisalabad,1,0,0,7,0,17948,5,11,0,0,0,0,Omar Farooq,Kitchen Blender,03201103304
+CG-03082,Islamabad,1,0,1,5,0,19332,1,19,1,6,0,0,Hira Shahid,Prayer Mat Set,03201241217
+CG-03515,Sialkot,0,0,1,6,1,2149,6,19,0,0,0,1,Danish Ali,Leather Wallet,03201379130
+CG-03042,Rawalpindi,1,0,0,13,1,2168,4,11,0,0,0,0,Sana Iqbal,Abaya,03201517043
+CG-02475,Faisalabad,1,1,2,4,0,3101,1,2,1,0,1,0,Talha Mehmood,Wireless Earbuds,03201654956
+CG-01905,Islamabad,1,0,1,15,1,3043,1,21,1,7,0,0,Iqra Naseem,Winter Jacket,03201792869
+CG-03021,Lahore,1,0,1,17,1,2073,2,16,0,0,0,0,Shahzaib Anwar,Skincare Set,03201930782
+CG-02223,Faisalabad,1,1,3,2,0,1032,4,2,0,0,0,0,Ali Raza,Running Shoes,03202068695
+CG-00062,Rawalpindi,1,1,0,11,0,1410,1,17,0,0,0,0,Fatima Noor,Smart Watch,03202206608
+CG-03697,Faisalabad,1,0,3,4,0,500,2,13,0,0,0,1,Usman Tariq,Cotton Kurti,03202344521
+CG-00017,Lahore,1,0,1,2,1,1802,2,3,0,0,0,1,Ayesha Khan,Phone Cover + Glass,03202482434
+CG-02570,Hyderabad,1,0,1,5,0,5895,1,9,0,0,0,0,Bilal Ahmed,Hair Dryer,03202620347
+CG-04959,Sialkot,1,0,0,15,0,10219,3,22,1,7,1,0,Zainab Bibi,Kitchen Blender,03202758260
+CG-03473,Hyderabad,1,0,0,5,0,5319,6,7,1,8,0,0,Hassan Javed,Prayer Mat Set,03202896173
+CG-03529,Lahore,1,0,2,2,0,1134,1,0,1,0,1,1,Mahnoor Aslam,Leather Wallet,03203034086
+CG-04532,Quetta,1,0,0,9,1,8081,1,23,1,2,0,0,Omar Farooq,Abaya,03203171999
+CG-01238,Islamabad,1,0,1,6,1,500,1,2,0,0,0,0,Hira Shahid,Wireless Earbuds,03203309912
+CG-01513,Rawalpindi,0,1,4,2,0,4504,4,1,0,0,0,0,Danish Ali,Winter Jacket,03203447825
+CG-05432,Rawalpindi,1,0,1,2,0,1146,1,11,0,0,0,0,Sana Iqbal,Skincare Set,03203585738
+CG-01698,Rawalpindi,1,0,1,7,1,1945,1,13,0,0,0,0,Talha Mehmood,Running Shoes,03203723651
+CG-04401,Lahore,1,1,0,11,0,1975,4,19,0,0,0,1,Iqra Naseem,Smart Watch,03203861564
+CG-05214,Hyderabad,1,0,0,2,1,1432,4,18,1,6,0,0,Shahzaib Anwar,Cotton Kurti,03203999477
+CG-00036,Hyderabad,1,0,1,12,1,3450,5,13,0,0,0,0,Ali Raza,Phone Cover + Glass,03204137390
+CG-05760,Lahore,1,0,1,16,1,5218,6,15,0,0,0,0,Fatima Noor,Hair Dryer,03204275303
+CG-04540,Multan,1,0,2,4,1,1052,3,5,1,3,0,0,Usman Tariq,Kitchen Blender,03204413216
+CG-05616,Quetta,1,0,0,17,0,1544,2,4,0,0,0,1,Ayesha Khan,Prayer Mat Set,03204551129
+CG-04136,Sialkot,1,0,1,9,0,4431,4,9,1,8,0,0,Bilal Ahmed,Leather Wallet,03204689042
+CG-01127,Peshawar,1,0,1,12,0,14166,4,11,0,0,0,0,Zainab Bibi,Abaya,03204826955
+CG-00686,Faisalabad,1,0,1,11,0,1193,2,12,0,0,0,0,Hassan Javed,Wireless Earbuds,03204964868
+CG-04575,Quetta,1,0,0,13,0,2721,1,15,0,0,0,0,Mahnoor Aslam,Winter Jacket,03205102781
+CG-01742,Faisalabad,1,0,0,4,0,2676,3,13,1,6,0,0,Omar Farooq,Skincare Set,03205240694
+CG-01253,Quetta,1,0,1,4,0,2854,6,2,1,5,1,0,Hira Shahid,Running Shoes,03205378607
+CG-04235,Karachi,1,0,0,15,1,1825,6,7,1,1,0,0,Danish Ali,Smart Watch,03205516520
+CG-03979,Lahore,1,0,0,8,0,4472,5,11,0,0,0,1,Sana Iqbal,Cotton Kurti,03205654433
+CG-02661,Quetta,1,0,5,5,0,3449,5,2,0,0,0,1,Talha Mehmood,Phone Cover + Glass,03205792346
+CG-03488,Faisalabad,1,0,3,4,1,4095,4,3,0,0,0,0,Iqra Naseem,Hair Dryer,03205930259
+CG-01203,Quetta,1,0,0,17,0,1586,5,15,0,0,0,0,Shahzaib Anwar,Kitchen Blender,03206068172
+CG-02320,Karachi,1,0,0,4,0,2487,4,23,0,0,0,1,Ali Raza,Prayer Mat Set,03206206085
+CG-03631,Multan,1,1,3,3,0,2266,4,23,0,0,0,1,Fatima Noor,Leather Wallet,03206343998
+CG-00232,Karachi,1,0,0,7,0,3113,2,17,0,0,0,0,Usman Tariq,Abaya,03206481911
+CG-04238,Quetta,1,0,0,6,0,1053,4,5,1,7,0,0,Ayesha Khan,Wireless Earbuds,03206619824
+CG-02593,Karachi,1,1,2,4,0,1359,1,21,0,0,0,1,Bilal Ahmed,Winter Jacket,03206757737
+CG-03046,Quetta,1,0,0,3,0,3424,1,3,0,0,0,1,Zainab Bibi,Skincare Set,03206895650
+CG-02891,Multan,1,0,0,8,0,3656,5,16,1,8,0,0,Hassan Javed,Running Shoes,03207033563
+CG-02864,Karachi,1,0,0,6,1,4941,5,9,0,0,0,0,Mahnoor Aslam,Smart Watch,03207171476
+CG-03459,Rawalpindi,1,0,0,6,1,892,6,12,1,9,0,0,Omar Farooq,Cotton Kurti,03207309389
+CG-03066,Hyderabad,1,0,0,4,0,2367,1,23,1,6,0,0,Hira Shahid,Phone Cover + Glass,03207447302
+CG-03521,Rawalpindi,1,0,2,10,1,4843,5,3,0,0,0,1,Danish Ali,Hair Dryer,03207585215
+CG-01073,Multan,1,0,2,8,0,919,1,16,0,0,0,0,Sana Iqbal,Kitchen Blender,03207723128
+CG-03070,Faisalabad,1,0,1,10,1,4899,2,14,0,0,0,0,Talha Mehmood,Prayer Mat Set,03207861041
+CG-03206,Sialkot,1,0,2,18,1,2187,5,15,0,0,0,0,Iqra Naseem,Leather Wallet,03207998954
+CG-00924,Islamabad,1,0,0,5,1,7281,1,23,1,9,0,0,Shahzaib Anwar,Abaya,03208136867
+CG-00626,Rawalpindi,1,0,1,12,1,4478,4,3,1,5,0,0,Ali Raza,Wireless Earbuds,03208274780
+CG-00977,Multan,1,1,0,5,0,4454,4,18,0,0,0,1,Fatima Noor,Winter Jacket,03208412693
+CG-03427,Hyderabad,1,0,1,15,1,2630,5,0,0,0,0,0,Usman Tariq,Skincare Set,03208550606
+CG-05159,Sialkot,1,0,0,10,1,4492,3,21,0,0,0,0,Ayesha Khan,Running Shoes,03208688519
+CG-05620,Karachi,1,0,1,13,0,6303,3,20,0,0,0,0,Bilal Ahmed,Smart Watch,03208826432
+CG-04698,Rawalpindi,1,1,3,5,0,10694,2,23,1,0,0,1,Zainab Bibi,Cotton Kurti,03208964345
+CG-00454,Multan,1,0,0,5,1,2003,6,3,0,0,0,0,Hassan Javed,Phone Cover + Glass,03209102258
+CG-01826,Lahore,1,0,1,9,1,1479,6,13,0,0,0,1,Mahnoor Aslam,Hair Dryer,03209240171
+CG-04129,Faisalabad,1,0,0,6,1,33514,4,19,1,10,0,0,Omar Farooq,Kitchen Blender,03209378084
+CG-01636,Lahore,1,0,1,12,1,500,3,4,0,0,0,0,Hira Shahid,Prayer Mat Set,03209515997
+CG-05054,Karachi,1,0,0,5,1,8208,4,15,0,0,0,0,Danish Ali,Leather Wallet,03209653910
+CG-02120,Quetta,1,0,0,7,0,12028,5,3,0,0,0,1,Sana Iqbal,Abaya,03209791823
+CG-03460,Faisalabad,1,0,0,11,1,2415,5,4,0,0,0,1,Talha Mehmood,Wireless Earbuds,03209929736
+CG-00368,Karachi,0,0,1,15,1,9747,4,22,0,0,0,0,Iqra Naseem,Winter Jacket,03210067649
+CG-04083,Quetta,1,0,0,15,0,3497,5,18,0,0,0,0,Shahzaib Anwar,Skincare Set,03210205562
+CG-05385,Hyderabad,1,0,0,11,1,2606,5,20,0,0,0,0,Ali Raza,Running Shoes,03210343475
+CG-00838,Karachi,1,0,0,3,1,7770,4,20,0,0,0,1,Fatima Noor,Smart Watch,03210481388
+CG-00953,Faisalabad,1,0,0,5,1,2471,5,23,0,0,0,1,Usman Tariq,Cotton Kurti,03210619301
+CG-04502,Sialkot,1,0,0,21,1,7687,3,14,0,0,0,0,Ayesha Khan,Phone Cover + Glass,03210757214
+CG-00492,Quetta,1,0,0,17,1,10322,3,6,0,0,0,0,Bilal Ahmed,Hair Dryer,03210895127
