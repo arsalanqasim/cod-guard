@@ -295,3 +295,10 @@ and leaves unobserved channel/language cohorts unevaluated. The dashboard
 renders its active matching report. The tenant savings endpoint separates
 synthetic estimates, observed outcomes and statement charges from savings,
 which remain unavailable without a counterfactual comparison.
+
+### Round 5 — WS-C: Shopify custom app intake
+
+[Shopify setup](SHOPIFY.md) maps custom installation, protected fields, raw
+signature verification, merchant/order deduplication and distribution limits.
+Fixture tests cover redacted payloads, the COD filter and tenant isolation.
+No live store installed, App Store submission, or billing integration.

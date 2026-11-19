@@ -19,12 +19,14 @@ from woo_routes import router as woo_router
 from whatsapp_routes import router as whatsapp_router
 from courier_routes import router as courier_router
 from savings_report import seller_report
+from shopify_routes import router as shopify_router
 
 app = FastAPI(title="COD-Guard — shadow intake", version="0.3")
 app.add_middleware(RequestBodyLimit, limit=VOICE_LIMIT_BYTES + 1024 * 1024)
 app.include_router(woo_router)
 app.include_router(whatsapp_router)
 app.include_router(courier_router)
+app.include_router(shopify_router)
 voice_jobs = JobQueue(workers=VOICE_WORKERS, capacity=4, ttl_seconds=600)
 
 
