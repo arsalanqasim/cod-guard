@@ -32,9 +32,11 @@ if notice:
     st.success(notice)
 
 try:
-    data = service.load_orders()
-    orders = {row["order_id"]: row for row in data.to_dict("records")}
-    assessments = {oid: service.assess_order(order) for oid, order in orders.items()}
+    page_size = 50
+    page = st.session_state.get("dispatch_page", 1)
+    page_rows, page_scores, total = service.order_page(limit=page_size, offset=(page - 1) * page_size)
+    orders = {row["order_id"]: row for row in page_rows}
+    assessments = {score["order_id"]: score for score in page_scores}
     model = service.model_status()
     learning = service.learning_status()
 except (FileNotFoundError, StateUnavailable, ValueError) as exc:
@@ -42,9 +44,15 @@ except (FileNotFoundError, StateUnavailable, ValueError) as exc:
     st.code("python data/generate_benchmark.py\npython backend/app/train_model.py\npython scripts/seed_demo.py")
     st.stop()
 
+if not orders:
+    st.info("No demo orders are available on this page.")
+    st.stop()
+
 with st.sidebar:
     st.subheader("Exhibition control")
     st.caption("LOCAL CONVERSATION SIMULATOR")
+    st.number_input("Order page", min_value=1, max_value=max(1, (total + page_size - 1) // page_size),
+                    step=1, key="dispatch_page")
     st.write("No WhatsApp messages are sent. Reply intent uses offline rules; Urdu audio uses Whisper.")
     st.divider()
     st.write("**Risk model**")
@@ -62,9 +70,10 @@ with st.sidebar:
 
 counts = {decision: sum(a["decision"] == decision for a in assessments.values())
           for decision in ["SHIP", "VERIFY_FIRST", "HOLD", "HOLD_CANCEL"]}
-for column, label, count in zip(st.columns(4),
-                               ["Ready to ship", "Verify first", "On hold / cancelled", "Marked demo outcomes"],
-                               [counts["SHIP"], counts["VERIFY_FIRST"], counts["HOLD"] + counts["HOLD_CANCEL"], learning["recorded"]]):
+st.caption(f"Orders {(page - 1) * page_size + 1}–{min(page * page_size, total)} of {total}")
+for column, label, count in zip(st.columns(3),
+                               ["Ready to ship on page", "Verify first on page", "Held / cancelled on page"],
+                               [counts["SHIP"], counts["VERIFY_FIRST"], counts["HOLD"] + counts["HOLD_CANCEL"]]):
     column.metric(label, count)
 
 order_ids = list(orders)
@@ -95,7 +104,7 @@ with tab_orders:
     st.caption("A lone adverse signal cannot hold an order or require verification. Both address checks count together as one signal.")
     filter_column, search_column = st.columns([1, 2])
     zones = filter_column.multiselect("Risk zones", ["GREEN", "AMBER", "RED"], default=["GREEN", "AMBER", "RED"])
-    search = search_column.text_input("Search order or customer", placeholder="Order ID, customer, product or city").casefold()
+    search = search_column.text_input("Search this page", placeholder="Order ID, customer, product or city").casefold()
     rows = []
     for oid, order in orders.items():
         risk = assessments[oid]

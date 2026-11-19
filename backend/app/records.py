@@ -233,3 +233,15 @@ def select_orders(connection, tenant_id, *, order_id=None):
         query += " AND order_id=?"
         parameters += (order_id,)
     return [dict(row) for row in connection.execute(query + " ORDER BY order_id", parameters)]
+
+
+def select_page(connection, tenant_id, limit, offset, search):
+    where = "tenant_id=?"
+    params = (tenant_id,)
+    if search:
+        where += " AND instr(lower(order_id || ' ' || customer_name || ' ' || product || ' ' || city), ?) > 0"
+        params += (search.casefold(),)
+    total = connection.execute(f"SELECT COUNT(*) FROM orders WHERE {where}", params).fetchone()[0]
+    rows = connection.execute(f"SELECT * FROM orders WHERE {where} ORDER BY order_id LIMIT ? OFFSET ?",
+                              (*params, limit, offset))
+    return [dict(row) for row in rows], total

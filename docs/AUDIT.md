@@ -147,6 +147,15 @@ and raw reply expiry. `test_empty_order_requires_verification` protects the
 unknown-feature path. The dashboard remains limited to the synthetic demo
 tenant. See [shadow intake and retention](SHADOW_INTAKE.md).
 
+### 6. Order queue latency
+
+The API and dashboard read a bounded page and its current decision and
+outcome projections in one SQLite snapshot, then score the page in one
+prediction batch. The API exposes the total in `X-Total-Count`. The 10,000-row
+TestClient regression checks the median of five requests for a page of 50
+under one second and verifies one prediction batch per request. The dashboard
+test checks that changing pages scores only the visible 50 and 30 rows.
+
 ## Round 2 addendum
 
 The Round 1 test IDs, 6,000 synthetic rows, model ID `cg-0328b4106253`, and

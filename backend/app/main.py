@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Annotated, Literal
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from fastapi import Depends, FastAPI, File, Header, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, Header, HTTPException, Query, Response, UploadFile
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, field_validator
 import service
@@ -46,11 +46,14 @@ def ready():
 
 
 @app.get("/orders")
-def orders(operator: Operator = Depends(require_operator)):
+def orders(response: Response, limit: Annotated[int, Query(ge=1, le=100)] = 50,
+           offset: Annotated[int, Query(ge=0, le=2**31 - 1)] = 0,
+           operator: Operator = Depends(require_operator)):
+    rows, assessments, total = service.order_page(operator.tenant_id, limit=limit, offset=offset)
+    response.headers["X-Total-Count"] = str(total)
     return [{**{key: order[key] for key in ("order_id", "customer_name", "product", "city", "amount_pkr", "data_source")},
              "phone": ("••••" + order["phone"][-2:]) if len(order["phone"]) > 2 else "••••",
-             **service.assess_order(order, tenant_id=operator.tenant_id)}
-            for order in service.load_orders(operator.tenant_id).astype(object).where(lambda frame: frame.notna(), None).to_dict("records")]
+             **assessment} for order, assessment in zip(rows, assessments)]
 
 
 @app.post("/orders/import", status_code=201)

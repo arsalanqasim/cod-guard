@@ -15,9 +15,9 @@ import pandas as pd
 
 from risk_engine import OPTIONAL_MODEL_FEATURES, assess as rule_assess
 from verification import parse_reply, apply_reply, opening_message
-from storage import read_state, transaction
+from storage import queue_snapshot, read_state, transaction
 from decision_events import append_event
-from records import DEMO_TENANT, ORDER_FIELDS, audit, connect, ensure_seeded, select_orders, write
+from records import DEMO_TENANT, ORDER_FIELDS, audit, connect, ensure_seeded, select_orders, select_page, write
 from model_schema import probabilities, validate_bundle
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -46,20 +46,22 @@ def _bundle():
     return _cached_bundle(str(MODEL_PATH), stat.st_mtime_ns, stat.st_size)
 
 
-def model_status():
+def _available_model():
     try:
         bundle = _bundle()
-        if bundle is None:
-            return {"available": False, "reason": "No trained model; run backend/app/train_model.py", "threshold": 0.60}
-        return {"available": True, "threshold": bundle["threshold"],
-                "model_id": bundle.get("model_id", "legacy-model"),
-                "model_name": bundle.get("model_name", "HistGradientBoostingClassifier"),
-                "trained_at": bundle.get("trained_at"),
-                "version": bundle.get("version", 0),
-                "feedback": bundle.get("feedback", {}),
-                "reason": None}
     except Exception as exc:
-        return {"available": False, "reason": f"Model unavailable: {type(exc).__name__}: {exc}", "threshold": 0.60}
+        return None, {"available": False, "reason": f"Model unavailable: {type(exc).__name__}: {exc}", "threshold": 0.60}
+    if bundle is None:
+        return None, {"available": False, "reason": "No trained model; run backend/app/train_model.py", "threshold": 0.60}
+    return bundle, {"available": True, "threshold": bundle["threshold"],
+                    "model_id": bundle.get("model_id", "legacy-model"),
+                    "model_name": bundle.get("model_name", "HistGradientBoostingClassifier"),
+                    "trained_at": bundle.get("trained_at"), "version": bundle.get("version", 0),
+                    "feedback": bundle.get("feedback", {}), "reason": None}
+
+
+def model_status():
+    return _available_model()[1]
 
 
 def load_orders(tenant_id=DEMO_TENANT):
@@ -84,32 +86,49 @@ def _ml_probability(order):
         bundle = _bundle()
     except Exception:
         return None  # model_status exposes the failure to the UI/API
-    if bundle is None:
+    return _batch_probabilities(bundle, [order])[0]
+
+
+def _model_row(order, columns):
+    if not order.get("city") or any(order.get(key) is None for key in columns if not key.startswith("city_")):
         return None
-    if not order.get("city") or any(key not in order for key in bundle["columns"] if not key.startswith("city_")):
-        return None
-    row = {column: order.get(column, 0) for column in bundle["columns"]}
+    row = {column: order.get(column, 0) for column in columns}
     city_column = f"city_{order.get('city')}"
     if city_column in row:
         row[city_column] = 1
-    try:
-        return float(probabilities(bundle, pd.DataFrame([row], columns=bundle["columns"]))[0])
-    except Exception:
-        return None
+    return row
+
+
+def _batch_probabilities(bundle, orders):
+    results = [None] * len(orders)
+    if bundle is None:
+        return results
+    rows = [(index, row) for index, order in enumerate(orders)
+            if (row := _model_row(order, bundle["columns"])) is not None]
+    if rows:
+        try:
+            values = probabilities(bundle, pd.DataFrame([row for _, row in rows], columns=bundle["columns"]))
+        except Exception:
+            return results
+        for (index, _), probability in zip(rows, values):
+            results[index] = float(probability)
+    return results
 
 
 def assess_order(order, *, state=None, tenant_id=DEMO_TENANT):
+    if state is None:
+        state = _load_state(tenant_id, (order["order_id"],), messages=False)
+    return _assessment(order, state, model_status(), _ml_probability(order))
+
+
+def _assessment(order, state, status, probability):
     order = {key: value for key, value in order.items() if value is not None}
-    status = model_status()
-    probability = _ml_probability(order)
     risk = rule_assess(order, ml_probability=probability, threshold=status["threshold"])
     missing_model_features = OPTIONAL_MODEL_FEATURES - order.keys()
     if not order.get("city") or missing_model_features:
         if risk["zone"] == "GREEN":
             risk["zone"] = "AMBER"
         risk["reasons"].append("Missing order features; request verification")
-    if state is None:
-        state = _load_state(tenant_id, (order["order_id"],), messages=False)
     saved = state["decisions"].get(order["order_id"])
     decision = saved or apply_reply(risk["zone"], "UNCLEAR")
     return {"order_id": order["order_id"], "rule_score": risk["risk_score"],
@@ -120,6 +139,18 @@ def assess_order(order, *, state=None, tenant_id=DEMO_TENANT):
             "verified": bool(saved), "intent": (saved or {}).get("intent"),
             "outcome": state["outcomes"].get(order["order_id"]),
             "model_id": status.get("model_id"), "model_error": status["reason"]}
+
+
+def order_page(tenant_id=DEMO_TENANT, *, limit=50, offset=0, search=""):
+    if tenant_id == DEMO_TENANT:
+        ensure_seeded(STATE_PATH, SEED_PATH)
+    with connect(STATE_PATH) as connection:
+        connection.execute("BEGIN")
+        orders, total = select_page(connection, tenant_id, limit, offset, search)
+        state = queue_snapshot(connection, tenant_id, tuple(order["order_id"] for order in orders))
+    bundle, status = _available_model()
+    scores = _batch_probabilities(bundle, orders)
+    return orders, [_assessment(order, state, status, score) for order, score in zip(orders, scores)], total
 
 
 def verify_reply(order, reply_text, source="text", *, actor="local-demo", tenant_id=DEMO_TENANT):
@@ -211,7 +242,7 @@ def learning_status(tenant_id=DEMO_TENANT):
     if tenant_id != DEMO_TENANT:
         return {"recorded": 0, "trained_outcomes": 0, "pending": 0, "model_id": None, "version": 0}
     status = model_status()
-    state = _load_state()
+    state = _load_state(messages=False)
     known = set(load_orders()["order_id"])
     outcomes = {key: value for key, value in state["outcomes"].items()
                 if key in known and value in OUTCOMES}

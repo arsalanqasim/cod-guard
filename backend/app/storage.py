@@ -46,6 +46,22 @@ def state_snapshot(connection, tenant_id=DEMO_TENANT, order_ids=None, *, message
     return state
 
 
+def queue_snapshot(connection, tenant_id, order_ids):
+    state = {"decisions": {}, "outcomes": {}}
+    if not order_ids:
+        return state
+    where, parameters = _where(tenant_id, order_ids)
+    for table, key in (("decisions", "decisions"), ("outcomes", "outcomes")):
+        visible = " AND default_snapshot=0" if table == "decisions" else ""
+        rows = connection.execute(f"""SELECT event.* FROM {table} AS event JOIN (
+            SELECT order_id, MAX(revision) AS revision FROM {table}
+            WHERE {where}{visible} GROUP BY order_id
+            ) AS latest USING (order_id, revision) WHERE event.tenant_id=?""", (*parameters, tenant_id))
+        for row in rows:
+            state[key][row["order_id"]] = dict(row) if table == "decisions" else row["outcome"]
+    return state
+
+
 def read_state(path, tenant_id=DEMO_TENANT, order_ids=None, *, messages=True):
     with connect(path) as connection:
         connection.execute("BEGIN")
