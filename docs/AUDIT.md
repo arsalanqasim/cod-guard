@@ -164,13 +164,16 @@ Round 2 tables.
 
 The review's past-tense negation and item-level cancellation now abstain.
 Scoped, conditional and contradictory replies ask the operator to clarify
-and retain any previous explicit decision. Direct whole-order instructions
+and retain any previous explicit decision. The order view retains the
+review flag until an explicit reply clears it. Direct whole-order instructions
 such as “Please do not send it” still stop dispatch.
 
 Regression coverage: `test_negated_scoped_and_contradictory_replies_abstain`
 replays the review's exact strings alongside adversarial replies.
 `test_ambiguous_scope_routes_to_operator_without_flipping_prior_decision`
 checks both directions of the service override on existing decisions.
+The dashboard regression checks that the follow-up remains visible. The
+storage migration test checks review-flag backfill for existing records.
 
 ### 2. Model publication and retraining
 

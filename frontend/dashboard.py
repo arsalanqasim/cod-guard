@@ -94,6 +94,8 @@ def decision_message(assessment):
         st.warning(text)
     else:
         st.error(text)
+    if assessment["needs_review"]:
+        st.warning("Clarify the last reply with the customer.")
 
 
 tab_orders, tab_verification, tab_metrics = st.tabs(
@@ -113,7 +115,8 @@ with tab_orders:
         rows.append({"Order": oid, "Customer": order["customer_name"], "Product": order["product"],
                      "City": order["city"], "PKR": order["amount_pkr"], "Rule score": risk["rule_score"],
                      "ML estimate": risk["ml_probability"], "Zone": risk["zone"],
-                     "Decision": risk["decision"], "Outcome": risk["outcome"] or "Unmarked"})
+                     "Decision": risk["decision"], "Follow-up": "Clarify reply" if risk["needs_review"] else "",
+                     "Outcome": risk["outcome"] or "Unmarked"})
     if rows:
         frame = pd.DataFrame(rows)
         colors = {"GREEN": "background-color:#E5F4EB;color:#17613B", "AMBER": "background-color:#FFF2D5;color:#805500", "RED": "background-color:#FDE7E7;color:#963431"}

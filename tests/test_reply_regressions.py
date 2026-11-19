@@ -17,7 +17,10 @@ class ReplyRegressionTests(unittest.TestCase):
                       "Order nahi, sirf address confirm karna hai", "صرف ایک آئٹم کینسل کریں",
                       "Yes, confirm the order, but please cancel it", "Please confirm and cancel",
                       "Please do not cancel one item", "Yes, confirm if the size is large",
-                      "Did you cancel my order?"]:
+                      "Did you cancel my order?", "Please cancel the blue shirt",
+                      "Yes, cancel my second product", "Confirm payment",
+                      "Please stop calling me", "I did not ask you to confirm",
+                      "I don't want to confirm", "I cannot confirm this order", "Not yes"]:
             with self.subTest(reply=reply):
                 self.assertEqual(parse_reply(reply), "UNCLEAR")
 

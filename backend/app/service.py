@@ -146,6 +146,7 @@ def _assessment(order, state, status, probability):
             "signal_count": risk["signal_count"], "signals": risk["signals"],
             "decision": decision["decision"], "decision_why": decision["why"],
             "verified": bool(saved), "intent": (saved or {}).get("intent"),
+            "needs_review": bool((saved or {}).get("needs_review")),
             "outcome": state["outcomes"].get(order["order_id"]),
             "model_id": status.get("model_id"), "model_error": status["reason"]}
 
@@ -176,7 +177,8 @@ def verify_reply(order, reply_text, source="text", *, actor="local-demo", tenant
             result = {"decision": previous["decision"],
                       "why": "Reply unclear; keeping the customer's previous explicit answer. Please clarify."}
         event = append_event(state, order["order_id"], "decision", actor, **result,
-                             intent=effective_intent, zone=assessment["zone"], model_id=assessment["model_id"])
+                             intent=effective_intent, zone=assessment["zone"], model_id=assessment["model_id"],
+                             needs_review=intent == "UNCLEAR")
         state["decisions"][order["order_id"]] = event.copy()
         state["messages"].setdefault(order["order_id"], []).append({
             "text": reply_text, "source": source, "intent": intent, **result,

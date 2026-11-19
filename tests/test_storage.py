@@ -53,6 +53,18 @@ class StorageTests(unittest.TestCase):
         self.path.write_text("{}", encoding="utf-8")
         self.assertEqual(read_state(self.path)["outcomes"], {})
 
+    def test_migrate_normalized_database_backfills_reply_review_flag(self):
+        with closing(sqlite3.connect(self.path.with_suffix(".sqlite3"))) as raw, raw:
+            raw.execute("PRAGMA user_version=1")
+            raw.execute("CREATE TABLE decisions (intent, why, default_snapshot)")
+            raw.executemany("INSERT INTO decisions VALUES (?, ?, ?)",
+                            [("CONFIRM", "Reply unclear; previous answer kept", 0),
+                             ("UNCLEAR", "Please clarify", 0), ("CONFIRM", "Explicit answer", 0)])
+        with connect(self.path) as db:
+            self.assertEqual(db.execute("PRAGMA user_version").fetchone()[0], 2)
+            self.assertEqual([row[0] for row in db.execute("SELECT needs_review FROM decisions ORDER BY rowid")],
+                             [1, 1, 0])
+
     def test_distinct_events_survive_eight_writers_and_failed_transaction(self):
         def append_batch(worker):
             for index in range(10):

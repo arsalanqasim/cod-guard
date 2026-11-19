@@ -26,6 +26,7 @@ SCHEMA = (
         tenant_id TEXT NOT NULL, order_id TEXT NOT NULL, revision INTEGER NOT NULL,
         at TEXT, actor TEXT NOT NULL, decision TEXT NOT NULL, why TEXT, intent TEXT,
         zone TEXT, model_id TEXT, default_snapshot INTEGER NOT NULL DEFAULT 0,
+        needs_review INTEGER NOT NULL DEFAULT 0,
         PRIMARY KEY (tenant_id, order_id, revision))""",
     """CREATE TABLE outcomes (
         tenant_id TEXT NOT NULL, order_id TEXT NOT NULL, revision INTEGER NOT NULL,
@@ -79,10 +80,12 @@ def insert_order(connection, tenant_id, order):
 
 
 def add_decision(connection, tenant_id, order_id, event):
-    connection.execute("""INSERT INTO decisions VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+    review = (event.get("intent") == "UNCLEAR" or (event.get("why") or "").startswith("Reply unclear;"))
+    connection.execute("""INSERT INTO decisions VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                        (tenant_id, order_id, event["revision"], event.get("at"), event["actor"],
                         event["decision"], event.get("why"), event.get("intent"), event.get("zone"),
-                        event.get("model_id"), int(event.get("default_snapshot", False))))
+                        event.get("model_id"), int(event.get("default_snapshot", False)),
+                        int(event.get("needs_review", review))))
 
 
 def add_outcome(connection, tenant_id, order_id, event):
@@ -154,7 +157,8 @@ def _migrate_payload(connection, payload):
 
 def _initialize(connection, legacy):
     connection.execute("BEGIN IMMEDIATE")
-    if connection.execute("PRAGMA user_version").fetchone()[0] == 0:
+    version = connection.execute("PRAGMA user_version").fetchone()[0]
+    if version == 0:
         sqlite_state = connection.execute("SELECT 1 FROM sqlite_master WHERE name='app_state'").fetchone()
         for statement in SCHEMA:
             connection.execute(statement)
@@ -171,7 +175,11 @@ def _initialize(connection, legacy):
         _migrate_payload(connection, payload)
         if legacy.is_file():
             connection.execute("INSERT INTO settings VALUES ('archive-legacy')")
-        connection.execute("PRAGMA user_version=1")
+    elif version == 1:
+        connection.execute("ALTER TABLE decisions ADD COLUMN needs_review INTEGER NOT NULL DEFAULT 0")
+        connection.execute("""UPDATE decisions SET needs_review=1 WHERE default_snapshot=0
+                            AND (intent='UNCLEAR' OR why LIKE 'Reply unclear;%')""")
+    connection.execute("PRAGMA user_version=2")
     connection.commit()
 
 
@@ -185,9 +193,9 @@ def connect(path):
             connection.execute("PRAGMA foreign_keys=ON")
             try:
                 version = connection.execute("PRAGMA user_version").fetchone()[0]
-                if version == 0:
+                if version in (0, 1):
                     _initialize(connection, legacy)
-                elif version != 1:
+                elif version != 2:
                     raise ValueError("Unsupported state schema version")
             except (ValueError, KeyError, TypeError, AttributeError) as exc:
                 raise StateUnavailable("State migration is unavailable") from exc
