@@ -10,7 +10,7 @@ from pathlib import Path
 
 
 def empty_state():
-    return {"decisions": {}, "outcomes": {}, "outcome_decisions": {}, "messages": {}}
+    return {"decisions": {}, "outcomes": {}, "outcome_decisions": {}, "messages": {}, "events": {}}
 
 
 @contextmanager

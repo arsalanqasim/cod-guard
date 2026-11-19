@@ -16,6 +16,7 @@ import pandas as pd
 from risk_engine import assess as rule_assess
 from verification import parse_reply, apply_reply, opening_message
 from storage import read_state, transaction
+from decision_events import append_event
 
 ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = Path(os.environ.get("COD_GUARD_DATA_DIR", ROOT / "data"))
@@ -86,11 +87,12 @@ def _ml_probability(order):
     return float(bundle["model"].predict_proba(pd.DataFrame([row], columns=bundle["columns"]))[0][1])
 
 
-def assess_order(order):
+def assess_order(order, *, state=None):
     status = model_status()
     probability = _ml_probability(order)
     risk = rule_assess(order, ml_probability=probability, threshold=status["threshold"])
-    state = _load_state()
+    if state is None:
+        state = _load_state()
     saved = state["decisions"].get(order["order_id"])
     decision = saved or apply_reply(risk["zone"], "UNCLEAR")
     return {"order_id": order["order_id"], "rule_score": risk["risk_score"],
@@ -103,21 +105,23 @@ def assess_order(order):
             "model_id": status.get("model_id"), "model_error": status["reason"]}
 
 
-def verify_reply(order, reply_text, source="text"):
-    assessment = assess_order(order)
+def verify_reply(order, reply_text, source="text", *, actor="local-demo"):
     intent = parse_reply(reply_text)
-    result = apply_reply(assessment["zone"], intent)
     with transaction(STATE_PATH) as state:
+        assessment = assess_order(order, state=state)
+        result = apply_reply(assessment["zone"], intent)
         previous = state["decisions"].get(order["order_id"])
         effective_intent = intent
         if intent == "UNCLEAR" and previous and previous.get("intent") in ("CONFIRM", "DENY"):
             effective_intent = previous["intent"]
             result = {"decision": previous["decision"],
                       "why": "Reply unclear; keeping the customer's previous explicit answer. Please clarify."}
-        state["decisions"][order["order_id"]] = {**result, "intent": effective_intent}
+        event = append_event(state, order["order_id"], "decision", actor, **result,
+                             intent=effective_intent, zone=assessment["zone"], model_id=assessment["model_id"])
+        state["decisions"][order["order_id"]] = event.copy()
         state["messages"].setdefault(order["order_id"], []).append({
             "text": reply_text, "source": source, "intent": intent, **result,
-            "at": datetime.now(timezone.utc).isoformat()})
+            "at": event["at"], "actor": actor, "decision_revision": event["revision"]})
     return {"intent": intent, **result}
 
 
@@ -125,15 +129,26 @@ def conversation(order_id):
     return _load_state()["messages"].get(order_id, [])
 
 
-def mark_outcome(order_id, outcome):
+def mark_outcome(order_id, outcome, *, actor="local-demo"):
     if outcome not in OUTCOMES:
         raise ValueError("Outcome must be delivered, returned, or refused")
-    assessment = assess_order(get_order(order_id))
+    order = get_order(order_id)
     with transaction(STATE_PATH) as state:
-        state["outcome_decisions"].setdefault(order_id, {
-            "decision": assessment["decision"], "zone": assessment["zone"],
-            "model_id": assessment["model_id"], "at": datetime.now(timezone.utc).isoformat()})
+        snapshot = state["outcome_decisions"].get(order_id)
+        if snapshot is None and order_id not in state["outcomes"]:
+            assessment = assess_order(order, state=state)
+            decision = state["decisions"].get(order_id)
+            if not decision or "revision" not in decision:
+                decision = append_event(state, order_id, "decision", actor,
+                                        decision=assessment["decision"], why=assessment["decision_why"],
+                                        zone=assessment["zone"], model_id=assessment["model_id"],
+                                        intent=assessment["intent"])
+            snapshot = state["outcome_decisions"][order_id] = decision.copy()
+        event = append_event(state, order_id, "outcome", actor, outcome=outcome,
+                             decision_revision=(snapshot or {}).get("revision"),
+                             correction=order_id in state["outcomes"])
         state["outcomes"][order_id] = outcome
+        return event.copy()
 
 
 def live_metrics():
@@ -143,7 +158,7 @@ def live_metrics():
     for order_id, outcome in state["outcomes"].items():
         if order_id not in known_ids or outcome not in OUTCOMES:
             continue
-        decision = state["outcome_decisions"].get(order_id) or state["decisions"].get(order_id)
+        decision = state["outcome_decisions"].get(order_id)
         if not decision:
             unscored += 1
             continue

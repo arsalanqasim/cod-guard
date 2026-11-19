@@ -117,6 +117,17 @@ artifacts were isolated from these browser marks.
    outcome marking are implemented. Shopify/courier webhooks, real WhatsApp,
    authentication, public hosting and multi-merchant isolation are not built.
 
+## Round 4 addendum · Decision snapshots
+
+Outcome marking reads and freezes the latest decision within the transaction.
+The decision and outcome trail records revision, time and actor. Outcome
+corrections append a revision tied to the original frozen decision. Legacy
+outcomes with missing snapshots are counted as unscored.
+
+`test_outcome_freezes_denial_committed_before_outcome_transaction` reproduces
+the review's SHIP → denial → outcome interleaving. The correction and legacy
+regressions cover durable revision references and unscored outcomes.
+
 ## Round 2 addendum
 
 The Round 1 test IDs, 6,000 synthetic rows, model ID `cg-0328b4106253`, and
