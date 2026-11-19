@@ -5,7 +5,7 @@
   "failure_rate": 0.507,
   "target_failure_rate": 0.51,
   "model_id": "cg-0328b4106253",
-  "trained_at": "2026-11-19T09:32:03.082414+00:00",
+  "trained_at": "2026-11-19T10:13:19.920860+00:00",
   "model_name": "regularized_gradient_boosting",
   "version": 1,
   "split": {
