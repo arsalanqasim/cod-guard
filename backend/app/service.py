@@ -7,7 +7,6 @@ cannot rewrite the historical confusion matrix.
 import os
 import json
 import pickle
-from datetime import datetime, timezone
 from functools import lru_cache
 from pathlib import Path
 
@@ -160,6 +159,8 @@ def verify_reply(order, reply_text, source="text", *, actor="local-demo", tenant
         result = apply_reply(assessment["zone"], intent)
         previous = state["decisions"].get(order["order_id"])
         effective_intent = intent
+        if intent == "UNCLEAR":
+            result["why"] += ". Please clarify with the customer."
         if intent == "UNCLEAR" and previous and previous.get("intent") in ("CONFIRM", "DENY"):
             effective_intent = previous["intent"]
             result = {"decision": previous["decision"],
@@ -170,7 +171,7 @@ def verify_reply(order, reply_text, source="text", *, actor="local-demo", tenant
         state["messages"].setdefault(order["order_id"], []).append({
             "text": reply_text, "source": source, "intent": intent, **result,
             "at": event["at"], "actor": actor, "decision_revision": event["revision"]})
-    return {"intent": intent, **result}
+    return {"intent": intent, "needs_review": intent == "UNCLEAR", **result}
 
 
 def conversation(order_id, tenant_id=DEMO_TENANT):

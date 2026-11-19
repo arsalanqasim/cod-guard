@@ -233,3 +233,17 @@ against the fixed generator. Model inputs and serialized weights contain
 only the existing features. The routine outcome-retraining report continues
 to describe its own model and split. The baseline JSON contains the full
 Round 2 tables.
+
+## Round 4 addendum
+
+### 1. Reply scope
+
+The review's past-tense negation and item-level cancellation now abstain.
+Scoped, conditional and contradictory replies ask the operator to clarify
+and retain any previous explicit decision. Direct whole-order instructions
+such as “Please do not send it” still stop dispatch.
+
+Regression coverage: `test_negated_scoped_and_contradictory_replies_abstain`
+replays the review's exact strings alongside adversarial replies.
+`test_ambiguous_scope_routes_to_operator_without_flipping_prior_decision`
+checks both directions of the service override on existing decisions.
