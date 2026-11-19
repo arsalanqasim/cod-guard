@@ -5,6 +5,14 @@ decision rules are retained. The implementation keeps FastAPI, Streamlit and
 scikit-learn; replacing the UI framework would not repair the missing learning,
 voice, or evaluation paths. `docs/BUILD_SPEC.md` is unchanged.
 
+## Round 5 — WS-A: Daraz feasibility
+
+The read-only Pakistan client covers the three proposed order routes and
+HMAC-SHA256 signing. Mocked tests cover request construction and safe error
+reporting. [The spike](DARAZ_SPIKE.md) records the primary sources and the
+missing authorized capture. Design mode is score-and-queue only; no runtime
+intake or buyer verification is enabled.
+
 ## Verified starting point
 
 Python 3.13.3, Windows x64. Existing repository was clean at `c2e95f2` before the
@@ -266,11 +274,3 @@ can be reviewed in shadow mode by the tenant's operator. A design partner,
 courier integration, consented voice evaluation, field outcomes and pricing
 evidence still require separate work. Failed legacy outcomes without a frozen
 decision cannot be reconstructed and remain unscored.
-
-### Round 5 — WS-A: Daraz feasibility
-
-The read-only Pakistan client covers the three proposed order routes and
-HMAC-SHA256 signing. Mocked tests cover request construction and safe error
-reporting. [The spike](DARAZ_SPIKE.md) records the primary sources and the
-missing authorized capture. Design mode is score-and-queue only; no runtime
-intake or buyer verification is enabled.
