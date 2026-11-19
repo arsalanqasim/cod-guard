@@ -17,16 +17,18 @@ from risk_engine import assess as rule_assess
 from verification import parse_reply, apply_reply, opening_message
 from storage import read_state, transaction
 from decision_events import append_event
+from records import DEMO_TENANT, ORDER_FIELDS, connect, ensure_seeded, select_orders
 
 ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = Path(os.environ.get("COD_GUARD_DATA_DIR", ROOT / "data"))
 STATE_PATH = DATA_DIR / "state.json"
+SEED_PATH = ROOT / "data/demo_orders.csv"
 MODEL_PATH = Path(os.environ.get("COD_GUARD_MODEL_PATH", ROOT / "backend/app/model.pkl"))
 OUTCOMES = ("delivered", "returned", "refused")
 
 
-def _load_state():
-    return read_state(STATE_PATH)
+def _load_state(tenant_id=DEMO_TENANT, order_ids=None, *, messages=True):
+    return read_state(STATE_PATH, tenant_id, order_ids, messages=messages)
 
 
 @lru_cache(maxsize=2)
@@ -61,16 +63,21 @@ def model_status():
         return {"available": False, "reason": f"Model unavailable: {type(exc).__name__}: {exc}", "threshold": 0.60}
 
 
-def load_orders():
-    return pd.read_csv(ROOT / "data/demo_orders.csv", dtype={"order_id": str, "phone": str})
+def load_orders(tenant_id=DEMO_TENANT):
+    if tenant_id == DEMO_TENANT:
+        ensure_seeded(STATE_PATH, SEED_PATH)
+    with connect(STATE_PATH) as connection:
+        return pd.DataFrame(select_orders(connection, tenant_id), columns=("tenant_id", *ORDER_FIELDS))
 
 
-def get_order(order_id):
-    rows = load_orders()
-    matches = rows[rows["order_id"] == order_id]
-    if matches.empty:
+def get_order(order_id, tenant_id=DEMO_TENANT):
+    if tenant_id == DEMO_TENANT:
+        ensure_seeded(STATE_PATH, SEED_PATH)
+    with connect(STATE_PATH) as connection:
+        matches = select_orders(connection, tenant_id, order_id=order_id)
+    if not matches:
         raise KeyError(order_id)
-    return matches.iloc[0].to_dict()
+    return matches[0]
 
 
 def _ml_probability(order):
@@ -87,12 +94,12 @@ def _ml_probability(order):
     return float(bundle["model"].predict_proba(pd.DataFrame([row], columns=bundle["columns"]))[0][1])
 
 
-def assess_order(order, *, state=None):
+def assess_order(order, *, state=None, tenant_id=DEMO_TENANT):
     status = model_status()
     probability = _ml_probability(order)
     risk = rule_assess(order, ml_probability=probability, threshold=status["threshold"])
     if state is None:
-        state = _load_state()
+        state = _load_state(tenant_id, (order["order_id"],), messages=False)
     saved = state["decisions"].get(order["order_id"])
     decision = saved or apply_reply(risk["zone"], "UNCLEAR")
     return {"order_id": order["order_id"], "rule_score": risk["risk_score"],
@@ -105,9 +112,9 @@ def assess_order(order, *, state=None):
             "model_id": status.get("model_id"), "model_error": status["reason"]}
 
 
-def verify_reply(order, reply_text, source="text", *, actor="local-demo"):
+def verify_reply(order, reply_text, source="text", *, actor="local-demo", tenant_id=DEMO_TENANT):
     intent = parse_reply(reply_text)
-    with transaction(STATE_PATH) as state:
+    with transaction(STATE_PATH, tenant_id, (order["order_id"],)) as state:
         assessment = assess_order(order, state=state)
         result = apply_reply(assessment["zone"], intent)
         previous = state["decisions"].get(order["order_id"])
@@ -125,15 +132,15 @@ def verify_reply(order, reply_text, source="text", *, actor="local-demo"):
     return {"intent": intent, **result}
 
 
-def conversation(order_id):
-    return _load_state()["messages"].get(order_id, [])
+def conversation(order_id, tenant_id=DEMO_TENANT):
+    return _load_state(tenant_id, (order_id,))["messages"].get(order_id, [])
 
 
-def mark_outcome(order_id, outcome, *, actor="local-demo"):
+def mark_outcome(order_id, outcome, *, actor="local-demo", tenant_id=DEMO_TENANT):
     if outcome not in OUTCOMES:
         raise ValueError("Outcome must be delivered, returned, or refused")
-    order = get_order(order_id)
-    with transaction(STATE_PATH) as state:
+    order = get_order(order_id, tenant_id)
+    with transaction(STATE_PATH, tenant_id, (order_id,)) as state:
         snapshot = state["outcome_decisions"].get(order_id)
         if snapshot is None and order_id not in state["outcomes"]:
             assessment = assess_order(order, state=state)
@@ -142,7 +149,7 @@ def mark_outcome(order_id, outcome, *, actor="local-demo"):
                 decision = append_event(state, order_id, "decision", actor,
                                         decision=assessment["decision"], why=assessment["decision_why"],
                                         zone=assessment["zone"], model_id=assessment["model_id"],
-                                        intent=assessment["intent"])
+                                        intent=assessment["intent"], default_snapshot=True)
             snapshot = state["outcome_decisions"][order_id] = decision.copy()
         event = append_event(state, order_id, "outcome", actor, outcome=outcome,
                              decision_revision=(snapshot or {}).get("revision"),
@@ -151,10 +158,10 @@ def mark_outcome(order_id, outcome, *, actor="local-demo"):
         return event.copy()
 
 
-def live_metrics():
-    state = _load_state()
+def live_metrics(tenant_id=DEMO_TENANT):
+    state = _load_state(tenant_id, messages=False)
     tp = fp = fn = tn = unscored = 0
-    known_ids = set(load_orders()["order_id"])
+    known_ids = set(load_orders(tenant_id)["order_id"])
     for order_id, outcome in state["outcomes"].items():
         if order_id not in known_ids or outcome not in OUTCOMES:
             continue

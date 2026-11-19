@@ -2,6 +2,7 @@ __pycache__/
 *.pyc
 backend/app/model.pkl
 data/state.json
+data/state.json.archive
 .venv/
 data/*.sqlite3*
 data/whisper/

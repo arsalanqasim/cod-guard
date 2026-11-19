@@ -128,6 +128,15 @@ outcomes with missing snapshots are counted as unscored.
 the review's SHIP → denial → outcome interleaving. The correction and legacy
 regressions cover durable revision references and unscored outcomes.
 
+### 5. Storage and recovery
+
+Indexed SQLite tables store seeded orders, decision and outcome revisions,
+messages, model metadata and audit events. Migration uses the existing SQLite
+state when present and otherwise imports the legacy JSON once, then archives
+the file. Malformed state leaves the original recoverable. The storage tests
+exercise both migration sources, 80 distinct events across eight concurrent
+writers, exception rollback, and online backup restored into a new location.
+
 ## Round 2 addendum
 
 The Round 1 test IDs, 6,000 synthetic rows, model ID `cg-0328b4106253`, and

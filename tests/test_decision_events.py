@@ -1,3 +1,4 @@
+import json
 import sys
 import tempfile
 import unittest
@@ -26,13 +27,13 @@ class DecisionEventsTests(unittest.TestCase):
         denial_committed = Event()
 
         @contextmanager
-        def interleave(path):
+        def interleave(path, *args):
             # The old outcome path read SHIP before reaching this point.
             if not reaching_lock.is_set():
                 reaching_lock.set()
                 if not denial_committed.wait(10):
                     raise RuntimeError("Denial did not commit before outcome acquired its lock")
-            with transaction(path) as state:
+            with transaction(path, *args) as state:
                 yield state
 
         with patch.object(service, "transaction", interleave), ThreadPoolExecutor() as executor:
@@ -65,10 +66,11 @@ class DecisionEventsTests(unittest.TestCase):
         self.assertEqual(service.live_metrics()["fn"], 1)
 
     def test_legacy_outcome_without_snapshot_stays_unscored(self):
-        with transaction(service.STATE_PATH) as state:
-            state["outcomes"][self.order_id] = "delivered"
-        service.verify_reply(self.order, "Yes")
-        service.mark_outcome(self.order_id, "refused")
-        metrics = service.live_metrics()
+        with tempfile.TemporaryDirectory() as directory, \
+             patch.object(service, "STATE_PATH", Path(directory) / "state.json"):
+            service.STATE_PATH.write_text(json.dumps({"outcomes": {self.order_id: "delivered"}}), encoding="utf-8")
+            service.verify_reply(self.order, "Yes")
+            service.mark_outcome(self.order_id, "refused")
+            metrics = service.live_metrics()
         self.assertEqual((metrics["marked"], metrics["unscored"]), (0, 1))
 
