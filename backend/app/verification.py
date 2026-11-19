@@ -37,7 +37,11 @@ def parse_reply(text: str) -> str:
     def matches(pattern, value):
         return re.search(r"(?<!\w)(?:" + pattern + r")(?!\w)", value) is not None
 
-    negated_cancel = r"(?:don't|do not|never)\s+cancel(?:\s+(?:it|the order|my order))?"
+    negated_cancel = (
+        r"(?:(?:don't|do not|never)\s+cancel(?:\s+(?:it|the order|my order))?"
+        r"|cancel\s+(?:mat|na|nahi|nahin|nhi)\s*(?:kar\w*)?"
+        r"|(?:کینسل|منسوخ)\s+(?:مت|نہ|نہیں)\s*(?:کریں|کرنا|کرو)?)"
+    )
     keep_order = matches(negated_cancel, t)
     t = re.sub(r"(?<!\w)" + negated_cancel + r"(?!\w)", " ", t)
     reassurance = r"no (?:problems?|issues?|worries)|not fake|(?:کوئی\s+)?(?:مسئلہ|دقت|اعتراض)\s+نہیں"
@@ -45,7 +49,9 @@ def parse_reply(text: str) -> str:
 
     negated_dispatch = (
         r"(?:don't|do not|never|cannot|can't)\s+(?:please\s+)?(?:send|confirm|deliver|dispatch)\w*"
-        r"|(?:mat|na)\s+bhej\w*|(?:مت|نہ)\s+بھیج\w*|بھیج\w*\s+(?:مت|نہیں)"
+        r"|(?:mat|na|nahi|nahin|nhi)\s+(?:bhej\w*|confirm\w*)"
+        r"|(?:confirm(?:ed)?|bhej\w*|theek|thik|send|deliver|dispatch)\s+(?:nahi|nahin|nhi|nai|mat)"
+        r"|(?:مت|نہ)\s+بھیج\w*|(?:بھیج\w*|کنفرم|ٹھیک)\s+(?:مت|نہیں|نہ)"
     )
     denial = (
         r"cancel(?:led)?|stop|not mine|not my order|منسوخ|کینسل"
@@ -55,8 +61,8 @@ def parse_reply(text: str) -> str:
     question = re.match(r"^(?:can|could|would|what|when|where|how|is|are|did|have|کیا|کب|کیسے)(?!\w)", t)
     if question and not matches(r"cancel|منسوخ|کینسل", t):
         return "UNCLEAR"
-    direct_negative = re.match(r"^(?:(?:ji|جی|haan|yes|ہاں|bhai)\s*[,،]?\s*)*(?:no|nahi|nahin|nai|نہیں)(?!\w)", t)
-    order_negative = (matches(r"no|nahi|nahin|nai|نہیں", t)
+    direct_negative = re.match(r"^(?:(?:ji|جی|haan|yes|ہاں|bhai)\s*[,،]?\s*)*(?:no|nahi|nahin|nhi|nai|نہیں)(?!\w)", t)
+    order_negative = (matches(r"no|nahi|nahin|nhi|nai|نہیں", t)
                       and matches(r"order\w*|آرڈر|منگو\w*|منگوا\w*|mangw\w*", t))
     # A clear denial wins over politeness and positive tokens elsewhere.
     if direct_negative or order_negative or matches(negated_dispatch, t) or matches(denial, t):
