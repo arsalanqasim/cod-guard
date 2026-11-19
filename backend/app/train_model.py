@@ -88,6 +88,12 @@ def fit_and_evaluate(df, feedback_rows=None, feedback=None, previous_version=0):
             raise ValueError("Feedback cannot overlap benchmark training/validation/test IDs; use reserved demo orders")
         if not set(feedback_rows["label_failed"]).issubset({0, 1}):
             raise ValueError("Feedback labels must be binary observed outcomes")
+        if set(feedback_rows["order_id"]) != set(feedback):
+            raise ValueError("Feedback rows and recorded outcome IDs must match")
+        for _, row in feedback_rows.iterrows():
+            outcome = feedback[row["order_id"]]
+            if outcome not in ("delivered", "returned", "refused") or int(row["label_failed"]) != int(outcome != "delivered"):
+                raise ValueError("Feedback labels must match the recorded outcomes")
         train = pd.concat([train, feedback_rows], ignore_index=True)
     X_train = feature_frame(train)
     columns = list(X_train.columns)
