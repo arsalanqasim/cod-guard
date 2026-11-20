@@ -14,8 +14,8 @@ from artifacts import active_version
 
 
 @contextmanager
-def demo_session():
-    baseline = active_version(ROOT / "backend/app/model.pkl")
+def demo_session(model_path=ROOT / "backend/app/model.pkl"):
+    baseline = active_version(model_path)
     if baseline is None:
         raise ValueError("Run python scripts/build_demo.py to provision the synthetic baseline")
     report = json.loads((baseline / "evaluation.json").read_text(encoding="utf-8"))

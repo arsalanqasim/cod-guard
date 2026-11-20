@@ -1,5 +1,6 @@
 """Single-instance COD-Guard API for tenant-scoped shadow intake."""
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Annotated, Literal
@@ -34,6 +35,12 @@ app.include_router(shopify_router)
 app.include_router(social_router)
 app.include_router(network_router)
 voice_jobs = JobQueue(workers=VOICE_WORKERS, capacity=4, ttl_seconds=600)
+REPLY_PHONE = re.compile(r"(?<!\w)(?:\+?92|0)[ ()-]*3(?:[ ()-]*[0-9]){9}(?![0-9])")
+
+
+def _mask_phone(phone):
+    digits = "".join(ch for ch in phone if ch.isdecimal())
+    return "••••" + (digits[-2:] if len(digits) > 2 else "")
 
 
 def _order(order_id, operator):
@@ -70,8 +77,9 @@ def orders(response: Response, limit: Annotated[int, Query(ge=1, le=100)] = 50,
            operator: Operator = Depends(require_operator)):
     rows, assessments, total = service.order_page(operator.tenant_id, limit=limit, offset=offset)
     response.headers["X-Total-Count"] = str(total)
+    response.headers["Cache-Control"] = "no-store"
     return [{**{key: order[key] for key in ("order_id", "customer_name", "product", "city", "amount_pkr", "data_source")},
-             "phone": ("••••" + order["phone"][-2:]) if len(order["phone"]) > 2 else "••••",
+             "phone": _mask_phone(order["phone"]),
              **assessment} for order, assessment in zip(rows, assessments)]
 
 
@@ -95,14 +103,32 @@ def csv_import(file: Annotated[UploadFile, File()],
 
 
 @app.get("/orders/{order_id}")
-def order_detail(order_id: str, operator: Operator = Depends(require_operator)):
+def order_detail(order_id: str, response: Response, reveal_phone: bool = False,
+                 operator: Operator = Depends(require_operator)):
     order = _order(order_id, operator)
-    service.record_access(operator.tenant_id, operator.actor, "phone_read", order_id=order_id)
+    response.headers["Cache-Control"] = "no-store"
+    conversation = service.conversation(order_id, operator.tenant_id)
+    if reveal_phone:
+        service.record_access(operator.tenant_id, operator.actor, "phone_read", order_id=order_id)
+    else:
+        order["phone"] = _mask_phone(order["phone"])
+        for message in conversation:
+            if message["text"]:
+                message["text"] = REPLY_PHONE.sub(lambda match: _mask_phone(match[0]), message["text"])
     # Evaluation ground-truth labels are deliberately not returned to the seller.
     assessment = service.assess_order(order, tenant_id=operator.tenant_id)
     return {**{key: value for key, value in order.items() if key != "label_failed"},
             **assessment, **service.order_advice(order, assessment, operator.tenant_id),
-            "messages": service.conversation(order_id, operator.tenant_id)}
+            "messages": conversation}
+
+
+@app.get("/orders/{order_id}/risk-shadow")
+def risk_shadow_history(order_id: str, response: Response,
+                        after: Annotated[int, Query(ge=0, le=2**63 - 1)] = 0,
+                        operator: Operator = Depends(require_operator)):
+    order = _order(order_id, operator)
+    response.headers["Cache-Control"] = "no-store"
+    return service.shadow_decisions(order, operator.tenant_id, after)
 
 
 class Reply(BaseModel):

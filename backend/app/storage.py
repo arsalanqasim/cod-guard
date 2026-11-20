@@ -1,5 +1,6 @@
 """Transactional projections over normalized SQLite records."""
 from contextlib import contextmanager
+import risk_shadow
 
 from records import (DEMO_TENANT, add_decision, add_message, add_model_version, add_outcome,
                      audit, connect, write)
@@ -85,6 +86,7 @@ def update_state(connection, tenant_id, order_ids):
         for event in events[event_counts.get(order_id, 0):]:
             if event["kind"] == "decision":
                 add_decision(connection, tenant_id, order_id, event)
+                risk_shadow.record(connection, tenant_id, order_id, event)
             else:
                 add_outcome(connection, tenant_id, order_id, event)
                 if event.get("correction"):

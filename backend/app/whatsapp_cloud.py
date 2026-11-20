@@ -46,6 +46,7 @@ class Account:
     verify_token: str = field(repr=False)
     signing_key: str = field(repr=False)
     api_version: str = "v27.0"
+    business_verified: bool = False
 
 
 @lru_cache(maxsize=1)
@@ -64,10 +65,11 @@ def _accounts(raw):
                 or not all(isinstance(value, str) and len(value) >= 16 and value.isascii()
                            for value in (account.token, account.app_secret, account.verify_token))
                 or not isinstance(account.signing_key, str) or len(account.signing_key) < 32
-                or account.phone_number_id in phones):
+                or type(account.business_verified) is not bool or account.phone_number_id in phones):
             raise ValueError("Invalid WhatsApp configuration")
         phones.add(account.phone_number_id)
-        accounts[tenant_id] = account
+        if account.business_verified:
+            accounts[tenant_id] = account
     return accounts
 
 
@@ -167,7 +169,7 @@ class CloudTransport:
 
 
 def send_verification(account, order, actor):
-    if account is None:
+    if account is None or not account.business_verified:
         return {"mode": "simulated", "preview": opening_message(order), "sent": False}
     phone = _eligible_phone(order)
     recipient = _recipient(account, phone)

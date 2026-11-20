@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "tag": "[PK-SYNTH]",
+  "tts": "facebook/mms-tts-urd-script_arabic",
+  "tts_revision": "4c4f53d52e4f0b40cb8e7f36dcef66a2a73619c5",
+  "rows": [
+    {"id": "short01", "reference": "ہاں", "intent": "CONFIRM"},
+    {"id": "short02", "reference": "جی ہاں", "intent": "CONFIRM"},
+    {"id": "short03", "reference": "بھیج دیں", "intent": "CONFIRM"},
+    {"id": "short04", "reference": "بھیجیں", "intent": "CONFIRM"},
+    {"id": "short05", "reference": "نہیں", "intent": "DENY"},
+    {"id": "short06", "reference": "جی نہیں", "intent": "DENY"},
+    {"id": "short07", "reference": "مت بھیجیں", "intent": "DENY"},
+    {"id": "short08", "reference": "آرڈر نہیں", "intent": "UNCLEAR"},
+    {"id": "short09", "reference": "جی", "intent": "UNCLEAR"},
+    {"id": "short10", "reference": "کل بتاؤں", "intent": "UNCLEAR"},
+    {"id": "short11", "reference": "شاید", "intent": "UNCLEAR"},
+    {"id": "short12", "reference": "کون سا", "intent": "UNCLEAR"}
+  ]
+}

@@ -110,24 +110,32 @@ Voice (once, while online): `scripts/prepare_voice.py` caches Whisper
 `small` weights under `data/whisper/`; inference then runs **offline**.
 The bundled sample clip is general Urdu speech from Google FLEURS
 (CC BY 4.0). See [Urdu voice accuracy](docs/VOICE_ACCURACY.md) for the
-read-speech measurement and its scope.
+read-speech measurement, and [Round 9 Urdu voice](docs/ROUND9_VOICE.md)
+for the short-reply evaluation.
 
-## API
+## Hosting and API
+
+Run `python scripts/run_host.py --bootstrap` from a clean checkout to
+start the loopback API and an isolated exhibition dashboard.
+[Host setup, privacy and tenant configuration](docs/HOSTING.md)
 
 Operators can correct the latest classified reply and export versioned labels
 for offline retraining. See [reply corrections and shadow evaluation](docs/REPLY_CORRECTIONS.md)
 and the [Round 7 benchmark](docs/DECISION_MODEL_EVAL.md).
 
 ```powershell
-.\.venv\Scripts\python.exe -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000
+.\.venv\Scripts\python.exe -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000 --no-access-log
 ```
 
 Operator-key authenticated writes, tenant-scoped data, masked phone
-numbers in list views, authenticated CSV intake for shadow operation
+numbers in list and detail views, authenticated CSV intake for shadow operation
 ([SHADOW_INTAKE.md](docs/SHADOW_INTAKE.md)), paginated queue (a 50-order
 page over 10,000 stored orders loads in tens of milliseconds), and
 `/health` vs `/ready` separation — readiness verifies the database, the
 active model bundle, and that its evaluation artifacts match.
+
+The real-data evaluation keeps model-first scoring in seller-specific
+shadow mode. [Round 9 metrics](docs/ROUND9_EVAL.md) · [Data provenance](docs/DATA_SOURCES.md)
 
 ## Channels and evidence
 
