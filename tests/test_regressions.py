@@ -69,6 +69,18 @@ class ServiceRegressionTests(unittest.TestCase):
         service.verify_reply(self.order, "No, cancel")
         self.assertEqual(service.verify_reply(self.order, "Kal bataunga")["decision"], "HOLD_CANCEL")
 
+    def test_scoped_follow_up_keeps_dispatch_but_is_not_verified(self):
+        service.verify_reply(self.order, "No, cancel")
+        self.assertTrue(service.assess_order(self.order)["verified"])
+        result = service.verify_reply(self.order, "Yes, send the order without the blue shirt")
+        self.assertEqual((result["intent"], result["decision"]), ("UNCLEAR", "HOLD_CANCEL"))
+        assessment = service.assess_order(self.order)
+        self.assertEqual((assessment["decision"], assessment["verified"], assessment["needs_review"]),
+                         ("HOLD_CANCEL", False, True))
+        service.verify_reply(self.order, "Yes confirm")
+        self.assertEqual((service.assess_order(self.order)["verified"],
+                          service.assess_order(self.order)["needs_review"]), (True, False))
+
     def test_ambiguous_scope_routes_to_operator_without_flipping_prior_decision(self):
         service.verify_reply(self.order, "Yes confirm")
         partial = service.verify_reply(self.order, "Please cancel the extra item only")

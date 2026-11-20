@@ -13,95 +13,53 @@ script (deterministic and testable at a stall, no API key needed). An
 LLM classifier can be layered behind parse_reply() later without
 changing the decision logic.
 """
-import re
 import unicodedata
 import os
 import threading
 from io import BytesIO
 from pathlib import Path
 
+CONFIRM_REPLIES = {
+    # Answers to the order-bound prompt and explicit whole-order instructions.
+    "yes", "confirm", "yes confirm", "confirmed", "i confirm",
+    "i confirm the order", "confirm my order", "confirm the order", "confirm this order",
+    "send it", "send my order", "send the order", "please send it", "please send my order",
+    "yes send it", "yes send the order", "don't cancel please send my order",
+    "no problem yes confirm", "no problems send it",
+    "haan", "han", "ji haan", "ji theek hai", "bhej dein", "bhej den",
+    "order confirm hai", "ji theek hai bhej dein", "cancel mat karna bhej dein",
+    "ہاں", "جی ہاں", "جی ٹھیک ہے", "آرڈر کنفرم ہے", "بھیج دیں", "بھیجیں",
+    "کینسل مت کریں بھیج دیں", "کوئی مسئلہ نہیں بھیج دیں",
+}
+DENY_REPLIES = {
+    "no", "cancel", "no cancel", "cancel it", "cancel my order", "cancel the order",
+    "please cancel it", "please cancel my order", "please cancel the order",
+    "no cancel the order", "not my order", "no i didn't order this",
+    "i did not place this order", "don't send it", "no don't send it",
+    "do not send it", "please do not send it", "please do not confirm",
+    "nahi", "nahin", "nhi", "ji nahi", "ji nahin", "ji theek nhi hai",
+    "nahi mera order nahi hai", "confirm nahi karna", "bhejna nahi",
+    "نہیں", "جی نہیں", "مت بھیجیں", "یہ آرڈر میرا نہیں ہے", "کنفرم نہیں کرنا",
+    "آرڈر کینسل کریں", "میرا آرڈر منسوخ کریں",
+}
+
+
 def parse_reply(text: str) -> str:
-    """Conservative, offline intent rules; this is not an LLM classifier.
-
-    Polite ``ji`` alone is not consent. Negated dispatch is a denial,
-    while negated cancellation requires a separate affirmative instruction.
-    Questions, partial orders, contradictions and conditional/future replies
-    need a follow-up.
-    """
-    if not isinstance(text, str) or not text.strip():
+    """Accept complete approved replies to the order-bound verification prompt."""
+    if not isinstance(text, str):
         return "UNCLEAR"
-    t = unicodedata.normalize("NFKC", text).lower().replace("’", "'")
-    t = t.translate(str.maketrans({"ي": "ی", "ك": "ک", "ى": "ی"}))
-    t = " ".join("".join(c for c in t if not unicodedata.combining(c)).split())
-
-    def bounded(pattern):
-        return r"(?<!\w)(?:" + pattern + r")(?!\w)"
-
-    def matches(pattern, value):
-        return re.search(bounded(pattern), value) is not None
-
-    question = r"^(?:can|could|would|what|when|where|why|how|is|are|did|have|کیا|کب|کیسے)(?!\w)"
-    partial_scope = (
-        r"only|except|just the|extra|some|part of|one of|item(?:s)?|address|price|size|colou?r"
-        r"|sirf|bas ek|siraf|rang|pata|صرف|سوائے|آئٹم|قیمت|پتہ|سائز|رنگ"
-    )
-    uncertainty = (
-        r"if|unless|maybe|perhaps|later|tomorrow|wait|agar|kal|baad|اگر|شاید|کل|بعد"
-        r"|will confirm|not sure|پتا نہیں"
-    )
-    action = r"cancel(?:led)?|confirm(?:ed)?|send|deliver|dispatch|ship|stop"
-    whole_order_object = (
-        r"it|please|thanks|now|today|and|but|kar\w*|mat|na|nahi|nahin|nhi"
-        r"|(?:(?:my|this|the|that|our)\s+)?(?:(?:whole|entire|full)\s+)?(?:order|delivery|shipment|package)"
-    )
-    unknown_object = rf"(?:{action})\s+(?!(?:{whole_order_object})(?!\w))\w+"
-    reported_negation = (
-        r"(?:did(?:n't| not)|ha(?:ven't|ve not|sn't|s not)|was(?:n't| not))"
-        r"|(?:i|we)\s+(?:don't|do not|cannot|can't|won't|will not|never)"
-    )
-    negated_statement = (rf"(?:{reported_negation})\s+[^.!?;،,]{{0,40}}?"
-                         rf"(?<!\w)(?:{action}|yes|no)|not\s+(?:yet\s+)?(?:confirmed|yes|no)")
-    if (re.search(question, t) or "?" in t or "؟" in t
-            or any(matches(pattern, t) for pattern in
-                   (partial_scope, unknown_object, uncertainty, negated_statement))):
-        return "UNCLEAR"
-
-    negated_cancel = (
-        r"(?:(?:don't|do not|never)\s+cancel(?:\s+(?:it|the order|my order))?"
-        r"|cancel\s+(?:mat|na|nahi|nahin|nhi)\s*(?:kar\w*)?"
-        r"|(?:کینسل|منسوخ)\s+(?:مت|نہ|نہیں)\s*(?:کریں|کرنا|کرو)?)"
-    )
-    keep_order = matches(negated_cancel, t)
-    t = re.sub(bounded(negated_cancel), " ", t)
-    reassurance = r"no (?:problems?|issues?|worries)|not fake|(?:کوئی\s+)?(?:مسئلہ|دقت|اعتراض)\s+نہیں"
-    t = re.sub(r"(?<!\w)(?:" + reassurance + r")(?!\w)", " ", t).strip()
-
-    negated_dispatch = (
-        r"(?:don't|do not|never|cannot|can't)\s+(?:please\s+)?(?:send|confirm|deliver|dispatch)\w*"
-        r"|(?:mat|na|nahi|nahin|nhi)\s+(?:bhej\w*|confirm\w*)"
-        r"|(?:confirm(?:ed)?|bhej\w*|theek|thik|send|deliver|dispatch)\s+(?:nahi|nahin|nhi|nai|mat)"
-        r"|(?:مت|نہ)\s+بھیج\w*|(?:بھیج\w*|کنفرم|ٹھیک)\s+(?:مت|نہیں|نہ)"
-    )
-    denial = (
-        r"cancel(?:led)?|stop|not mine|not my order|منسوخ|کینسل"
-        r"|(?:didn't|did not|never)\s+(?:place\s+)?(?:this\s+)?order(?:ed)?"
-        r"|(?:don't|do not)\s+want\s+(?:it|(?:my|the|this)\s+order)"
-    )
-    direct_negative = re.match(r"^(?:(?:ji|جی|haan|yes|ہاں|bhai)\s*[,،]?\s*)*(?:no|nahi|nahin|nhi|nai|نہیں)(?!\w)", t)
-    order_negative = (matches(r"no|nahi|nahin|nhi|nai|نہیں", t)
-                      and matches(r"order\w*|آرڈر|منگو\w*|منگوا\w*|mangw\w*", t))
-    confirmation = (
-        r"yes|confirm(?:ed)?|ok(?:ay)?|theek|thik|han|haan|ہاں|ٹھیک|کنفرم"
-        r"|bhej\w*|بھیج\w*|(?:send|deliver|dispatch)\s+(?:it|(?:my|the|this)\s+order)"
-    )
-    denied = direct_negative or order_negative or matches(negated_dispatch, t) or matches(denial, t)
-    affirmative_text = re.sub(bounded(negated_dispatch), " ", t)
-    confirmed = matches(confirmation, affirmative_text)
-    if denied:
-        return "UNCLEAR" if confirmed or keep_order else "DENY"
-    if confirmed:
+    normalized = unicodedata.normalize("NFKC", text).casefold()
+    normalized = normalized.translate(str.maketrans({
+        "’": "'", "ي": "ی", "ك": "ک", "ى": "ی", ",": " ", "،": " ",
+    }))
+    normalized = "".join(char for char in normalized if not unicodedata.combining(char))
+    normalized = " ".join(normalized.split()).rstrip(".!۔").rstrip()
+    if normalized in CONFIRM_REPLIES:
         return "CONFIRM"
+    if normalized in DENY_REPLIES:
+        return "DENY"
     return "UNCLEAR"
+
 
 def opening_message(order: dict) -> str:
     """WhatsApp-style first message (Urdu + English, as sellers actually send)."""

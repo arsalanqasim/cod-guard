@@ -8,6 +8,21 @@ from verification import parse_reply
 
 
 class ReplyRegressionTests(unittest.TestCase):
+    def test_whole_order_intent_requires_an_explicit_unqualified_phrase(self):
+        for reply in (
+            "Yes, send the order without the blue shirt",
+            "Yes, remove the extra item", "Send only two units",
+            "I would confirm the order", "I will confirm tomorrow",
+            "Yes, if it arrives by Friday", "No, cancel the order after 5pm",
+            "Yes, deliver the order after Eid",
+            "Haan, neeli shirt ke baghair bhej dein",
+            "Main confirm karta agar Friday tak aaye", "Order Eid ke baad bhej dein",
+            "ہاں، نیلی قمیض کے بغیر بھیج دیں", "اگر جمعہ تک آئے تو کنفرم کریں",
+            "آرڈر عید کے بعد بھیج دیں",
+        ):
+            with self.subTest(reply=reply):
+                self.assertEqual(parse_reply(reply), "UNCLEAR")
+
     def test_negated_scoped_and_contradictory_replies_abstain(self):
         for reply in ["I did not confirm this order", "Please cancel the extra item only",
                       "I haven't confirmed this order", "I did not cancel my order",
