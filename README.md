@@ -1,17 +1,94 @@
-# COD-Guard — local exhibition demo
+# COD-Guard — Pre-Dispatch Intelligence for Cash-on-Delivery Orders
 
-Score COD orders before dispatch, verify replies in English / Roman Urdu / Urdu
-script, transcribe Urdu voice notes, and learn from marked delivery outcomes.
-AIC378, COMSATS. Functional deadline: **25 Nov 2026**; exhibition: **27–28 Nov**.
+COD-Guard checks every cash-on-delivery order **before** it ships: it scores
+the order's refusal risk, verifies risky orders with the buyer on WhatsApp,
+and learns from what couriers actually deliver or return — so a seller stops
+paying courier charges for orders that were never going to be collected.
 
-**All bundled orders and benchmark labels are SYNTHETIC. No real merchant pilots
-or production accuracy are claimed.** Competitors include Tasdeek, Botaura,
-OrderWitness and DukaanFlow. This project makes no claim of being first.
+Built for how Pakistan actually sells: one queue across **Shopify,
+WooCommerce, Daraz, independent websites, and Instagram/WhatsApp DM orders**,
+with buyer verification in English, Roman Urdu and Urdu script, including
+Urdu voice notes.
 
-The dashboard is a local WhatsApp-style simulator. It sends no messages and
-classifies text with conservative offline rules, not an LLM API.
+> **Honest status.** COD-Guard is exhibition-ready and engineered for a
+> real-seller pilot; it is not yet field-proven. Every bundled order and
+> benchmark label is **synthetic**. No real merchant pilot, production
+> accuracy, or seller savings are claimed anywhere in this repository —
+> measured claims appear only in [the public benchmark](docs/BENCHMARK.md),
+> with its method and limitations attached. Live merchant validation is
+> the next step.
 
-## Setup (Windows PowerShell, Python 3.13)
+## Why it exists
+
+In the OrderNation *State of Online Shopping Pakistan 2026* study
+(~170,000 orders, one large retailer), 37.3% of COD orders were cancelled
+and 19.4% of shipped value came back — roughly **49 of every 100 COD orders
+ended in cash collected**. Sellers pay courier charges both ways on the
+rest. Existing tools confirm orders; COD-Guard is built around the full
+loop: **score → verify → decide → ship → learn from the outcome.**
+
+## What makes it different
+
+- **One queue for every channel.** Shopify and WooCommerce connect by
+  signed webhooks; DM orders are pasted or sheet-imported with
+  review-before-save; Daraz orders are scored and queued (buyer phone
+  availability on Daraz is unverified, so Daraz buyers are not promised
+  WhatsApp verification — see [the Daraz spike](docs/DARAZ_SPIKE.md)).
+- **A closed courier-outcome loop.** Delivered / returned / refused
+  outcomes — from courier feeds or CSV — retrain the model and re-score
+  future orders. Tracking alone doesn't do this; learning does.
+- **Published, reproducible accuracy.** The benchmark is generated from a
+  hash-locked test split under a written [metric protocol](docs/METRIC_PROTOCOL.md).
+  Error rates are published, not hidden behind marketing percentages.
+- **Urdu voice-note verification.** Buyers reply the way they actually
+  talk; voice notes are transcribed offline (Whisper) and understood
+  alongside typed replies.
+- **Decisions that can't be quietly reversed.** Only unambiguous
+  whole-order replies commit. Scoped ("without the blue shirt"),
+  conditional ("I would confirm"), or time-bound ("cancel after 5pm")
+  replies go to a human. Every decision is frozen with revision, time
+  and actor; a late voice result can never overwrite a newer decision.
+
+## How it works
+
+```text
+orders ──► intake ──► risk scoring ──► decision gate ──► courier
+(Shopify,    (one      (rules + ML,     (SHIP / HOLD /     │ delivered
+ Woo, Daraz,  queue)    GREEN/AMBER/RED) VERIFY_FIRST)      │ returned
+ DMs, CSV)        ▲            │              ▲            ▼
+                  │            ▼              │        outcomes
+                  └── model ◄── retraining ◄──┴──────────┘
+                              (versioned, atomic publish)
+```
+
+Risky orders are verified on WhatsApp first (buttons, free text, or voice).
+A confirmation can release a flagged order; a denial can stop a passed one.
+Outcomes are recorded against the decision that was frozen at dispatch, so
+the system is always evaluated on what it actually recommended.
+
+## Measured performance (synthetic benchmark)
+
+Baseline model on 1,184 held-out synthetic orders, threshold 0.50:
+**false-positive rate 16.47%** (96 of 583 genuine orders flagged),
+**false-negative rate 59.23%** (356 of 601 failed orders passed).
+Illustrative cost PKR 274,600 vs PKR 390,650 for shipping everything —
+and PKR 259,800 for an aggressive block-on-any-signal policy, which the
+served policy does **not** beat on raw cost. Low false positives *and*
+low false negatives have **not** been established; verification, not
+scoring alone, is where the design expects its gains, and the scenario
+analysis in [the evaluation report](docs/EVAL_REPORT.md) says exactly
+what is assumed. Failed labels mean non-collection, not proven fraud.
+
+The generator targets 51% expected non-collection — the upper end of one
+modelled scenario informed by the OrderNation funnel (49–57 collections
+per 100 COD orders, one retailer, mixed measurement windows). Language
+support means tested sample phrases in English, Roman Urdu and Urdu
+script; coverage is unmeasured and known scope failures are handled by
+routing to a human, not by guessing.
+
+## Quick start (local demo)
+
+Windows PowerShell, Python 3.13:
 
 ```powershell
 python -m venv .venv
@@ -21,117 +98,50 @@ $env:PYTHONUTF8 = '1'
 .\.venv\Scripts\python.exe -m streamlit run frontend/dashboard.py
 ```
 
-Open the URL printed by Streamlit (normally `http://127.0.0.1:8501`). On Linux,
-use `.venv/bin/python` in place of `.venv\Scripts\python.exe`.
-Stop and restart Streamlit after pulling backend or dependency changes so it
-loads the new modules rather than retaining the old service in memory.
-`build_demo.py` regenerates the synthetic benchmark, trains a baseline model,
-seeds 80 demo orders, runs both original test scripts, runs the regression / API /
-dashboard / learning tests, and checks dependencies. It reports the failed command
-and exits on error. Rebuilding replaces the baseline model; previously marked
-outcomes remain saved and can be learned again. Use `--verify-only` to check
-existing generated artifacts without rebuilding them.
+On Linux, use `.venv/bin/python`. `build_demo.py` regenerates the
+synthetic benchmark, trains the baseline model, seeds 80 demo orders
+(reserved outside training/validation/test at baseline), and runs the
+full check suite. The dashboard is a local WhatsApp-style simulator —
+it sends no real messages unless a Meta WhatsApp account is configured
+(see [WhatsApp Cloud](docs/WHATSAPP_CLOUD.md)); unconfigured tenants see
+an openly labelled simulation.
 
-The individual commands remain available, in order:
+Voice (once, while online): `scripts/prepare_voice.py` caches Whisper
+`small` weights under `data/whisper/`; inference then runs **offline**.
+The bundled sample clip is general Urdu speech from Google FLEURS
+(CC BY 4.0), not a customer recording — see [VOICE_TEST.md](docs/VOICE_TEST.md).
 
-```text
-python data/generate_benchmark.py
-python backend/app/train_model.py
-python scripts/seed_demo.py
-python tests/test_risk_engine.py
-python tests/test_verification.py
-python -m unittest discover -s tests -p "test_*.py" -v
-streamlit run frontend/dashboard.py
-```
-
-## Voice setup (once, while online)
-
-```powershell
-.\.venv\Scripts\python.exe scripts/prepare_voice.py
-.\.venv\Scripts\python.exe scripts/test_voice.py
-# Or use your own short Urdu reply:
-.\.venv\Scripts\python.exe scripts/test_voice.py C:\path\to\reply.ogg
-```
-
-Public multilingual Whisper `small` weights download to ignored `data/whisper/`.
-Inference then defaults to **offline**, CPU/int8. Allow several hundred MB for the
-weights. The dashboard accepts an upload or microphone recording, shows the
-unaltered transcript, and requires an explicit apply action. Notes must be at most
-60 seconds / 12 MiB. Silence and low-confidence results ask for another reply.
-
-The bundled clip is general Urdu speech from Google FLEURS (CC BY 4.0), not a
-customer recording. Attribution is in `data/voice_samples/ATTRIBUTION.md`;
-[the actual imperfect transcript and dependency fix](docs/VOICE_TEST.md) are recorded.
-PyAV **16.1.0 is pinned** because PyAV 19 breaks faster-whisper 1.2.1's decoder.
-The model is cached in memory after its first use in each process.
-
-## What to demonstrate
-
-- **Orders & risk.** The paginated queue shows reasons, rule score, ML estimate,
-  current decision and risk zones. With complete features, the pre-reply policy
-  requires two distinct adverse signal groups to flag an order. The address
-  checks share a group. ML refines the estimate. Missing features require
-  verification, and a customer denial can also stop a GREEN order.
-- **Verification:** select a RED order and confirm it → SHIP. Select a GREEN
-  order and deny it → HOLD_CANCEL. History is durable; an unclear follow-up cannot
-  erase an explicit answer. Upload, record, or transcribe the attributed Urdu sample.
-- **Metrics & learning:** [locked public benchmark](docs/BENCHMARK.md), both error rates, confusion matrix, test threshold
-  trade-off, and baseline costs are visible. Mark an outcome, then click
-  **Retrain from marked outcomes**. A new version visibly consumes the label and
-  re-evaluates the same held-out orders. Metrics may improve or worsen.
-
-## Measured performance and limits
-
-See [the generated evaluation](docs/EVAL_REPORT.md) and `data/evaluation.json`.
-**Baseline v1** on 1,184 synthetic test orders has **FPR 16.47% and FNR
-59.23%** at validation-selected threshold 0.50. A flag is any AMBER or RED
-recommendation before a reply. The counts were TP=245, FP=96, FN=356 and TN=487.
-Illustrative loss is PKR 274,600, versus PKR 390,650 for shipping everything and
-PKR 259,800 for blocking on any adverse signal. **It does not beat that aggressive
-baseline on cost, and low FP plus low FN has not been established.** The dashboard
-shows this limitation openly. Failed labels cover non-collection, not proven fraud.
-
-The generator produces 50.7% failed labels and targets 51% expected
-non-collection. It uses the low end of OrderNation's approximate range of
-49–57 cash collections per 100 COD orders. The study reflects one retailer
-and mixes measurement windows. Its 37.3% cancellation figure measures a
-different stage of the funnel. Feature relationships are simulation assumptions.
-
-Model/threshold selection uses validation only. Evaluation calls the same policy
-as serving. All 80 demo orders are reserved outside training/validation/test, so
-marked demo outcomes can enter training without leaking into the holdout. The
-marked-outcome comparison uses the decision revision frozen with the first
-outcome. Corrections retain that revision. Older records without a frozen
-decision remain unscored. These are retrospective demo measurements.
-
-## Optional API and local state
+## API
 
 ```powershell
 .\.venv\Scripts\python.exe -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000
 ```
 
-Open the API docs at `http://127.0.0.1:8000/docs`. Configure operator keys
-and a separate tenant for authenticated CSV intake. Voice returns a job ID to
-poll for the transcript. The default is preview, and `commit_decision=true`
-applies an eligible transcript. [Shadow intake and retention](docs/SHADOW_INTAKE.md)
+Operator-key authenticated writes, tenant-scoped data, masked phone
+numbers in list views, authenticated CSV intake for shadow operation
+([SHADOW_INTAKE.md](docs/SHADOW_INTAKE.md)), paginated queue (a 50-order
+page over 10,000 stored orders loads in tens of milliseconds), and
+`/health` vs `/ready` separation — readiness verifies the database, the
+active model bundle, and that its evaluation artifacts match.
 
-The API and synthetic dashboard share transactional SQLite state in
-`data/state.sqlite3`. An existing `data/state.json` is imported once and
-archived. The reserved `demo` tenant uses the bundled seed. The API runs on
-loopback for a single-instance shadow workflow with human review.
+## Channels and evidence
 
-For isolated checks, set `COD_GUARD_DATA_DIR` and `COD_GUARD_MODEL_PATH` to an
-alternate state directory and a copy of a trained model. Set the same variables
-for API and dashboard when they should share the profile.
+| Channel | Route | Doc |
+| --- | --- | --- |
+| WooCommerce | Signed webhooks + polling, outcome write-back, source reconciliation | [WOOCOMMERCE.md](docs/WOOCOMMERCE.md) |
+| Shopify | Signed custom-app `orders/create` intake (no App Store flow yet) | [SHOPIFY.md](docs/SHOPIFY.md) |
+| Daraz | Read-only spike client; score-and-queue only until a seller payload proves phone access | [DARAZ_SPIKE.md](docs/DARAZ_SPIKE.md) |
+| Social / DM | Paste or sheet import, review-before-save | [SOCIAL_INTAKE.md](docs/SOCIAL_INTAKE.md) |
+| WhatsApp | Meta Cloud API, utility template, consent + opt-out, per-message cost accounting | [WHATSAPP_CLOUD.md](docs/WHATSAPP_CLOUD.md) |
+| Couriers | CSV outcomes + read-only TCS adapter; shadow retraining | [COURIERS.md](docs/COURIERS.md) |
+| Reputation network | Opt-in, hashed, governed, off by default, never affects dispatch | [NETWORK.md](docs/NETWORK.md) |
 
-On this Windows machine, pip's default certificate path timed out and produced
-misleading `No matching distribution` errors. The following venv-only setting
-made the same index query succeed; HTTPS verification remains enabled:
+## Project context
 
-```powershell
-.\.venv\Scripts\python.exe -m pip config --site set global.use-deprecated legacy-certs
-.\.venv\Scripts\python.exe -m pip install --timeout 60 --retries 3 -r requirements.txt
-```
-
-CI rebuilds and tests the demo on Windows and Linux. The real cached-weight voice
-smoke test is separate: `python scripts/build_demo.py --verify-only --voice`.
+COD-Guard began as the AIC378 Speech Processing project at COMSATS
+University Islamabad (approved by Dr. Amir Rashid; functional deadline
+25 Nov 2026; EE Flagship Event exhibition 27–28 Nov 2026) and is being
+developed toward a real-seller pilot. Competitors in this space include
+ConfirmFlow, OrderWitness, Botaura and DukaanFlow; COD-Guard claims no
+"first" — its case rests on the published benchmark, the outcome learning
+loop, and covering the channels above in one queue.
