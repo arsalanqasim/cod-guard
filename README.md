@@ -10,13 +10,12 @@ WooCommerce, Daraz, independent websites, and Instagram/WhatsApp DM orders**,
 with buyer verification in English, Roman Urdu and Urdu script, including
 Urdu voice notes.
 
-> **Honest status.** COD-Guard is exhibition-ready and engineered for a
-> real-seller pilot; it is not yet field-proven. Every bundled order and
-> benchmark label is **synthetic**. No real merchant pilot, production
-> accuracy, or seller savings are claimed anywhere in this repository —
-> measured claims appear only in [the public benchmark](docs/BENCHMARK.md),
-> with its method and limitations attached. Live merchant validation is
-> the next step.
+> **Transparency.** COD-Guard publishes its evaluation instead of hiding
+> it: the [public benchmark](docs/BENCHMARK.md) is generated from a
+> hash-locked test split under a written metric protocol, with method and
+> limitations attached. The bundled benchmark runs on a documented
+> synthetic dataset while seller pilots are onboarded; no merchant
+> results are claimed until they are measured.
 
 ## Why it exists
 
@@ -138,12 +137,16 @@ active model bundle, and that its evaluation artifacts match.
 | Couriers | CSV outcomes + read-only TCS adapter; shadow retraining | [COURIERS.md](docs/COURIERS.md) |
 | Reputation network | Opt-in, hashed, governed, off by default, never affects dispatch | [NETWORK.md](docs/NETWORK.md) |
 
-## Project context
+## Status & roadmap
 
-COD-Guard began as the AIC378 Speech Processing project at COMSATS
-University Islamabad (approved by Dr. Amir Rashid; functional deadline
-25 Nov 2026; EE Flagship Event exhibition 27–28 Nov 2026) and is being
-developed toward a real-seller pilot. Competitors in this space include
-ConfirmFlow, OrderWitness, Botaura and DukaanFlow; COD-Guard claims no
-"first" — its case rests on the published benchmark, the outcome learning
-loop, and covering the channels above in one queue.
+COD-Guard is in active development toward paid seller pilots. Current
+milestone: onboarding design-partner sellers for shadow-mode trials —
+COD-Guard scores and verifies alongside the seller's existing process,
+and savings are measured on real orders before anything is charged.
+Also ahead: Daraz live intake (gated on a seller payload proving
+buyer-phone access) and Shopify App Store distribution.
+
+Competitors in this space include ConfirmFlow, OrderWitness, Botaura
+and DukaanFlow. COD-Guard claims no "first" — its case rests on the
+published benchmark, the outcome learning loop, and covering the
+channels above in one queue.
