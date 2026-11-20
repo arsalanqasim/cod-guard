@@ -142,17 +142,19 @@ def voice(order_id: str, file: UploadFile = File(...), commit_decision: bool = F
     if not contents or len(contents) > VOICE_LIMIT_BYTES:
         raise HTTPException(status_code=422, detail="Audio must be nonempty and at most 12 MiB")
     service.record_access(operator.tenant_id, operator.actor, "voice_requested", order_id=order_id)
+    revision = service.verification_revision(operator.tenant_id, order_id) if commit_decision else None
 
     def transcribe():
         result = transcribe_voice_note(contents, suffix=suffix)
         if not result["ok"]:
             raise ValueError(result["reason"])
         intent = parse_reply(result["text"]) if not result.get("warning") else "UNCLEAR"
-        applied = commit_decision and intent != "UNCLEAR"
-        response = {**result, "intent": intent, "applied": applied, "needs_review": intent == "UNCLEAR"}
-        if applied:
-            response.update(service.verify_reply(order, result["text"], source="voice", actor=operator.actor,
-                                                 tenant_id=operator.tenant_id))
+        response = {**result, "intent": intent, "applied": False, "superseded": False,
+                    "needs_review": intent == "UNCLEAR"}
+        if commit_decision and intent != "UNCLEAR":
+            response.update(service.apply_queued_verification(
+                order, result["text"], intent, "voice", actor=operator.actor,
+                tenant_id=operator.tenant_id, expected_revision=revision))
         return response
 
     try:
