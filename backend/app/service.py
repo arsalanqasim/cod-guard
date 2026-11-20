@@ -16,7 +16,7 @@ import pandas as pd
 from risk_engine import OPTIONAL_MODEL_FEATURES, assess as rule_assess
 from verification import parse_reply, apply_reply, opening_message
 from artifacts import active_version
-from storage import queue_snapshot, read_state, transaction
+from storage import queue_snapshot, read_state, transaction, update_state
 from decision_events import append_event
 from records import (DEMO_TENANT, ORDER_FIELDS, StateUnavailable, add_model_version, audit,
                      connect, ensure_seeded, select_orders, select_page, write)
@@ -167,6 +167,25 @@ def order_page(tenant_id=DEMO_TENANT, *, limit=50, offset=0, search=""):
 def verify_reply(order, reply_text, source="text", *, actor="local-demo", tenant_id=DEMO_TENANT):
     with transaction(STATE_PATH, tenant_id, (order["order_id"],)) as state:
         return apply_verification(state, order, reply_text, parse_reply(reply_text), source, actor)
+
+
+def verification_revision(tenant_id, order_id):
+    state = _load_state(tenant_id, (order_id,), messages=False)
+    return state["decisions"].get(order_id, {}).get("revision")
+
+
+def apply_queued_verification(order, reply_text, intent, source, *, actor, tenant_id, expected_revision):
+    order_id = order["order_id"]
+    with write(STATE_PATH) as db, update_state(db, tenant_id, (order_id,)) as state:
+        current = state["decisions"].get(order_id, {})
+        revision = current.get("revision")
+        if revision != expected_revision:
+            audit(db, tenant_id, actor, "verification_superseded", order_id=order_id,
+                  reference=f"{source} expected={expected_revision} current={revision}")
+            return {"applied": False, "superseded": True, "needs_review": True,
+                    "decision": current.get("decision")}
+        return {"applied": True, "superseded": False,
+                **apply_verification(state, order, reply_text, intent, source, actor)}
 
 
 def apply_verification(state, order, reply_text, intent, source, actor):

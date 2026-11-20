@@ -332,3 +332,11 @@ preserve the previous decision and request review. The order API reports
 `verified=false` while a reply needs review. The reply and service regressions
 cover the three review examples, scope and time in three text forms, and
 preservation of a saved denial.
+
+### Round 6 — WS-2: Queued voice ordering
+
+[Re-review §2, “Queued voice ordering”](PRODUCTION_REVIEW_REREVIEW.md#storage-latency-and-voice).
+A queued apply compares its captured decision revision inside the write
+transaction. The paused-inference API regression queues a confirmation,
+records a newer manual denial and releases inference. The completed job
+reports supersession and the denial remains in effect.
