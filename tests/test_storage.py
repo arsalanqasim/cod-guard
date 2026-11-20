@@ -61,9 +61,36 @@ class StorageTests(unittest.TestCase):
                             [("CONFIRM", "Reply unclear; previous answer kept", 0),
                              ("UNCLEAR", "Please clarify", 0), ("CONFIRM", "Explicit answer", 0)])
         with connect(self.path) as db:
-            self.assertEqual(db.execute("PRAGMA user_version").fetchone()[0], 8)
+            self.assertEqual(db.execute("PRAGMA user_version").fetchone()[0], 10)
             self.assertEqual([row[0] for row in db.execute("SELECT needs_review FROM decisions ORDER BY rowid")],
                              [1, 1, 0])
+
+    def test_migrate_v8_distinguishes_possible_historical_button_taps(self):
+        with connect(self.path) as db, db:
+            db.execute("DROP TABLE reply_corrections")
+            db.execute("DROP TABLE reply_shadow_predictions")
+            db.execute("PRAGMA user_version=8")
+            db.executemany("""INSERT INTO messages (tenant_id,order_id,text,source,intent,actor)
+                VALUES ('alpha','ORD-1',?,'whatsapp',?,'webhook')""",
+                           [("Confirm", "CONFIRM"), ("Cancel", "DENY"), ("Yes", "CONFIRM")])
+        with connect(self.path) as db:
+            sources = [row["source"] for row in db.execute("SELECT source FROM messages ORDER BY id")]
+            self.assertEqual(sources, ["whatsapp_legacy", "whatsapp_legacy", "whatsapp"])
+            self.assertEqual(db.execute("SELECT COUNT(*) FROM reply_corrections").fetchone()[0], 0)
+
+    def test_migrate_v9_preserves_labels_and_adds_shadow_predictions(self):
+        with connect(self.path) as db, db:
+            db.execute("DROP TABLE reply_shadow_predictions")
+            db.execute("PRAGMA user_version=9")
+            db.execute("""INSERT INTO messages (id,tenant_id,order_id,text,source,intent,actor)
+                VALUES (1,'alpha','ORD-1','Maybe','text','UNCLEAR','operator')""")
+            db.execute("""INSERT INTO reply_corrections
+                (tenant_id,message_id,label,language,decision_revision,at,actor)
+                VALUES ('alpha',1,'DENY','en',2,'2026-11-20','operator')""")
+        with connect(self.path) as db:
+            self.assertEqual(db.execute("PRAGMA user_version").fetchone()[0], 10)
+            self.assertEqual(db.execute("SELECT label FROM reply_corrections").fetchone()[0], "DENY")
+            self.assertEqual(db.execute("SELECT COUNT(*) FROM reply_shadow_predictions").fetchone()[0], 0)
 
     def test_distinct_events_survive_eight_writers_and_failed_transaction(self):
         def append_batch(worker):

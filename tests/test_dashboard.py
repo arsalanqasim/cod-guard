@@ -9,9 +9,23 @@ from streamlit.testing.v1 import AppTest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "backend/app"))
 import service
+from reply_corrections import export_page
 
 
 class DashboardTests(unittest.TestCase):
+    def test_operator_can_correct_the_latest_unclear_reply(self):
+        with tempfile.TemporaryDirectory() as directory, \
+             patch.object(service, "STATE_PATH", Path(directory) / "state.json"):
+            app = AppTest.from_file(str(ROOT / "frontend/dashboard.py"), default_timeout=30).run()
+            order_id = app.selectbox(key="verify_order").value
+            app.chat_input(key=f"reply_{order_id}").set_value("I need to back out of this purchase").run()
+            revision = service.verification_revision("demo", order_id)
+            app.selectbox(key=f"reply_label_{order_id}_{revision}").set_value("DENY")
+            next(button for button in app.button if button.label == "Save correction").click().run()
+            self.assertFalse(app.exception, str(app.exception))
+            self.assertEqual(service.assess_order(service.get_order(order_id))["decision"], "HOLD_CANCEL")
+            self.assertEqual(export_page(service.STATE_PATH, "demo", "test")[0]["label"], "DENY")
+
     def test_moves_between_pages_without_scoring_the_full_queue(self):
         with tempfile.TemporaryDirectory() as directory, \
              patch.object(service, "STATE_PATH", Path(directory) / "state.json"), \
