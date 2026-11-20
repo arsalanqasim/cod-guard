@@ -14,6 +14,8 @@ sys.path[:0] = [str(ROOT / "backend/app"), str(ROOT)]
 import main
 import operators
 import service
+import artifacts
+from train_model import render_report
 from records import connect
 from scripts.purge_replies import purge
 
@@ -63,6 +65,43 @@ class PilotApiTests(unittest.TestCase):
         self.path.with_suffix(".sqlite3").write_bytes(b"not a database")
         self.assertEqual(client.get("/orders/CG-00203").json()["error"], "state_unavailable")
         self.assertEqual(client.get("/health").status_code, 200)
+
+    def test_ready_requires_a_coherent_versioned_evaluation_set(self):
+        client = self.client("demo")
+        model_path = self.path.with_suffix(".pkl")
+        evaluation = json.loads((ROOT / "data/evaluation.json").read_text(encoding="utf-8"))
+        bundle = service._bundle() | {key: evaluation[key] for key in ("model_id", "version", "trained_at")}
+        markdown = render_report(evaluation)
+        artifacts.publish(bundle, evaluation, markdown, model_path, expected=None)
+        version = artifacts.active_version(model_path)
+        evaluation_path = version / "evaluation.json"
+        report_path = version / "report.md"
+        with patch.object(service, "MODEL_PATH", model_path):
+            self.assertEqual(client.get("/ready").status_code, 200)
+            for path, content in (
+                (evaluation_path, None), (evaluation_path, "{bad JSON"),
+                (evaluation_path, json.dumps(evaluation | {"model_id": "different"})),
+                (evaluation_path, json.dumps(evaluation | {"version": evaluation["version"] + 1})),
+                (evaluation_path, json.dumps(evaluation | {"trained_at": "different"})),
+                (evaluation_path, json.dumps(evaluation | {"chosen": {"threshold": .99}})),
+                (report_path, None), (report_path, markdown.replace(evaluation["model_id"], "different")),
+            ):
+                with self.subTest(path=path.name, content=content is not None):
+                    original = path.read_bytes()
+                    try:
+                        if content is None:
+                            path.unlink()
+                        else:
+                            path.write_text(content, encoding="utf-8")
+                        response = client.get("/ready")
+                        self.assertEqual(response.status_code, 503)
+                        self.assertEqual(response.json()["error"], "evaluation_unavailable")
+                        self.assertEqual(client.get("/health").status_code, 200)
+                        if path == evaluation_path:
+                            self.assertEqual(client.get("/evaluation").status_code, 404)
+                    finally:
+                        path.write_bytes(original)
+            self.assertEqual(client.get("/ready").status_code, 200)
 
     def test_intake_replays_receipt_reports_bad_rows_and_flags_missing_features(self):
         client = self.client("alpha")

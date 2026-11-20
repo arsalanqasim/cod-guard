@@ -349,3 +349,12 @@ Standalone training captures the expected pointer before fitting and only
 exports the non-atomic baseline diagnostics after activation. Controlled
 activation tests cover both races and assert that a rejected fit leaves
 prior diagnostics intact. [Consistency contract](METRIC_PROTOCOL.md).
+
+### Round 6 — WS-4: Readiness coherence
+
+[Re-review §2, “API failure matrix”](PRODUCTION_REVIEW_REREVIEW.md#api-failure-matrix).
+`/ready` checks the active bundle, corresponding JSON identity, version,
+training timestamp and threshold, and the Markdown generated from that JSON.
+The failure matrix covers each missing or mismatched artifact while health
+continues to report liveness. [The operator runbook](SHADOW_INTAKE.md)
+describes recovery after voice and retrain job status is lost on restart.

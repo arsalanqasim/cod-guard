@@ -54,8 +54,11 @@ def state_error(request, exc):
 @app.get("/ready")
 def ready():
     service.check_state()
-    if not service.model_status()["available"]:
-        return JSONResponse(status_code=503, content={"detail": "Risk model is unavailable", "error": "model_unavailable"})
+    error = service.model_readiness_error()
+    if error:
+        detail = {"model_unavailable": "Risk model is unavailable",
+                  "evaluation_unavailable": "Active evaluation artifacts are missing or inconsistent"}[error]
+        return JSONResponse(status_code=503, content={"detail": detail, "error": error})
     return {"status": "ready"}
 
 
