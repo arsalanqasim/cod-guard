@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "sha256": {
+    "reply_intents.v1.jsonl": "2c1db743167c41f979ad300103cbb47318c983cd3d531c3f547d4255fd902313"
+  },
+  "reply_counts": {
+    "regression": 79,
+    "train": 198,
+    "val": 72,
+    "test": 144
+  }
+}

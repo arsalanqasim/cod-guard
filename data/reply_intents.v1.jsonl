@@ -1,0 +1,493 @@
+{"id":"r001","split":"regression","family":"known-confirm","label":"CONFIRM","language":"en","text":"Yes confirm","source":"parser tests and production reviews","trap":"CONFIRM→HOLD"}
+{"id":"r002","split":"regression","family":"known-confirm","label":"CONFIRM","language":"en","text":"Don't cancel, please send my order","source":"parser tests and production reviews","trap":"CONFIRM→HOLD"}
+{"id":"r003","split":"regression","family":"known-confirm","label":"CONFIRM","language":"en","text":"No problem, yes confirm","source":"parser tests and production reviews","trap":"CONFIRM→HOLD"}
+{"id":"r004","split":"regression","family":"known-confirm","label":"CONFIRM","language":"en","text":"No problems, send it","source":"parser tests and production reviews","trap":"CONFIRM→HOLD"}
+{"id":"r005","split":"regression","family":"known-confirm","label":"CONFIRM","language":"en","text":"Yes","source":"parser tests and production reviews","trap":"CONFIRM→HOLD"}
+{"id":"r006","split":"regression","family":"known-confirm","label":"CONFIRM","language":"roman_ur","text":"Ji theek hai, bhej dein","source":"parser tests and production reviews","trap":"CONFIRM→HOLD"}
+{"id":"r007","split":"regression","family":"known-confirm","label":"CONFIRM","language":"roman_ur","text":"Cancel mat karna, bhej dein","source":"parser tests and production reviews","trap":"CONFIRM→HOLD"}
+{"id":"r008","split":"regression","family":"known-confirm","label":"CONFIRM","language":"ur","text":"جی ٹھیک ہے","source":"parser tests and production reviews","trap":"CONFIRM→HOLD"}
+{"id":"r009","split":"regression","family":"known-confirm","label":"CONFIRM","language":"ur","text":"کینسل مت کریں، بھیج دیں","source":"parser tests and production reviews","trap":"CONFIRM→HOLD"}
+{"id":"r010","split":"regression","family":"known-confirm","label":"CONFIRM","language":"ur","text":"کوئی مسئلہ نہیں، بھیج دیں","source":"parser tests and production reviews","trap":"CONFIRM→HOLD"}
+{"id":"r011","split":"regression","family":"known-deny","label":"DENY","language":"en","text":"No, I didn't order this","source":"parser tests and production reviews","trap":"DENY→SHIP"}
+{"id":"r012","split":"regression","family":"known-deny","label":"DENY","language":"en","text":"No, don't send it","source":"parser tests and production reviews","trap":"DENY→SHIP"}
+{"id":"r013","split":"regression","family":"known-deny","label":"DENY","language":"en","text":"Please do not confirm","source":"parser tests and production reviews","trap":"DENY→SHIP"}
+{"id":"r014","split":"regression","family":"known-deny","label":"DENY","language":"en","text":"I did not place this order","source":"parser tests and production reviews","trap":"DENY→SHIP"}
+{"id":"r015","split":"regression","family":"known-deny","label":"DENY","language":"en","text":"No, cancel","source":"parser tests and production reviews","trap":"DENY→SHIP"}
+{"id":"r016","split":"regression","family":"known-deny","label":"DENY","language":"en","text":"No","source":"parser tests and production reviews","trap":"DENY→SHIP"}
+{"id":"r017","split":"regression","family":"known-deny","label":"DENY","language":"roman_ur","text":"Nahi, mera order nahi hai","source":"parser tests and production reviews","trap":"DENY→SHIP"}
+{"id":"r018","split":"regression","family":"known-deny","label":"DENY","language":"roman_ur","text":"Ji nahi","source":"parser tests and production reviews","trap":"DENY→SHIP"}
+{"id":"r019","split":"regression","family":"known-deny","label":"DENY","language":"roman_ur","text":"confirm nahi karna","source":"parser tests and production reviews","trap":"DENY→SHIP"}
+{"id":"r020","split":"regression","family":"known-deny","label":"DENY","language":"roman_ur","text":"Ji theek nhi hai","source":"parser tests and production reviews","trap":"DENY→SHIP"}
+{"id":"r021","split":"regression","family":"known-deny","label":"DENY","language":"roman_ur","text":"bhejna nahi","source":"parser tests and production reviews","trap":"DENY→SHIP"}
+{"id":"r022","split":"regression","family":"known-deny","label":"DENY","language":"ur","text":"نہیں","source":"parser tests and production reviews","trap":"DENY→SHIP"}
+{"id":"r023","split":"regression","family":"known-deny","label":"DENY","language":"ur","text":"جی نہیں","source":"parser tests and production reviews","trap":"DENY→SHIP"}
+{"id":"r024","split":"regression","family":"known-deny","label":"DENY","language":"ur","text":"مت بھیجیں","source":"parser tests and production reviews","trap":"DENY→SHIP"}
+{"id":"r025","split":"regression","family":"known-deny","label":"DENY","language":"ur","text":"یہ آرڈر میرا نہیں ہے","source":"parser tests and production reviews","trap":"DENY→SHIP"}
+{"id":"r026","split":"regression","family":"known-deny","label":"DENY","language":"ur","text":"کنفرم نہیں کرنا","source":"parser tests and production reviews","trap":"DENY→SHIP"}
+{"id":"r027","split":"regression","family":"known-modification","label":"MODIFICATION","language":"en","text":"Yes, send the order without the blue shirt","source":"parser tests and production reviews"}
+{"id":"r028","split":"regression","family":"known-modification","label":"MODIFICATION","language":"en","text":"Yes, remove the extra item","source":"parser tests and production reviews"}
+{"id":"r029","split":"regression","family":"known-modification","label":"MODIFICATION","language":"en","text":"Send only two units","source":"parser tests and production reviews"}
+{"id":"r030","split":"regression","family":"known-modification","label":"MODIFICATION","language":"en","text":"Please cancel the extra item only","source":"parser tests and production reviews"}
+{"id":"r031","split":"regression","family":"known-modification","label":"MODIFICATION","language":"en","text":"Yes, confirm the blue shirt only","source":"parser tests and production reviews"}
+{"id":"r032","split":"regression","family":"known-modification","label":"MODIFICATION","language":"en","text":"Please cancel one item","source":"parser tests and production reviews"}
+{"id":"r033","split":"regression","family":"known-modification","label":"MODIFICATION","language":"en","text":"Confirm the address, please","source":"parser tests and production reviews"}
+{"id":"r034","split":"regression","family":"known-modification","label":"MODIFICATION","language":"en","text":"Please cancel the extra item","source":"parser tests and production reviews"}
+{"id":"r035","split":"regression","family":"known-modification","label":"MODIFICATION","language":"en","text":"Please cancel the blue shirt","source":"parser tests and production reviews"}
+{"id":"r036","split":"regression","family":"known-modification","label":"MODIFICATION","language":"en","text":"Yes, cancel my second product","source":"parser tests and production reviews"}
+{"id":"r037","split":"regression","family":"known-modification","label":"MODIFICATION","language":"roman_ur","text":"Haan, neeli shirt ke baghair bhej dein","source":"parser tests and production reviews"}
+{"id":"r038","split":"regression","family":"known-modification","label":"MODIFICATION","language":"roman_ur","text":"Order nahi, sirf address confirm karna hai","source":"parser tests and production reviews"}
+{"id":"r039","split":"regression","family":"known-modification","label":"MODIFICATION","language":"ur","text":"ہاں، نیلی قمیض کے بغیر بھیج دیں","source":"parser tests and production reviews"}
+{"id":"r040","split":"regression","family":"known-modification","label":"MODIFICATION","language":"ur","text":"صرف ایک آئٹم کینسل کریں","source":"parser tests and production reviews"}
+{"id":"r041","split":"regression","family":"known-unclear","label":"UNCLEAR","language":"en","text":"I would confirm the order","source":"parser tests and production reviews"}
+{"id":"r042","split":"regression","family":"known-unclear","label":"UNCLEAR","language":"en","text":"I will confirm tomorrow","source":"parser tests and production reviews"}
+{"id":"r043","split":"regression","family":"known-unclear","label":"UNCLEAR","language":"en","text":"Yes, if it arrives by Friday","source":"parser tests and production reviews"}
+{"id":"r044","split":"regression","family":"known-unclear","label":"UNCLEAR","language":"en","text":"No, cancel the order after 5pm","source":"parser tests and production reviews"}
+{"id":"r045","split":"regression","family":"known-unclear","label":"UNCLEAR","language":"en","text":"Yes, deliver the order after Eid","source":"parser tests and production reviews"}
+{"id":"r046","split":"regression","family":"known-unclear","label":"UNCLEAR","language":"en","text":"I did not confirm this order","source":"parser tests and production reviews"}
+{"id":"r047","split":"regression","family":"known-unclear","label":"UNCLEAR","language":"en","text":"I haven't confirmed this order","source":"parser tests and production reviews"}
+{"id":"r048","split":"regression","family":"known-unclear","label":"UNCLEAR","language":"en","text":"I did not cancel my order","source":"parser tests and production reviews"}
+{"id":"r049","split":"regression","family":"known-unclear","label":"UNCLEAR","language":"en","text":"Don't cancel my order","source":"parser tests and production reviews"}
+{"id":"r050","split":"regression","family":"known-unclear","label":"UNCLEAR","language":"en","text":"I did not say yes","source":"parser tests and production reviews"}
+{"id":"r051","split":"regression","family":"known-unclear","label":"UNCLEAR","language":"en","text":"Yes, confirm the order, but please cancel it","source":"parser tests and production reviews"}
+{"id":"r052","split":"regression","family":"known-unclear","label":"UNCLEAR","language":"en","text":"Please confirm and cancel","source":"parser tests and production reviews"}
+{"id":"r053","split":"regression","family":"known-unclear","label":"UNCLEAR","language":"en","text":"Please do not cancel one item","source":"parser tests and production reviews"}
+{"id":"r054","split":"regression","family":"known-unclear","label":"UNCLEAR","language":"en","text":"Yes, confirm if the size is large","source":"parser tests and production reviews"}
+{"id":"r055","split":"regression","family":"known-unclear","label":"UNCLEAR","language":"en","text":"Did you cancel my order?","source":"parser tests and production reviews"}
+{"id":"r056","split":"regression","family":"known-unclear","label":"UNCLEAR","language":"en","text":"Confirm payment","source":"parser tests and production reviews"}
+{"id":"r057","split":"regression","family":"known-unclear","label":"UNCLEAR","language":"en","text":"Please stop calling me","source":"parser tests and production reviews"}
+{"id":"r058","split":"regression","family":"known-unclear","label":"UNCLEAR","language":"en","text":"I did not ask you to confirm","source":"parser tests and production reviews"}
+{"id":"r059","split":"regression","family":"known-unclear","label":"UNCLEAR","language":"en","text":"I don't want to confirm","source":"parser tests and production reviews"}
+{"id":"r060","split":"regression","family":"known-unclear","label":"UNCLEAR","language":"en","text":"I cannot confirm this order","source":"parser tests and production reviews"}
+{"id":"r061","split":"regression","family":"known-unclear","label":"UNCLEAR","language":"en","text":"Not yes","source":"parser tests and production reviews"}
+{"id":"r062","split":"regression","family":"known-unclear","label":"UNCLEAR","language":"en","text":"deliverance","source":"parser tests and production reviews"}
+{"id":"r063","split":"regression","family":"known-unclear","label":"UNCLEAR","language":"en","text":"Can you confirm the price?","source":"parser tests and production reviews"}
+{"id":"r064","split":"regression","family":"known-unclear","label":"UNCLEAR","language":"en","text":"There is no weather update","source":"parser tests and production reviews"}
+{"id":"r065","split":"regression","family":"known-unclear","label":"UNCLEAR","language":"en","text":"Is this a fake order?","source":"parser tests and production reviews"}
+{"id":"r066","split":"regression","family":"known-unclear","label":"UNCLEAR","language":"en","text":"Maybe","source":"parser tests and production reviews"}
+{"id":"r067","split":"regression","family":"known-unclear","label":"UNCLEAR","language":"en","text":"STOP","source":"parser tests and production reviews"}
+{"id":"r068","split":"regression","family":"known-unclear","label":"UNCLEAR","language":"roman_ur","text":"Main confirm karta agar Friday tak aaye","source":"parser tests and production reviews"}
+{"id":"r069","split":"regression","family":"known-unclear","label":"UNCLEAR","language":"roman_ur","text":"Order Eid ke baad bhej dein","source":"parser tests and production reviews"}
+{"id":"r070","split":"regression","family":"known-unclear","label":"UNCLEAR","language":"roman_ur","text":"Kal bataunga","source":"parser tests and production reviews"}
+{"id":"r071","split":"regression","family":"known-unclear","label":"UNCLEAR","language":"roman_ur","text":"ji","source":"parser tests and production reviews"}
+{"id":"r072","split":"regression","family":"known-unclear","label":"UNCLEAR","language":"ur","text":"اگر جمعہ تک آئے تو کنفرم کریں","source":"parser tests and production reviews"}
+{"id":"r073","split":"regression","family":"known-unclear","label":"UNCLEAR","language":"ur","text":"آرڈر عید کے بعد بھیج دیں","source":"parser tests and production reviews"}
+{"id":"r074","split":"regression","family":"known-unclear","label":"UNCLEAR","language":"ur","text":"مجید صاحب سے بات کریں","source":"parser tests and production reviews"}
+{"id":"r075","split":"regression","family":"known-unclear","label":"UNCLEAR","language":"ur","text":"ٹھیکیدار سے بات کریں","source":"parser tests and production reviews"}
+{"id":"r076","split":"regression","family":"known-unclear","label":"UNCLEAR","language":"ur","text":"جی، کل بتاؤں گا","source":"parser tests and production reviews"}
+{"id":"r077","split":"regression","family":"known-unclear","label":"UNCLEAR","language":"ur","text":"ان کے دور میں آلودگی مسئلہ نہیں تھی","source":"parser tests and production reviews"}
+{"id":"r078","split":"regression","family":"known-unclear","label":"UNCLEAR","language":"other","text":"","source":"parser tests and production reviews"}
+{"id":"r079","split":"regression","family":"known-unclear","label":"UNCLEAR","language":"other","text":null,"source":"parser tests and production reviews"}
+{"id":"r080","split":"train","family":"approval","label":"CONFIRM","language":"en","text":"Full order approved","source":"synthetic variations"}
+{"id":"r081","split":"train","family":"approval","label":"CONFIRM","language":"en","text":"I approve this purchase","source":"synthetic variations"}
+{"id":"r082","split":"train","family":"approval","label":"CONFIRM","language":"en","text":"You have my approval","source":"synthetic variations"}
+{"id":"r083","split":"train","family":"approval","label":"CONFIRM","language":"roman_ur","text":"Pura order manzoor hai","source":"synthetic variations"}
+{"id":"r084","split":"train","family":"approval","label":"CONFIRM","language":"roman_ur","text":"Meri taraf se manzoori hai","source":"synthetic variations"}
+{"id":"r085","split":"train","family":"approval","label":"CONFIRM","language":"roman_ur","text":"Poori booking approve hai","source":"synthetic variations"}
+{"id":"r086","split":"train","family":"approval","label":"CONFIRM","language":"ur","text":"پورا آرڈر منظور ہے","source":"synthetic variations"}
+{"id":"r087","split":"train","family":"approval","label":"CONFIRM","language":"ur","text":"میری طرف سے منظوری ہے","source":"synthetic variations"}
+{"id":"r088","split":"train","family":"approval","label":"CONFIRM","language":"ur","text":"یہ خریداری منظور ہے","source":"synthetic variations"}
+{"id":"r089","split":"train","family":"accept_parcel","label":"CONFIRM","language":"en","text":"I'll take the parcel","source":"synthetic variations"}
+{"id":"r090","split":"train","family":"accept_parcel","label":"CONFIRM","language":"en","text":"I'll accept this delivery","source":"synthetic variations"}
+{"id":"r091","split":"train","family":"accept_parcel","label":"CONFIRM","language":"en","text":"I'll receive the whole package","source":"synthetic variations"}
+{"id":"r092","split":"train","family":"accept_parcel","label":"CONFIRM","language":"roman_ur","text":"Main parcel le loon ga","source":"synthetic variations"}
+{"id":"r093","split":"train","family":"accept_parcel","label":"CONFIRM","language":"roman_ur","text":"Delivery main receive karungi","source":"synthetic variations"}
+{"id":"r094","split":"train","family":"accept_parcel","label":"CONFIRM","language":"roman_ur","text":"Poora package le lunga","source":"synthetic variations"}
+{"id":"r095","split":"train","family":"accept_parcel","label":"CONFIRM","language":"ur","text":"میں پارسل لے لوں گا","source":"synthetic variations"}
+{"id":"r096","split":"train","family":"accept_parcel","label":"CONFIRM","language":"ur","text":"میں یہ ڈیلیوری قبول کروں گی","source":"synthetic variations"}
+{"id":"r097","split":"train","family":"accept_parcel","label":"CONFIRM","language":"ur","text":"پورا پارسل لے لوں گی","source":"synthetic variations"}
+{"id":"r098","split":"train","family":"dispatch_permission","label":"CONFIRM","language":"en","text":"You can dispatch my purchase","source":"synthetic variations"}
+{"id":"r099","split":"train","family":"dispatch_permission","label":"CONFIRM","language":"en","text":"Go ahead with dispatch","source":"synthetic variations"}
+{"id":"r100","split":"train","family":"dispatch_permission","label":"CONFIRM","language":"en","text":"You may get the package on its way","source":"synthetic variations"}
+{"id":"r101","split":"train","family":"dispatch_permission","label":"CONFIRM","language":"roman_ur","text":"Aap parcel rawana kar dein","source":"synthetic variations"}
+{"id":"r102","split":"train","family":"dispatch_permission","label":"CONFIRM","language":"roman_ur","text":"Dispatch kar sakte hain","source":"synthetic variations"}
+{"id":"r103","split":"train","family":"dispatch_permission","label":"CONFIRM","language":"roman_ur","text":"Mera parcel nikal dein","source":"synthetic variations"}
+{"id":"r104","split":"train","family":"dispatch_permission","label":"CONFIRM","language":"ur","text":"آپ پارسل روانہ کر دیں","source":"synthetic variations"}
+{"id":"r105","split":"train","family":"dispatch_permission","label":"CONFIRM","language":"ur","text":"میرا پارسل روانہ کریں","source":"synthetic variations"}
+{"id":"r106","split":"train","family":"dispatch_permission","label":"CONFIRM","language":"ur","text":"آرڈر روانہ کر سکتے ہیں","source":"synthetic variations"}
+{"id":"r107","split":"train","family":"ready_to_receive","label":"CONFIRM","language":"en","text":"I am ready to receive the entire order","source":"synthetic variations"}
+{"id":"r108","split":"train","family":"ready_to_receive","label":"CONFIRM","language":"en","text":"Ready for the full delivery","source":"synthetic variations"}
+{"id":"r109","split":"train","family":"ready_to_receive","label":"CONFIRM","language":"en","text":"We're ready to collect this order","source":"synthetic variations"}
+{"id":"r110","split":"train","family":"ready_to_receive","label":"CONFIRM","language":"roman_ur","text":"Pura order lene ko tayyar hun","source":"synthetic variations"}
+{"id":"r111","split":"train","family":"ready_to_receive","label":"CONFIRM","language":"roman_ur","text":"Parcel ke liye ready hoon","source":"synthetic variations"}
+{"id":"r112","split":"train","family":"ready_to_receive","label":"CONFIRM","language":"roman_ur","text":"Hum delivery lene ko tayar hain","source":"synthetic variations"}
+{"id":"r113","split":"train","family":"ready_to_receive","label":"CONFIRM","language":"ur","text":"پورا آرڈر لینے کو تیار ہوں","source":"synthetic variations"}
+{"id":"r114","split":"train","family":"ready_to_receive","label":"CONFIRM","language":"ur","text":"پارسل وصول کرنے کے لیے تیار ہوں","source":"synthetic variations"}
+{"id":"r115","split":"train","family":"ready_to_receive","label":"CONFIRM","language":"ur","text":"ہم ڈیلیوری کے لیے تیار ہیں","source":"synthetic variations"}
+{"id":"r116","split":"train","family":"affirmative_spelling","label":"CONFIRM","language":"en","text":"Yep, dispatch it","source":"synthetic variations"}
+{"id":"r117","split":"train","family":"affirmative_spelling","label":"CONFIRM","language":"en","text":"Yup, I want the full order","source":"synthetic variations"}
+{"id":"r118","split":"train","family":"affirmative_spelling","label":"CONFIRM","language":"en","text":"Yesss go ahead","source":"synthetic variations"}
+{"id":"r119","split":"train","family":"affirmative_spelling","label":"CONFIRM","language":"roman_ur","text":"G han bhej do","source":"synthetic variations"}
+{"id":"r120","split":"train","family":"affirmative_spelling","label":"CONFIRM","language":"roman_ur","text":"Jee han send kr dein","source":"synthetic variations"}
+{"id":"r121","split":"train","family":"affirmative_spelling","label":"CONFIRM","language":"roman_ur","text":"Ji han bhej do","source":"synthetic variations"}
+{"id":"r122","split":"train","family":"affirmative_spelling","label":"CONFIRM","language":"ur","text":"جی ہاں، بھیج دو","source":"synthetic variations"}
+{"id":"r123","split":"train","family":"affirmative_spelling","label":"CONFIRM","language":"ur","text":"ہاں جی، بھیج دیں","source":"synthetic variations"}
+{"id":"r124","split":"train","family":"affirmative_spelling","label":"CONFIRM","language":"ur","text":"ہاں، ضرور بھیجیں","source":"synthetic variations"}
+{"id":"r125","split":"train","family":"keep_booking","label":"CONFIRM","language":"en","text":"Keep my booking and deliver it","source":"synthetic variations"}
+{"id":"r126","split":"train","family":"keep_booking","label":"CONFIRM","language":"en","text":"The booking stands, please dispatch","source":"synthetic variations"}
+{"id":"r127","split":"train","family":"keep_booking","label":"CONFIRM","language":"en","text":"Keep the full booking open and ship it","source":"synthetic variations"}
+{"id":"r128","split":"train","family":"keep_booking","label":"CONFIRM","language":"roman_ur","text":"Booking rakh ke deliver karein","source":"synthetic variations"}
+{"id":"r129","split":"train","family":"keep_booking","label":"CONFIRM","language":"roman_ur","text":"Booking rehne dein aur parcel bhejein","source":"synthetic variations"}
+{"id":"r130","split":"train","family":"keep_booking","label":"CONFIRM","language":"roman_ur","text":"Book kia hai, ab bhej dain","source":"synthetic variations"}
+{"id":"r131","split":"train","family":"keep_booking","label":"CONFIRM","language":"ur","text":"بکنگ برقرار رکھ کر بھیج دیں","source":"synthetic variations"}
+{"id":"r132","split":"train","family":"keep_booking","label":"CONFIRM","language":"ur","text":"بکنگ قائم ہے، روانہ کریں","source":"synthetic variations"}
+{"id":"r133","split":"train","family":"keep_booking","label":"CONFIRM","language":"ur","text":"بکنگ رہنے دے کر پارسل بھیج دیں","source":"synthetic variations"}
+{"id":"r134","split":"train","family":"refuse_parcel","label":"DENY","language":"en","text":"I won't accept the parcel","source":"synthetic variations"}
+{"id":"r135","split":"train","family":"refuse_parcel","label":"DENY","language":"en","text":"I refuse this delivery","source":"synthetic variations"}
+{"id":"r136","split":"train","family":"refuse_parcel","label":"DENY","language":"en","text":"The parcel will be refused at the door","source":"synthetic variations"}
+{"id":"r137","split":"train","family":"refuse_parcel","label":"DENY","language":"roman_ur","text":"Main parcel nahi lunga","source":"synthetic variations"}
+{"id":"r138","split":"train","family":"refuse_parcel","label":"DENY","language":"roman_ur","text":"Delivery accept nai karungi","source":"synthetic variations"}
+{"id":"r139","split":"train","family":"refuse_parcel","label":"DENY","language":"roman_ur","text":"Parcel wapas kar doon ga","source":"synthetic variations"}
+{"id":"r140","split":"train","family":"refuse_parcel","label":"DENY","language":"ur","text":"میں پارسل قبول نہیں کروں گا","source":"synthetic variations"}
+{"id":"r141","split":"train","family":"refuse_parcel","label":"DENY","language":"ur","text":"میں ڈیلیوری لینے سے انکار کرتی ہوں","source":"synthetic variations"}
+{"id":"r142","split":"train","family":"refuse_parcel","label":"DENY","language":"ur","text":"پارسل دروازے سے واپس کر دوں گا","source":"synthetic variations"}
+{"id":"r143","split":"train","family":"already_bought","label":"DENY","language":"en","text":"I bought it elsewhere, please cancel","source":"synthetic variations"}
+{"id":"r144","split":"train","family":"already_bought","label":"DENY","language":"en","text":"Already bought it from another shop, skip delivery","source":"synthetic variations"}
+{"id":"r145","split":"train","family":"already_bought","label":"DENY","language":"en","text":"I found it locally, cancel this purchase","source":"synthetic variations"}
+{"id":"r146","split":"train","family":"already_bought","label":"DENY","language":"roman_ur","text":"Aur shop se le liya cancel kar do","source":"synthetic variations"}
+{"id":"r147","split":"train","family":"already_bought","label":"DENY","language":"roman_ur","text":"Bazar se le chuka, parcel na bhejo","source":"synthetic variations"}
+{"id":"r148","split":"train","family":"already_bought","label":"DENY","language":"roman_ur","text":"Dosri dukan se liya hai ye order band kar dein","source":"synthetic variations"}
+{"id":"r149","split":"train","family":"already_bought","label":"DENY","language":"ur","text":"دوسری دکان سے لے لیا، آرڈر منسوخ کریں","source":"synthetic variations"}
+{"id":"r150","split":"train","family":"already_bought","label":"DENY","language":"ur","text":"بازار سے خرید لیا ہے، پارسل نہ بھیجیں","source":"synthetic variations"}
+{"id":"r151","split":"train","family":"already_bought","label":"DENY","language":"ur","text":"کہیں اور سے خرید لیا، یہ خریداری منسوخ کریں","source":"synthetic variations"}
+{"id":"r152","split":"train","family":"no_longer_needed","label":"DENY","language":"en","text":"Thank you, I no longer need the full order","source":"synthetic variations"}
+{"id":"r153","split":"train","family":"no_longer_needed","label":"DENY","language":"en","text":"No longer needed, call off delivery","source":"synthetic variations"}
+{"id":"r154","split":"train","family":"no_longer_needed","label":"DENY","language":"en","text":"I don't need this purchase anymore","source":"synthetic variations"}
+{"id":"r155","split":"train","family":"no_longer_needed","label":"DENY","language":"roman_ur","text":"Ab zaroorat nahi shukriya","source":"synthetic variations"}
+{"id":"r156","split":"train","family":"no_longer_needed","label":"DENY","language":"roman_ur","text":"Ab ye order nahi chahiye","source":"synthetic variations"}
+{"id":"r157","split":"train","family":"no_longer_needed","label":"DENY","language":"roman_ur","text":"Meray kaam ka ab nahi, mat bhejo","source":"synthetic variations"}
+{"id":"r158","split":"train","family":"no_longer_needed","label":"DENY","language":"ur","text":"شکریہ، اب آرڈر کی ضرورت نہیں","source":"synthetic variations"}
+{"id":"r159","split":"train","family":"no_longer_needed","label":"DENY","language":"ur","text":"اب یہ خریداری نہیں چاہیے","source":"synthetic variations"}
+{"id":"r160","split":"train","family":"no_longer_needed","label":"DENY","language":"ur","text":"ضرورت ختم ہو گئی، نہ بھیجیں","source":"synthetic variations"}
+{"id":"r161","split":"train","family":"polite_decline","label":"DENY","language":"en","text":"I'd rather pass on the entire order, thanks","source":"synthetic variations"}
+{"id":"r162","split":"train","family":"polite_decline","label":"DENY","language":"en","text":"Thank you, I'll have to decline the purchase","source":"synthetic variations"}
+{"id":"r163","split":"train","family":"polite_decline","label":"DENY","language":"en","text":"Sorry, I won't be going ahead with this purchase","source":"synthetic variations"}
+{"id":"r164","split":"train","family":"polite_decline","label":"DENY","language":"roman_ur","text":"Maaf karein main ye order nahi le sakta","source":"synthetic variations"}
+{"id":"r165","split":"train","family":"polite_decline","label":"DENY","language":"roman_ur","text":"Meherbani, mujhe parcel nahi chahiye","source":"synthetic variations"}
+{"id":"r166","split":"train","family":"polite_decline","label":"DENY","language":"roman_ur","text":"Shukria lekin poora order rehne dein","source":"synthetic variations"}
+{"id":"r167","split":"train","family":"polite_decline","label":"DENY","language":"ur","text":"معاف کیجیے، یہ آرڈر نہیں لوں گا","source":"synthetic variations"}
+{"id":"r168","split":"train","family":"polite_decline","label":"DENY","language":"ur","text":"مہربانی، مجھے یہ پارسل نہیں چاہیے","source":"synthetic variations"}
+{"id":"r169","split":"train","family":"polite_decline","label":"DENY","language":"ur","text":"شکریہ، میں پوری خریداری سے معذرت چاہتا ہوں","source":"synthetic variations"}
+{"id":"r170","split":"train","family":"wrong_buyer","label":"DENY","language":"en","text":"This purchase belongs to somebody else","source":"synthetic variations"}
+{"id":"r171","split":"train","family":"wrong_buyer","label":"DENY","language":"en","text":"You've reached the wrong customer for this order","source":"synthetic variations"}
+{"id":"r172","split":"train","family":"wrong_buyer","label":"DENY","language":"en","text":"That buyer isn't me, don't deliver here","source":"synthetic variations"}
+{"id":"r173","split":"train","family":"wrong_buyer","label":"DENY","language":"roman_ur","text":"Ghalat customer ko msg aaya","source":"synthetic variations"}
+{"id":"r174","split":"train","family":"wrong_buyer","label":"DENY","language":"roman_ur","text":"Ye kisi aur ka order hai","source":"synthetic variations"}
+{"id":"r175","split":"train","family":"wrong_buyer","label":"DENY","language":"roman_ur","text":"Ye booking meri nahi, mat bhejna","source":"synthetic variations"}
+{"id":"r176","split":"train","family":"wrong_buyer","label":"DENY","language":"ur","text":"یہ کسی اور کی خریداری ہے","source":"synthetic variations"}
+{"id":"r177","split":"train","family":"wrong_buyer","label":"DENY","language":"ur","text":"اس آرڈر کے لیے غلط شخص سے رابطہ کیا ہے","source":"synthetic variations"}
+{"id":"r178","split":"train","family":"wrong_buyer","label":"DENY","language":"ur","text":"یہ خریدار میں نہیں، یہاں نہ بھیجیں","source":"synthetic variations"}
+{"id":"r179","split":"train","family":"withdraw_request","label":"DENY","language":"en","text":"I'm withdrawing my entire purchase request","source":"synthetic variations"}
+{"id":"r180","split":"train","family":"withdraw_request","label":"DENY","language":"en","text":"Take the whole order off your list","source":"synthetic variations"}
+{"id":"r181","split":"train","family":"withdraw_request","label":"DENY","language":"en","text":"Please close the purchase request completely","source":"synthetic variations"}
+{"id":"r182","split":"train","family":"withdraw_request","label":"DENY","language":"roman_ur","text":"Puri request wapas le raha hoon","source":"synthetic variations"}
+{"id":"r183","split":"train","family":"withdraw_request","label":"DENY","language":"roman_ur","text":"List se poora order hata do","source":"synthetic variations"}
+{"id":"r184","split":"train","family":"withdraw_request","label":"DENY","language":"roman_ur","text":"Order wali request band kar do","source":"synthetic variations"}
+{"id":"r185","split":"train","family":"withdraw_request","label":"DENY","language":"ur","text":"میں پوری خریداری کی درخواست واپس لیتی ہوں","source":"synthetic variations"}
+{"id":"r186","split":"train","family":"withdraw_request","label":"DENY","language":"ur","text":"مکمل آرڈر فہرست سے ہٹا دیں","source":"synthetic variations"}
+{"id":"r187","split":"train","family":"withdraw_request","label":"DENY","language":"ur","text":"خریداری کی درخواست پوری طرح ختم کریں","source":"synthetic variations"}
+{"id":"r188","split":"train","family":"call_request","label":"UNCLEAR","language":"en","text":"Could you phone me first?","source":"synthetic variations"}
+{"id":"r189","split":"train","family":"call_request","label":"UNCLEAR","language":"en","text":"Can we talk on the phone?","source":"synthetic variations"}
+{"id":"r190","split":"train","family":"call_request","label":"UNCLEAR","language":"en","text":"Ring me when you can","source":"synthetic variations"}
+{"id":"r191","split":"train","family":"call_request","label":"UNCLEAR","language":"roman_ur","text":"Pehle phone kar sakte hain?","source":"synthetic variations"}
+{"id":"r192","split":"train","family":"call_request","label":"UNCLEAR","language":"roman_ur","text":"Mujhe call karna zara","source":"synthetic variations"}
+{"id":"r193","split":"train","family":"call_request","label":"UNCLEAR","language":"roman_ur","text":"Call pe bat karni hai","source":"synthetic variations"}
+{"id":"r194","split":"train","family":"call_request","label":"UNCLEAR","language":"ur","text":"پہلے مجھے فون کر سکتے ہیں؟","source":"synthetic variations"}
+{"id":"r195","split":"train","family":"call_request","label":"UNCLEAR","language":"ur","text":"مجھے ذرا کال کریں","source":"synthetic variations"}
+{"id":"r196","split":"train","family":"call_request","label":"UNCLEAR","language":"ur","text":"فون پر بات کرنی ہے","source":"synthetic variations"}
+{"id":"r197","split":"train","family":"acknowledgement","label":"UNCLEAR","language":"en","text":"Seen your message","source":"synthetic variations"}
+{"id":"r198","split":"train","family":"acknowledgement","label":"UNCLEAR","language":"en","text":"Got the message, thanks","source":"synthetic variations"}
+{"id":"r199","split":"train","family":"acknowledgement","label":"UNCLEAR","language":"en","text":"I read this","source":"synthetic variations"}
+{"id":"r200","split":"train","family":"acknowledgement","label":"UNCLEAR","language":"roman_ur","text":"Msg dekh lia","source":"synthetic variations"}
+{"id":"r201","split":"train","family":"acknowledgement","label":"UNCLEAR","language":"roman_ur","text":"Paigham mil gaya, shukria","source":"synthetic variations"}
+{"id":"r202","split":"train","family":"acknowledgement","label":"UNCLEAR","language":"roman_ur","text":"Message parh liya","source":"synthetic variations"}
+{"id":"r203","split":"train","family":"acknowledgement","label":"UNCLEAR","language":"ur","text":"پیغام دیکھ لیا","source":"synthetic variations"}
+{"id":"r204","split":"train","family":"acknowledgement","label":"UNCLEAR","language":"ur","text":"پیغام مل گیا، شکریہ","source":"synthetic variations"}
+{"id":"r205","split":"train","family":"acknowledgement","label":"UNCLEAR","language":"ur","text":"میں نے پیغام پڑھ لیا","source":"synthetic variations"}
+{"id":"r206","split":"train","family":"delivery_question","label":"UNCLEAR","language":"en","text":"When does the courier come?","source":"synthetic variations"}
+{"id":"r207","split":"train","family":"delivery_question","label":"UNCLEAR","language":"en","text":"What's the estimated arrival?","source":"synthetic variations"}
+{"id":"r208","split":"train","family":"delivery_question","label":"UNCLEAR","language":"en","text":"Can you tell me how long it takes?","source":"synthetic variations"}
+{"id":"r209","split":"train","family":"delivery_question","label":"UNCLEAR","language":"roman_ur","text":"Courier kab aaye ga?","source":"synthetic variations"}
+{"id":"r210","split":"train","family":"delivery_question","label":"UNCLEAR","language":"roman_ur","text":"Kitni der mein delivery hogi?","source":"synthetic variations"}
+{"id":"r211","split":"train","family":"delivery_question","label":"UNCLEAR","language":"roman_ur","text":"Pohnchnay ka time kya hai?","source":"synthetic variations"}
+{"id":"r212","split":"train","family":"delivery_question","label":"UNCLEAR","language":"ur","text":"کورئیر کب آئے گا؟","source":"synthetic variations"}
+{"id":"r213","split":"train","family":"delivery_question","label":"UNCLEAR","language":"ur","text":"کتنی دیر میں ڈیلیوری ہوگی؟","source":"synthetic variations"}
+{"id":"r214","split":"train","family":"delivery_question","label":"UNCLEAR","language":"ur","text":"پہنچنے کا وقت کیا ہے؟","source":"synthetic variations"}
+{"id":"r215","split":"train","family":"who_is_seller","label":"UNCLEAR","language":"en","text":"Which store is this?","source":"synthetic variations"}
+{"id":"r216","split":"train","family":"who_is_seller","label":"UNCLEAR","language":"en","text":"Who am I speaking to?","source":"synthetic variations"}
+{"id":"r217","split":"train","family":"who_is_seller","label":"UNCLEAR","language":"en","text":"Who sent this message?","source":"synthetic variations"}
+{"id":"r218","split":"train","family":"who_is_seller","label":"UNCLEAR","language":"roman_ur","text":"Konsi shop se hain?","source":"synthetic variations"}
+{"id":"r219","split":"train","family":"who_is_seller","label":"UNCLEAR","language":"roman_ur","text":"Kon baat kar raha hai?","source":"synthetic variations"}
+{"id":"r220","split":"train","family":"who_is_seller","label":"UNCLEAR","language":"roman_ur","text":"Ye message kis ne bheja?","source":"synthetic variations"}
+{"id":"r221","split":"train","family":"who_is_seller","label":"UNCLEAR","language":"ur","text":"یہ کون سی دکان ہے؟","source":"synthetic variations"}
+{"id":"r222","split":"train","family":"who_is_seller","label":"UNCLEAR","language":"ur","text":"کون بات کر رہا ہے؟","source":"synthetic variations"}
+{"id":"r223","split":"train","family":"who_is_seller","label":"UNCLEAR","language":"ur","text":"یہ پیغام کس نے بھیجا؟","source":"synthetic variations"}
+{"id":"r224","split":"train","family":"future_decision","label":"UNCLEAR","language":"en","text":"I still need to make a decision","source":"synthetic variations"}
+{"id":"r225","split":"train","family":"future_decision","label":"UNCLEAR","language":"en","text":"Let me decide later","source":"synthetic variations"}
+{"id":"r226","split":"train","family":"future_decision","label":"UNCLEAR","language":"en","text":"I'm thinking about the purchase","source":"synthetic variations"}
+{"id":"r227","split":"train","family":"future_decision","label":"UNCLEAR","language":"roman_ur","text":"Abhi faisla nahi hua","source":"synthetic variations"}
+{"id":"r228","split":"train","family":"future_decision","label":"UNCLEAR","language":"roman_ur","text":"Soch ke bataoon gi","source":"synthetic variations"}
+{"id":"r229","split":"train","family":"future_decision","label":"UNCLEAR","language":"roman_ur","text":"Abhi is purchase pe soch raha hoon","source":"synthetic variations"}
+{"id":"r230","split":"train","family":"future_decision","label":"UNCLEAR","language":"ur","text":"ابھی فیصلہ کرنا ہے","source":"synthetic variations"}
+{"id":"r231","split":"train","family":"future_decision","label":"UNCLEAR","language":"ur","text":"سوچ کر بتاؤں گی","source":"synthetic variations"}
+{"id":"r232","split":"train","family":"future_decision","label":"UNCLEAR","language":"ur","text":"ابھی خریداری پر غور کر رہا ہوں","source":"synthetic variations"}
+{"id":"r233","split":"train","family":"color_replacement","label":"MODIFICATION","language":"en","text":"Swap the red one for green","source":"synthetic variations"}
+{"id":"r234","split":"train","family":"color_replacement","label":"MODIFICATION","language":"en","text":"I want green instead of red","source":"synthetic variations"}
+{"id":"r235","split":"train","family":"color_replacement","label":"MODIFICATION","language":"en","text":"Change the shade to navy","source":"synthetic variations"}
+{"id":"r236","split":"train","family":"color_replacement","label":"MODIFICATION","language":"roman_ur","text":"Lal ki jagah hara bhejna","source":"synthetic variations"}
+{"id":"r237","split":"train","family":"color_replacement","label":"MODIFICATION","language":"roman_ur","text":"Green kar dein red wala","source":"synthetic variations"}
+{"id":"r238","split":"train","family":"color_replacement","label":"MODIFICATION","language":"roman_ur","text":"Rang navy kar dein","source":"synthetic variations"}
+{"id":"r239","split":"train","family":"color_replacement","label":"MODIFICATION","language":"ur","text":"لال کی جگہ سبز بھیجیں","source":"synthetic variations"}
+{"id":"r240","split":"train","family":"color_replacement","label":"MODIFICATION","language":"ur","text":"سرخ کی بجائے سبز چاہیے","source":"synthetic variations"}
+{"id":"r241","split":"train","family":"color_replacement","label":"MODIFICATION","language":"ur","text":"رنگ گہرا نیلا کر دیں","source":"synthetic variations"}
+{"id":"r242","split":"train","family":"phone_update","label":"MODIFICATION","language":"en","text":"Use my new number for this delivery","source":"synthetic variations"}
+{"id":"r243","split":"train","family":"phone_update","label":"MODIFICATION","language":"en","text":"Replace the delivery contact number","source":"synthetic variations"}
+{"id":"r244","split":"train","family":"phone_update","label":"MODIFICATION","language":"en","text":"Switch the courier phone to my work number","source":"synthetic variations"}
+{"id":"r245","split":"train","family":"phone_update","label":"MODIFICATION","language":"roman_ur","text":"Courier ke liye naya number use karain","source":"synthetic variations"}
+{"id":"r246","split":"train","family":"phone_update","label":"MODIFICATION","language":"roman_ur","text":"Delivery contact number badlein","source":"synthetic variations"}
+{"id":"r247","split":"train","family":"phone_update","label":"MODIFICATION","language":"roman_ur","text":"Mera office number laga dein","source":"synthetic variations"}
+{"id":"r248","split":"train","family":"phone_update","label":"MODIFICATION","language":"ur","text":"ڈیلیوری کے لیے میرا نیا نمبر استعمال کریں","source":"synthetic variations"}
+{"id":"r249","split":"train","family":"phone_update","label":"MODIFICATION","language":"ur","text":"رابطے کا نمبر بدل دیں","source":"synthetic variations"}
+{"id":"r250","split":"train","family":"phone_update","label":"MODIFICATION","language":"ur","text":"کورئیر کو میرے دفتر کا نمبر دیں","source":"synthetic variations"}
+{"id":"r251","split":"train","family":"address_move","label":"MODIFICATION","language":"en","text":"Please reroute it to my office address","source":"synthetic variations"}
+{"id":"r252","split":"train","family":"address_move","label":"MODIFICATION","language":"en","text":"Send this to the new address instead","source":"synthetic variations"}
+{"id":"r253","split":"train","family":"address_move","label":"MODIFICATION","language":"en","text":"Change the shipping address to my office","source":"synthetic variations"}
+{"id":"r254","split":"train","family":"address_move","label":"MODIFICATION","language":"roman_ur","text":"Ghar ke bajaye office ke pate par bhejein","source":"synthetic variations"}
+{"id":"r255","split":"train","family":"address_move","label":"MODIFICATION","language":"roman_ur","text":"Naye address pe deliver karna","source":"synthetic variations"}
+{"id":"r256","split":"train","family":"address_move","label":"MODIFICATION","language":"roman_ur","text":"Address office wala kar dein","source":"synthetic variations"}
+{"id":"r257","split":"train","family":"address_move","label":"MODIFICATION","language":"ur","text":"گھر کے بجائے دفتر کے پتے پر بھیجیں","source":"synthetic variations"}
+{"id":"r258","split":"train","family":"address_move","label":"MODIFICATION","language":"ur","text":"نئے پتے پر بھیجیں","source":"synthetic variations"}
+{"id":"r259","split":"train","family":"address_move","label":"MODIFICATION","language":"ur","text":"ڈیلیوری کا پتہ دفتر والا کر دیں","source":"synthetic variations"}
+{"id":"r260","split":"train","family":"quantity_increase","label":"MODIFICATION","language":"en","text":"Make that three bottles instead of one","source":"synthetic variations"}
+{"id":"r261","split":"train","family":"quantity_increase","label":"MODIFICATION","language":"en","text":"Add a second box to the order","source":"synthetic variations"}
+{"id":"r262","split":"train","family":"quantity_increase","label":"MODIFICATION","language":"en","text":"Can you add another pair to my order?","source":"synthetic variations"}
+{"id":"r263","split":"train","family":"quantity_increase","label":"MODIFICATION","language":"roman_ur","text":"Ek ki jagah teen bottles kar do","source":"synthetic variations"}
+{"id":"r264","split":"train","family":"quantity_increase","label":"MODIFICATION","language":"roman_ur","text":"Aik aur box add kar dein","source":"synthetic variations"}
+{"id":"r265","split":"train","family":"quantity_increase","label":"MODIFICATION","language":"roman_ur","text":"Order mein ek aur jori add karna","source":"synthetic variations"}
+{"id":"r266","split":"train","family":"quantity_increase","label":"MODIFICATION","language":"ur","text":"ایک کے بجائے تین بوتلیں کر دیں","source":"synthetic variations"}
+{"id":"r267","split":"train","family":"quantity_increase","label":"MODIFICATION","language":"ur","text":"ایک اور ڈبہ شامل کریں","source":"synthetic variations"}
+{"id":"r268","split":"train","family":"quantity_increase","label":"MODIFICATION","language":"ur","text":"آرڈر میں ایک اور جوڑی ڈال دیں","source":"synthetic variations"}
+{"id":"r269","split":"train","family":"delivery_instructions","label":"MODIFICATION","language":"en","text":"Give the parcel to the receptionist instead","source":"synthetic variations"}
+{"id":"r270","split":"train","family":"delivery_instructions","label":"MODIFICATION","language":"en","text":"Please leave the package at the side entrance","source":"synthetic variations"}
+{"id":"r271","split":"train","family":"delivery_instructions","label":"MODIFICATION","language":"en","text":"Put the package with the security guard","source":"synthetic variations"}
+{"id":"r272","split":"train","family":"delivery_instructions","label":"MODIFICATION","language":"roman_ur","text":"Parcel reception pe de dena","source":"synthetic variations"}
+{"id":"r273","split":"train","family":"delivery_instructions","label":"MODIFICATION","language":"roman_ur","text":"Package side gate se de jana","source":"synthetic variations"}
+{"id":"r274","split":"train","family":"delivery_instructions","label":"MODIFICATION","language":"roman_ur","text":"Parcel guard ko de dein","source":"synthetic variations"}
+{"id":"r275","split":"train","family":"delivery_instructions","label":"MODIFICATION","language":"ur","text":"پارسل استقبالیہ پر دے دیں","source":"synthetic variations"}
+{"id":"r276","split":"train","family":"delivery_instructions","label":"MODIFICATION","language":"ur","text":"پارسل پچھلے دروازے پر رکھ دیں","source":"synthetic variations"}
+{"id":"r277","split":"train","family":"delivery_instructions","label":"MODIFICATION","language":"ur","text":"پارسل چوکیدار کو دے دیں","source":"synthetic variations"}
+{"id":"r278","split":"val","family":"proceed","label":"CONFIRM","language":"en","text":"Please proceed with the complete purchase","source":"synthetic variations","trap":"CONFIRM→HOLD"}
+{"id":"r279","split":"val","family":"proceed","label":"CONFIRM","language":"en","text":"Go ahead with my entire order","source":"synthetic variations","trap":"CONFIRM→HOLD"}
+{"id":"r280","split":"val","family":"proceed","label":"CONFIRM","language":"en","text":"Proceed with everything on the order","source":"synthetic variations","trap":"CONFIRM→HOLD"}
+{"id":"r281","split":"val","family":"proceed","label":"CONFIRM","language":"roman_ur","text":"Poora order proceed kar dein","source":"synthetic variations","trap":"CONFIRM→HOLD"}
+{"id":"r282","split":"val","family":"proceed","label":"CONFIRM","language":"roman_ur","text":"Mera saara order aage barha dein","source":"synthetic variations","trap":"CONFIRM→HOLD"}
+{"id":"r283","split":"val","family":"proceed","label":"CONFIRM","language":"roman_ur","text":"Jo mangaya hai sab process kar dein","source":"synthetic variations","trap":"CONFIRM→HOLD"}
+{"id":"r284","split":"val","family":"proceed","label":"CONFIRM","language":"ur","text":"پوری خریداری آگے بڑھائیں","source":"synthetic variations","trap":"CONFIRM→HOLD"}
+{"id":"r285","split":"val","family":"proceed","label":"CONFIRM","language":"ur","text":"مکمل آرڈر پر کارروائی کریں","source":"synthetic variations","trap":"CONFIRM→HOLD"}
+{"id":"r286","split":"val","family":"proceed","label":"CONFIRM","language":"ur","text":"جو بھی منگوایا ہے سب بھیجیں","source":"synthetic variations","trap":"CONFIRM→HOLD"}
+{"id":"r287","split":"val","family":"send_as_ordered","label":"CONFIRM","language":"en","text":"Send everything exactly as ordered","source":"synthetic variations","trap":"CONFIRM→HOLD"}
+{"id":"r288","split":"val","family":"send_as_ordered","label":"CONFIRM","language":"en","text":"Deliver just what I ordered","source":"synthetic variations","trap":"CONFIRM→HOLD"}
+{"id":"r289","split":"val","family":"send_as_ordered","label":"CONFIRM","language":"en","text":"Send the complete basket as it is","source":"synthetic variations","trap":"CONFIRM→HOLD"}
+{"id":"r290","split":"val","family":"send_as_ordered","label":"CONFIRM","language":"roman_ur","text":"Jo order kia tha bilkul waisa poora bhejo","source":"synthetic variations","trap":"CONFIRM→HOLD"}
+{"id":"r291","split":"val","family":"send_as_ordered","label":"CONFIRM","language":"roman_ur","text":"Jaisa mangaya waisa deliver kardo","source":"synthetic variations","trap":"CONFIRM→HOLD"}
+{"id":"r292","split":"val","family":"send_as_ordered","label":"CONFIRM","language":"roman_ur","text":"Pura basket as is bhejein","source":"synthetic variations","trap":"CONFIRM→HOLD"}
+{"id":"r293","split":"val","family":"send_as_ordered","label":"CONFIRM","language":"ur","text":"جیسا آرڈر کیا تھا ویسا مکمل بھیج دیں","source":"synthetic variations","trap":"CONFIRM→HOLD"}
+{"id":"r294","split":"val","family":"send_as_ordered","label":"CONFIRM","language":"ur","text":"جو منگوایا تھا وہی پہنچائیں","source":"synthetic variations","trap":"CONFIRM→HOLD"}
+{"id":"r295","split":"val","family":"send_as_ordered","label":"CONFIRM","language":"ur","text":"سارا آرڈر جوں کا توں بھیج دیں","source":"synthetic variations","trap":"CONFIRM→HOLD"}
+{"id":"r296","split":"val","family":"stop_shipment","label":"DENY","language":"en","text":"Do not dispatch anything to me","source":"synthetic variations","trap":"DENY→SHIP"}
+{"id":"r297","split":"val","family":"stop_shipment","label":"DENY","language":"en","text":"Stop the entire shipment","source":"synthetic variations","trap":"DENY→SHIP"}
+{"id":"r298","split":"val","family":"stop_shipment","label":"DENY","language":"en","text":"Please keep the parcel with you, no delivery","source":"synthetic variations","trap":"DENY→SHIP"}
+{"id":"r299","split":"val","family":"stop_shipment","label":"DENY","language":"roman_ur","text":"Kuch bhi dispatch na karna","source":"synthetic variations","trap":"DENY→SHIP"}
+{"id":"r300","split":"val","family":"stop_shipment","label":"DENY","language":"roman_ur","text":"Poora shipment rok dein","source":"synthetic variations","trap":"DENY→SHIP"}
+{"id":"r301","split":"val","family":"stop_shipment","label":"DENY","language":"roman_ur","text":"Parcel apne paas rakhein delivery na karein","source":"synthetic variations","trap":"DENY→SHIP"}
+{"id":"r302","split":"val","family":"stop_shipment","label":"DENY","language":"ur","text":"میرے لیے کچھ روانہ نہ کریں","source":"synthetic variations","trap":"DENY→SHIP"}
+{"id":"r303","split":"val","family":"stop_shipment","label":"DENY","language":"ur","text":"پورا پارسل روک دیں","source":"synthetic variations","trap":"DENY→SHIP"}
+{"id":"r304","split":"val","family":"stop_shipment","label":"DENY","language":"ur","text":"پارسل اپنے پاس رکھیں، ڈیلیوری نہ کریں","source":"synthetic variations","trap":"DENY→SHIP"}
+{"id":"r305","split":"val","family":"polite_cancel","label":"DENY","language":"en","text":"Sorry for the trouble, call off my entire order","source":"synthetic variations","trap":"DENY→SHIP"}
+{"id":"r306","split":"val","family":"polite_cancel","label":"DENY","language":"en","text":"With apologies, I'd like the order cancelled in full","source":"synthetic variations","trap":"DENY→SHIP"}
+{"id":"r307","split":"val","family":"polite_cancel","label":"DENY","language":"en","text":"Please drop my purchase, thank you","source":"synthetic variations","trap":"DENY→SHIP"}
+{"id":"r308","split":"val","family":"polite_cancel","label":"DENY","language":"roman_ur","text":"Takleef ke liye sorry, poora order radd kar dein","source":"synthetic variations","trap":"DENY→SHIP"}
+{"id":"r309","split":"val","family":"polite_cancel","label":"DENY","language":"roman_ur","text":"Mazrat, meri purchase cancel kar dein","source":"synthetic variations","trap":"DENY→SHIP"}
+{"id":"r310","split":"val","family":"polite_cancel","label":"DENY","language":"roman_ur","text":"Shukriya, ye poora order drop kar dein","source":"synthetic variations","trap":"DENY→SHIP"}
+{"id":"r311","split":"val","family":"polite_cancel","label":"DENY","language":"ur","text":"زحمت کے لیے معذرت، پورا آرڈر منسوخ کریں","source":"synthetic variations","trap":"DENY→SHIP"}
+{"id":"r312","split":"val","family":"polite_cancel","label":"DENY","language":"ur","text":"معذرت، ساری خریداری منسوخ کر دیں","source":"synthetic variations","trap":"DENY→SHIP"}
+{"id":"r313","split":"val","family":"polite_cancel","label":"DENY","language":"ur","text":"مہربانی، میری خریداری ختم کر دیں","source":"synthetic variations","trap":"DENY→SHIP"}
+{"id":"r314","split":"val","family":"deadline_hypothetical","label":"UNCLEAR","language":"en","text":"I'd say yes if it gets here before noon","source":"synthetic variations"}
+{"id":"r315","split":"val","family":"deadline_hypothetical","label":"UNCLEAR","language":"en","text":"I might agree if it comes this week","source":"synthetic variations"}
+{"id":"r316","split":"val","family":"deadline_hypothetical","label":"UNCLEAR","language":"en","text":"I can only confirm if it ships today","source":"synthetic variations"}
+{"id":"r317","split":"val","family":"deadline_hypothetical","label":"UNCLEAR","language":"roman_ur","text":"Dopahar se pehle aye to yes","source":"synthetic variations"}
+{"id":"r318","split":"val","family":"deadline_hypothetical","label":"UNCLEAR","language":"roman_ur","text":"Is haftay aya to shayad","source":"synthetic variations"}
+{"id":"r319","split":"val","family":"deadline_hypothetical","label":"UNCLEAR","language":"roman_ur","text":"Aj dispatch ho to hi confirm kar sakun ga","source":"synthetic variations"}
+{"id":"r320","split":"val","family":"deadline_hypothetical","label":"UNCLEAR","language":"ur","text":"دوپہر سے پہلے آئے تو ہاں","source":"synthetic variations"}
+{"id":"r321","split":"val","family":"deadline_hypothetical","label":"UNCLEAR","language":"ur","text":"اس ہفتے آئے تو شاید ہاں","source":"synthetic variations"}
+{"id":"r322","split":"val","family":"deadline_hypothetical","label":"UNCLEAR","language":"ur","text":"آج روانہ ہو تبھی تصدیق کر سکوں گا","source":"synthetic variations"}
+{"id":"r323","split":"val","family":"ask_total","label":"UNCLEAR","language":"en","text":"What will this cost me in total?","source":"synthetic variations"}
+{"id":"r324","split":"val","family":"ask_total","label":"UNCLEAR","language":"en","text":"Is postage included in this amount?","source":"synthetic variations"}
+{"id":"r325","split":"val","family":"ask_total","label":"UNCLEAR","language":"en","text":"How much would I pay the courier?","source":"synthetic variations"}
+{"id":"r326","split":"val","family":"ask_total","label":"UNCLEAR","language":"roman_ur","text":"Total kitne paise dene hain?","source":"synthetic variations"}
+{"id":"r327","split":"val","family":"ask_total","label":"UNCLEAR","language":"roman_ur","text":"Amount mein postage hai kya?","source":"synthetic variations"}
+{"id":"r328","split":"val","family":"ask_total","label":"UNCLEAR","language":"roman_ur","text":"Courier ko kitna pay karna hoga?","source":"synthetic variations"}
+{"id":"r329","split":"val","family":"ask_total","label":"UNCLEAR","language":"ur","text":"کل کتنے پیسے دینے ہیں؟","source":"synthetic variations"}
+{"id":"r330","split":"val","family":"ask_total","label":"UNCLEAR","language":"ur","text":"رقم میں ڈاک شامل ہے؟","source":"synthetic variations"}
+{"id":"r331","split":"val","family":"ask_total","label":"UNCLEAR","language":"ur","text":"کورئیر کو کتنی رقم دینی ہے؟","source":"synthetic variations"}
+{"id":"r332","split":"val","family":"size_change","label":"MODIFICATION","language":"en","text":"Replace my size with a medium","source":"synthetic variations"}
+{"id":"r333","split":"val","family":"size_change","label":"MODIFICATION","language":"en","text":"Make both shirts extra small","source":"synthetic variations"}
+{"id":"r334","split":"val","family":"size_change","label":"MODIFICATION","language":"en","text":"Swap the large shirt for a small","source":"synthetic variations"}
+{"id":"r335","split":"val","family":"size_change","label":"MODIFICATION","language":"roman_ur","text":"Mera size medium kar do","source":"synthetic variations"}
+{"id":"r336","split":"val","family":"size_change","label":"MODIFICATION","language":"roman_ur","text":"Dono shirts extra small karna","source":"synthetic variations"}
+{"id":"r337","split":"val","family":"size_change","label":"MODIFICATION","language":"roman_ur","text":"Large shirt ko small se badal dein","source":"synthetic variations"}
+{"id":"r338","split":"val","family":"size_change","label":"MODIFICATION","language":"ur","text":"میرا سائز درمیانہ کر دیں","source":"synthetic variations"}
+{"id":"r339","split":"val","family":"size_change","label":"MODIFICATION","language":"ur","text":"دونوں قمیضیں بہت چھوٹی کر دیں","source":"synthetic variations"}
+{"id":"r340","split":"val","family":"size_change","label":"MODIFICATION","language":"ur","text":"بڑی قمیض چھوٹی سے بدل دیں","source":"synthetic variations"}
+{"id":"r341","split":"val","family":"payment_change","label":"MODIFICATION","language":"en","text":"Switch the payment to bank transfer","source":"synthetic variations"}
+{"id":"r342","split":"val","family":"payment_change","label":"MODIFICATION","language":"en","text":"Make this prepaid instead","source":"synthetic variations"}
+{"id":"r343","split":"val","family":"payment_change","label":"MODIFICATION","language":"en","text":"Change the payment method to cash","source":"synthetic variations"}
+{"id":"r344","split":"val","family":"payment_change","label":"MODIFICATION","language":"roman_ur","text":"Bank transfer pe payment karni hai badal dein","source":"synthetic variations"}
+{"id":"r345","split":"val","family":"payment_change","label":"MODIFICATION","language":"roman_ur","text":"Isay prepaid kar do","source":"synthetic variations"}
+{"id":"r346","split":"val","family":"payment_change","label":"MODIFICATION","language":"roman_ur","text":"Payment cash kar dein","source":"synthetic variations"}
+{"id":"r347","split":"val","family":"payment_change","label":"MODIFICATION","language":"ur","text":"ادائیگی بینک ٹرانسفر پر بدل دیں","source":"synthetic variations"}
+{"id":"r348","split":"val","family":"payment_change","label":"MODIFICATION","language":"ur","text":"پیشگی ادائیگی کر دیں","source":"synthetic variations"}
+{"id":"r349","split":"val","family":"payment_change","label":"MODIFICATION","language":"ur","text":"ادائیگی کا طریقہ نقد کر دیں","source":"synthetic variations"}
+{"id":"r350","split":"test","family":"dispatch_negated_cancel","label":"CONFIRM","language":"en","text":"No cancellation please, get the complete order out to me","source":"synthetic variations","trap":"CONFIRM→HOLD"}
+{"id":"r351","split":"test","family":"dispatch_negated_cancel","label":"CONFIRM","language":"en","text":"Don't put a stop on shipping, let the whole order come","source":"synthetic variations","trap":"CONFIRM→HOLD"}
+{"id":"r352","split":"test","family":"dispatch_negated_cancel","label":"CONFIRM","language":"en","text":"I never asked to cancel it, send the entire purchase","source":"synthetic variations","trap":"CONFIRM→HOLD"}
+{"id":"r353","split":"test","family":"dispatch_negated_cancel","label":"CONFIRM","language":"roman_ur","text":"Order band mat karo, poora parcel idhar bhejo","source":"synthetic variations","trap":"CONFIRM→HOLD"}
+{"id":"r354","split":"test","family":"dispatch_negated_cancel","label":"CONFIRM","language":"roman_ur","text":"Cancel na karna, sara order dispatch kar do","source":"synthetic variations","trap":"CONFIRM→HOLD"}
+{"id":"r355","split":"test","family":"dispatch_negated_cancel","label":"CONFIRM","language":"roman_ur","text":"Maine mana nahi kiya, poori booking bhej do","source":"synthetic variations","trap":"CONFIRM→HOLD"}
+{"id":"r356","split":"test","family":"dispatch_negated_cancel","label":"CONFIRM","language":"ur","text":"آرڈر منسوخ مت کرو، پورا پارسل بھیج دو","source":"synthetic variations","trap":"CONFIRM→HOLD"}
+{"id":"r357","split":"test","family":"dispatch_negated_cancel","label":"CONFIRM","language":"ur","text":"آرڈر مت روکو، سب کچھ پہنچا دو","source":"synthetic variations","trap":"CONFIRM→HOLD"}
+{"id":"r358","split":"test","family":"dispatch_negated_cancel","label":"CONFIRM","language":"ur","text":"میں نے منسوخ نہیں کہا، ساری خریداری بھیجو","source":"synthetic variations","trap":"CONFIRM→HOLD"}
+{"id":"r359","split":"test","family":"keep_every_item","label":"CONFIRM","language":"en","text":"Keep every item in and deliver the lot","source":"synthetic variations","trap":"CONFIRM→HOLD"}
+{"id":"r360","split":"test","family":"keep_every_item","label":"CONFIRM","language":"en","text":"I still want all of it, ship the lot","source":"synthetic variations","trap":"CONFIRM→HOLD"}
+{"id":"r361","split":"test","family":"keep_every_item","label":"CONFIRM","language":"en","text":"Nothing to remove, send the full parcel","source":"synthetic variations","trap":"CONFIRM→HOLD"}
+{"id":"r362","split":"test","family":"keep_every_item","label":"CONFIRM","language":"roman_ur","text":"Kuch mat nikalo, saara parcel bhej do","source":"synthetic variations","trap":"CONFIRM→HOLD"}
+{"id":"r363","split":"test","family":"keep_every_item","label":"CONFIRM","language":"roman_ur","text":"Sab chahiye, puri delivery kar do","source":"synthetic variations","trap":"CONFIRM→HOLD"}
+{"id":"r364","split":"test","family":"keep_every_item","label":"CONFIRM","language":"roman_ur","text":"Har item rakh kar sara dispatch kar dein","source":"synthetic variations","trap":"CONFIRM→HOLD"}
+{"id":"r365","split":"test","family":"keep_every_item","label":"CONFIRM","language":"ur","text":"کچھ بھی نہ نکالیں، پورا پارسل بھیجیں","source":"synthetic variations","trap":"CONFIRM→HOLD"}
+{"id":"r366","split":"test","family":"keep_every_item","label":"CONFIRM","language":"ur","text":"مجھے سب چاہیے، پوری ڈیلیوری کر دیں","source":"synthetic variations","trap":"CONFIRM→HOLD"}
+{"id":"r367","split":"test","family":"keep_every_item","label":"CONFIRM","language":"ur","text":"ہر چیز رکھ کر روانہ کر دیں","source":"synthetic variations","trap":"CONFIRM→HOLD"}
+{"id":"r368","split":"test","family":"receipt_commitment","label":"CONFIRM","language":"en","text":"Send the entire order. I'll pay the courier on receipt","source":"synthetic variations","trap":"CONFIRM→HOLD"}
+{"id":"r369","split":"test","family":"receipt_commitment","label":"CONFIRM","language":"en","text":"I'll pay on arrival, send the whole order","source":"synthetic variations","trap":"CONFIRM→HOLD"}
+{"id":"r370","split":"test","family":"receipt_commitment","label":"CONFIRM","language":"en","text":"Please ship the whole purchase, payment on delivery is fine","source":"synthetic variations","trap":"CONFIRM→HOLD"}
+{"id":"r371","split":"test","family":"receipt_commitment","label":"CONFIRM","language":"roman_ur","text":"Pura order bhej dein, courier ko pay kar dunga","source":"synthetic variations","trap":"CONFIRM→HOLD"}
+{"id":"r372","split":"test","family":"receipt_commitment","label":"CONFIRM","language":"roman_ur","text":"Delivery pe de dungi, sara parcel bhejein","source":"synthetic variations","trap":"CONFIRM→HOLD"}
+{"id":"r373","split":"test","family":"receipt_commitment","label":"CONFIRM","language":"roman_ur","text":"Pura order bhejo, cash on delivery theek hai","source":"synthetic variations","trap":"CONFIRM→HOLD"}
+{"id":"r374","split":"test","family":"receipt_commitment","label":"CONFIRM","language":"ur","text":"پورا آرڈر بھیج دیں، کورئیر کو ادائیگی کر دوں گا","source":"synthetic variations","trap":"CONFIRM→HOLD"}
+{"id":"r375","split":"test","family":"receipt_commitment","label":"CONFIRM","language":"ur","text":"وصولی پر رقم دے دوں گی، سب چیزیں بھیج دیں","source":"synthetic variations","trap":"CONFIRM→HOLD"}
+{"id":"r376","split":"test","family":"receipt_commitment","label":"CONFIRM","language":"ur","text":"پوری خریداری بھیجیں، وصولی پر ادائیگی ٹھیک ہے","source":"synthetic variations","trap":"CONFIRM→HOLD"}
+{"id":"r377","split":"test","family":"casual_go_ahead","label":"CONFIRM","language":"en","text":"Okay awesome, you can send the lot","source":"synthetic variations","trap":"CONFIRM→HOLD"}
+{"id":"r378","split":"test","family":"casual_go_ahead","label":"CONFIRM","language":"en","text":"All good, ship everything","source":"synthetic variations","trap":"CONFIRM→HOLD"}
+{"id":"r379","split":"test","family":"casual_go_ahead","label":"CONFIRM","language":"en","text":"Sounds good, send my entire purchase","source":"synthetic variations","trap":"CONFIRM→HOLD"}
+{"id":"r380","split":"test","family":"casual_go_ahead","label":"CONFIRM","language":"roman_ur","text":"G theek hy poora bhej den","source":"synthetic variations","trap":"CONFIRM→HOLD"}
+{"id":"r381","split":"test","family":"casual_go_ahead","label":"CONFIRM","language":"roman_ur","text":"Jee thk h, sara dispatch krdo","source":"synthetic variations","trap":"CONFIRM→HOLD"}
+{"id":"r382","split":"test","family":"casual_go_ahead","label":"CONFIRM","language":"roman_ur","text":"Ji sab fit, poora order send kar do","source":"synthetic variations","trap":"CONFIRM→HOLD"}
+{"id":"r383","split":"test","family":"casual_go_ahead","label":"CONFIRM","language":"ur","text":"جی ٹھیک، پورا آرڈر بھیج دیں","source":"synthetic variations","trap":"CONFIRM→HOLD"}
+{"id":"r384","split":"test","family":"casual_go_ahead","label":"CONFIRM","language":"ur","text":"سب ٹھیک ہے، سارا پارسل بھیجیں","source":"synthetic variations","trap":"CONFIRM→HOLD"}
+{"id":"r385","split":"test","family":"casual_go_ahead","label":"CONFIRM","language":"ur","text":"ٹھیک ہے جی، پوری خریداری روانہ کر دیں","source":"synthetic variations","trap":"CONFIRM→HOLD"}
+{"id":"r386","split":"test","family":"negated_dispatch","label":"DENY","language":"en","text":"Yes I saw it, but under no circumstances send this order","source":"synthetic variations","trap":"DENY→SHIP"}
+{"id":"r387","split":"test","family":"negated_dispatch","label":"DENY","language":"en","text":"I confirm I do not want anything shipped","source":"synthetic variations","trap":"DENY→SHIP"}
+{"id":"r388","split":"test","family":"negated_dispatch","label":"DENY","language":"en","text":"Please make sure nothing from this purchase comes here","source":"synthetic variations","trap":"DENY→SHIP"}
+{"id":"r389","split":"test","family":"negated_dispatch","label":"DENY","language":"roman_ur","text":"Haan msg mila lekin order bilkul na bhejna","source":"synthetic variations","trap":"DENY→SHIP"}
+{"id":"r390","split":"test","family":"negated_dispatch","label":"DENY","language":"roman_ur","text":"Confirm ye hai ke parcel bhejna hi nahi","source":"synthetic variations","trap":"DENY→SHIP"}
+{"id":"r391","split":"test","family":"negated_dispatch","label":"DENY","language":"roman_ur","text":"Is purchase mein se kuch mere paas mat bhejna","source":"synthetic variations","trap":"DENY→SHIP"}
+{"id":"r392","split":"test","family":"negated_dispatch","label":"DENY","language":"ur","text":"ہاں، پیغام ملا مگر آرڈر بالکل مت بھیجیں","source":"synthetic variations","trap":"DENY→SHIP"}
+{"id":"r393","split":"test","family":"negated_dispatch","label":"DENY","language":"ur","text":"تصدیق کرتی ہوں کہ کوئی چیز روانہ نہ کریں","source":"synthetic variations","trap":"DENY→SHIP"}
+{"id":"r394","split":"test","family":"negated_dispatch","label":"DENY","language":"ur","text":"اس خریداری سے کچھ بھی میرے پاس نہ بھیجیں","source":"synthetic variations","trap":"DENY→SHIP"}
+{"id":"r395","split":"test","family":"cancel_despite_confirmation","label":"DENY","language":"en","text":"I confirmed before, but now cancel the whole order","source":"synthetic variations","trap":"DENY→SHIP"}
+{"id":"r396","split":"test","family":"cancel_despite_confirmation","label":"DENY","language":"en","text":"That earlier yes is withdrawn, stop the order entirely","source":"synthetic variations","trap":"DENY→SHIP"}
+{"id":"r397","split":"test","family":"cancel_despite_confirmation","label":"DENY","language":"en","text":"Despite confirming earlier I don't want anything delivered","source":"synthetic variations","trap":"DENY→SHIP"}
+{"id":"r398","split":"test","family":"cancel_despite_confirmation","label":"DENY","language":"roman_ur","text":"Pehle confirm tha ab poora cancel karna","source":"synthetic variations","trap":"DENY→SHIP"}
+{"id":"r399","split":"test","family":"cancel_despite_confirmation","label":"DENY","language":"roman_ur","text":"Pehle haan boli thi ab sara order rok do","source":"synthetic variations","trap":"DENY→SHIP"}
+{"id":"r400","split":"test","family":"cancel_despite_confirmation","label":"DENY","language":"roman_ur","text":"Maine confirm kya tha lekin ab kuch bhi nahi chahiye","source":"synthetic variations","trap":"DENY→SHIP"}
+{"id":"r401","split":"test","family":"cancel_despite_confirmation","label":"DENY","language":"ur","text":"پہلے تصدیق کی تھی مگر اب پورا آرڈر منسوخ کریں","source":"synthetic variations","trap":"DENY→SHIP"}
+{"id":"r402","split":"test","family":"cancel_despite_confirmation","label":"DENY","language":"ur","text":"پہلی ہاں واپس، سارا آرڈر روک دیں","source":"synthetic variations","trap":"DENY→SHIP"}
+{"id":"r403","split":"test","family":"cancel_despite_confirmation","label":"DENY","language":"ur","text":"پہلے ہاں کہا تھا، اب کچھ بھی نہیں چاہیے","source":"synthetic variations","trap":"DENY→SHIP"}
+{"id":"r404","split":"test","family":"indirect_budget_refusal","label":"DENY","language":"en","text":"I'm sorry, this purchase is beyond my budget so I'll have to let it go","source":"synthetic variations","trap":"DENY→SHIP"}
+{"id":"r405","split":"test","family":"indirect_budget_refusal","label":"DENY","language":"en","text":"I appreciate it, but I need to back out of the purchase entirely","source":"synthetic variations","trap":"DENY→SHIP"}
+{"id":"r406","split":"test","family":"indirect_budget_refusal","label":"DENY","language":"en","text":"I'm afraid this order won't work for me, I'll pass","source":"synthetic variations","trap":"DENY→SHIP"}
+{"id":"r407","split":"test","family":"indirect_budget_refusal","label":"DENY","language":"roman_ur","text":"Budget se bahar hai maazrat, ye order nahi le paungi","source":"synthetic variations","trap":"DENY→SHIP"}
+{"id":"r408","split":"test","family":"indirect_budget_refusal","label":"DENY","language":"roman_ur","text":"Meherbani, mujhe puri khareed se peechay hatna hai","source":"synthetic variations","trap":"DENY→SHIP"}
+{"id":"r409","split":"test","family":"indirect_budget_refusal","label":"DENY","language":"roman_ur","text":"Sorry ye order mere liye nahi banay ga, rehne dein","source":"synthetic variations","trap":"DENY→SHIP"}
+{"id":"r410","split":"test","family":"indirect_budget_refusal","label":"DENY","language":"ur","text":"معذرت، یہ بجٹ سے باہر ہے اس لیے نہیں لوں گی","source":"synthetic variations","trap":"DENY→SHIP"}
+{"id":"r411","split":"test","family":"indirect_budget_refusal","label":"DENY","language":"ur","text":"مہربانی، مجھے پوری خریداری واپس لینی ہے","source":"synthetic variations","trap":"DENY→SHIP"}
+{"id":"r412","split":"test","family":"indirect_budget_refusal","label":"DENY","language":"ur","text":"یہ آرڈر میرے لیے ممکن نہیں، معاف کریں","source":"synthetic variations","trap":"DENY→SHIP"}
+{"id":"r413","split":"test","family":"wrong_order_acknowledgement","label":"DENY","language":"en","text":"Yes I got this text, but that is somebody else's order","source":"synthetic variations","trap":"DENY→SHIP"}
+{"id":"r414","split":"test","family":"wrong_order_acknowledgement","label":"DENY","language":"en","text":"Thanks for checking, none of these items were ordered by me","source":"synthetic variations","trap":"DENY→SHIP"}
+{"id":"r415","split":"test","family":"wrong_order_acknowledgement","label":"DENY","language":"en","text":"Right number but I never bought this, please take it off the list","source":"synthetic variations","trap":"DENY→SHIP"}
+{"id":"r416","split":"test","family":"wrong_order_acknowledgement","label":"DENY","language":"roman_ur","text":"Haan message mila, ye kisi aur ki booking hai","source":"synthetic variations","trap":"DENY→SHIP"}
+{"id":"r417","split":"test","family":"wrong_order_acknowledgement","label":"DENY","language":"roman_ur","text":"Thanks, maine in mein se kuch order nahi kia","source":"synthetic variations","trap":"DENY→SHIP"}
+{"id":"r418","split":"test","family":"wrong_order_acknowledgement","label":"DENY","language":"roman_ur","text":"Number mera hai lekin ye order mera nahi, list se hata dein","source":"synthetic variations","trap":"DENY→SHIP"}
+{"id":"r419","split":"test","family":"wrong_order_acknowledgement","label":"DENY","language":"ur","text":"ہاں پیغام ملا، یہ کسی اور کا آرڈر ہے","source":"synthetic variations","trap":"DENY→SHIP"}
+{"id":"r420","split":"test","family":"wrong_order_acknowledgement","label":"DENY","language":"ur","text":"شکریہ، ان میں سے کچھ بھی میں نے نہیں منگوایا","source":"synthetic variations","trap":"DENY→SHIP"}
+{"id":"r421","split":"test","family":"wrong_order_acknowledgement","label":"DENY","language":"ur","text":"نمبر میرا ہے لیکن آرڈر میرا نہیں، اسے ہٹا دیں","source":"synthetic variations","trap":"DENY→SHIP"}
+{"id":"r422","split":"test","family":"timed_cancellation","label":"UNCLEAR","language":"en","text":"Cancel the whole order next week if you haven't sent it","source":"synthetic variations"}
+{"id":"r423","split":"test","family":"timed_cancellation","label":"UNCLEAR","language":"en","text":"Put the cancellation through at midnight tomorrow","source":"synthetic variations"}
+{"id":"r424","split":"test","family":"timed_cancellation","label":"UNCLEAR","language":"en","text":"No, I might cancel later this evening","source":"synthetic variations"}
+{"id":"r425","split":"test","family":"timed_cancellation","label":"UNCLEAR","language":"roman_ur","text":"Kal raat ko cancel karna","source":"synthetic variations"}
+{"id":"r426","split":"test","family":"timed_cancellation","label":"UNCLEAR","language":"roman_ur","text":"Agley haftay cancel karna agar bheja nahi","source":"synthetic variations"}
+{"id":"r427","split":"test","family":"timed_cancellation","label":"UNCLEAR","language":"roman_ur","text":"Nhi abhi nahi, shaam ko shayad cancel karun","source":"synthetic variations"}
+{"id":"r428","split":"test","family":"timed_cancellation","label":"UNCLEAR","language":"ur","text":"کل آدھی رات کو منسوخ کرنا","source":"synthetic variations"}
+{"id":"r429","split":"test","family":"timed_cancellation","label":"UNCLEAR","language":"ur","text":"اگلے ہفتے منسوخ کریں اگر ابھی نہیں بھیجا","source":"synthetic variations"}
+{"id":"r430","split":"test","family":"timed_cancellation","label":"UNCLEAR","language":"ur","text":"نہیں، شاید آج شام منسوخ کروں","source":"synthetic variations"}
+{"id":"r431","split":"test","family":"timed_delivery","label":"UNCLEAR","language":"en","text":"Confirm for delivery only the day after payday","source":"synthetic variations"}
+{"id":"r432","split":"test","family":"timed_delivery","label":"UNCLEAR","language":"en","text":"Yes but send this next month, not now","source":"synthetic variations"}
+{"id":"r433","split":"test","family":"timed_delivery","label":"UNCLEAR","language":"en","text":"Please send the order once the wedding is over","source":"synthetic variations"}
+{"id":"r434","split":"test","family":"timed_delivery","label":"UNCLEAR","language":"roman_ur","text":"Tankhwa ke aglay din hi deliver karna","source":"synthetic variations"}
+{"id":"r435","split":"test","family":"timed_delivery","label":"UNCLEAR","language":"roman_ur","text":"Haan lekin aglay mahinay bhej do","source":"synthetic variations"}
+{"id":"r436","split":"test","family":"timed_delivery","label":"UNCLEAR","language":"roman_ur","text":"Shadi ke baad order bhejna","source":"synthetic variations"}
+{"id":"r437","split":"test","family":"timed_delivery","label":"UNCLEAR","language":"ur","text":"تنخواہ کے اگلے دن ہی ڈیلیوری کرنا","source":"synthetic variations"}
+{"id":"r438","split":"test","family":"timed_delivery","label":"UNCLEAR","language":"ur","text":"ہاں مگر اگلے مہینے بھیجنا","source":"synthetic variations"}
+{"id":"r439","split":"test","family":"timed_delivery","label":"UNCLEAR","language":"ur","text":"شادی کے بعد آرڈر بھیجیں","source":"synthetic variations"}
+{"id":"r440","split":"test","family":"other_person_decides","label":"UNCLEAR","language":"en","text":"I would confirm if my sister approves","source":"synthetic variations"}
+{"id":"r441","split":"test","family":"other_person_decides","label":"UNCLEAR","language":"en","text":"My brother might accept, ask him first","source":"synthetic variations"}
+{"id":"r442","split":"test","family":"other_person_decides","label":"UNCLEAR","language":"en","text":"I can't say until my father gets back","source":"synthetic variations"}
+{"id":"r443","split":"test","family":"other_person_decides","label":"UNCLEAR","language":"roman_ur","text":"Behen maan jaye to confirm karun","source":"synthetic variations"}
+{"id":"r444","split":"test","family":"other_person_decides","label":"UNCLEAR","language":"roman_ur","text":"Bhai shayad le le, pehle us se poocho","source":"synthetic variations"}
+{"id":"r445","split":"test","family":"other_person_decides","label":"UNCLEAR","language":"roman_ur","text":"Abbu ayen to bata sakta hoon","source":"synthetic variations"}
+{"id":"r446","split":"test","family":"other_person_decides","label":"UNCLEAR","language":"ur","text":"بہن راضی ہو تو تصدیق کروں گی","source":"synthetic variations"}
+{"id":"r447","split":"test","family":"other_person_decides","label":"UNCLEAR","language":"ur","text":"بھائی شاید لے لے گا، پہلے اس سے پوچھیں","source":"synthetic variations"}
+{"id":"r448","split":"test","family":"other_person_decides","label":"UNCLEAR","language":"ur","text":"ابو کے آنے تک کچھ کہہ نہیں سکتی","source":"synthetic variations"}
+{"id":"r449","split":"test","family":"polarity_question","label":"UNCLEAR","language":"en","text":"Did I accidentally say yes to this order?","source":"synthetic variations"}
+{"id":"r450","split":"test","family":"polarity_question","label":"UNCLEAR","language":"en","text":"Why does it say confirmed when I never replied?","source":"synthetic variations"}
+{"id":"r451","split":"test","family":"polarity_question","label":"UNCLEAR","language":"en","text":"Could you check whether I cancelled it?","source":"synthetic variations"}
+{"id":"r452","split":"test","family":"polarity_question","label":"UNCLEAR","language":"roman_ur","text":"Kya ghalti se main ne yes bola tha?","source":"synthetic variations"}
+{"id":"r453","split":"test","family":"polarity_question","label":"UNCLEAR","language":"roman_ur","text":"Reply nahi kiya phir bhi confirmed kyun hai?","source":"synthetic variations"}
+{"id":"r454","split":"test","family":"polarity_question","label":"UNCLEAR","language":"roman_ur","text":"Check karein kya main ne cancel kar dia tha?","source":"synthetic variations"}
+{"id":"r455","split":"test","family":"polarity_question","label":"UNCLEAR","language":"ur","text":"کیا میں نے غلطی سے ہاں کہا تھا؟","source":"synthetic variations"}
+{"id":"r456","split":"test","family":"polarity_question","label":"UNCLEAR","language":"ur","text":"میں نے جواب نہیں دیا تو تصدیق کیوں لکھی ہے؟","source":"synthetic variations"}
+{"id":"r457","split":"test","family":"polarity_question","label":"UNCLEAR","language":"ur","text":"دیکھ سکتے ہیں کہ کیا میں نے منسوخ کیا تھا؟","source":"synthetic variations"}
+{"id":"r458","split":"test","family":"remove_partial","label":"MODIFICATION","language":"en","text":"Yes, cancel the second box and keep the first","source":"synthetic variations"}
+{"id":"r459","split":"test","family":"remove_partial","label":"MODIFICATION","language":"en","text":"Remove the mug but keep the other products","source":"synthetic variations"}
+{"id":"r460","split":"test","family":"remove_partial","label":"MODIFICATION","language":"en","text":"Send the rest, leave out the socks","source":"synthetic variations"}
+{"id":"r461","split":"test","family":"remove_partial","label":"MODIFICATION","language":"roman_ur","text":"Haan dusra dabba cancel kar do pehla rehne do","source":"synthetic variations"}
+{"id":"r462","split":"test","family":"remove_partial","label":"MODIFICATION","language":"roman_ur","text":"Mug hata do aur baqi cheezein rakhna","source":"synthetic variations"}
+{"id":"r463","split":"test","family":"remove_partial","label":"MODIFICATION","language":"roman_ur","text":"Baqi bhejna, jurabain nahi","source":"synthetic variations"}
+{"id":"r464","split":"test","family":"remove_partial","label":"MODIFICATION","language":"ur","text":"ہاں دوسرا ڈبہ منسوخ کرو، پہلا قائم رہے","source":"synthetic variations"}
+{"id":"r465","split":"test","family":"remove_partial","label":"MODIFICATION","language":"ur","text":"مگ ہٹا دیں اور باقی چیزیں رکھیں","source":"synthetic variations"}
+{"id":"r466","split":"test","family":"remove_partial","label":"MODIFICATION","language":"ur","text":"باقی بھیج دو مگر موزے نہیں","source":"synthetic variations"}
+{"id":"r467","split":"test","family":"decrease_units","label":"MODIFICATION","language":"en","text":"I'll take only one pair instead of three","source":"synthetic variations"}
+{"id":"r468","split":"test","family":"decrease_units","label":"MODIFICATION","language":"en","text":"Make the order two units total","source":"synthetic variations"}
+{"id":"r469","split":"test","family":"decrease_units","label":"MODIFICATION","language":"en","text":"Please reduce the number of boxes to one","source":"synthetic variations"}
+{"id":"r470","split":"test","family":"decrease_units","label":"MODIFICATION","language":"roman_ur","text":"Teen ke bajaye bas ek jori chahiye","source":"synthetic variations"}
+{"id":"r471","split":"test","family":"decrease_units","label":"MODIFICATION","language":"roman_ur","text":"Total do pieces kar do","source":"synthetic variations"}
+{"id":"r472","split":"test","family":"decrease_units","label":"MODIFICATION","language":"roman_ur","text":"Sirf ek dabba rakhna","source":"synthetic variations"}
+{"id":"r473","split":"test","family":"decrease_units","label":"MODIFICATION","language":"ur","text":"تین کے بجائے بس ایک جوڑی چاہیے","source":"synthetic variations"}
+{"id":"r474","split":"test","family":"decrease_units","label":"MODIFICATION","language":"ur","text":"کل دو عدد کر دو","source":"synthetic variations"}
+{"id":"r475","split":"test","family":"decrease_units","label":"MODIFICATION","language":"ur","text":"صرف ایک ڈبہ رکھیں","source":"synthetic variations"}
+{"id":"r476","split":"test","family":"variant_change","label":"MODIFICATION","language":"en","text":"Replace the scented version with the unscented one","source":"synthetic variations"}
+{"id":"r477","split":"test","family":"variant_change","label":"MODIFICATION","language":"en","text":"Only send the waterproof version, switch my choice","source":"synthetic variations"}
+{"id":"r478","split":"test","family":"variant_change","label":"MODIFICATION","language":"en","text":"Change the product to the cheaper version","source":"synthetic variations"}
+{"id":"r479","split":"test","family":"variant_change","label":"MODIFICATION","language":"roman_ur","text":"Khushbu wale ki jagah baghair khushbu wala do","source":"synthetic variations"}
+{"id":"r480","split":"test","family":"variant_change","label":"MODIFICATION","language":"roman_ur","text":"Waterproof wala chahiye, version change kar dein","source":"synthetic variations"}
+{"id":"r481","split":"test","family":"variant_change","label":"MODIFICATION","language":"roman_ur","text":"Isay saste model se replace karein","source":"synthetic variations"}
+{"id":"r482","split":"test","family":"variant_change","label":"MODIFICATION","language":"ur","text":"خوشبودار کی جگہ بغیر خوشبو والا دیں","source":"synthetic variations"}
+{"id":"r483","split":"test","family":"variant_change","label":"MODIFICATION","language":"ur","text":"پسند بدل دیں، صرف واٹر پروف والا چاہیے","source":"synthetic variations"}
+{"id":"r484","split":"test","family":"variant_change","label":"MODIFICATION","language":"ur","text":"اسے سستے ماڈل سے بدلیں","source":"synthetic variations"}
+{"id":"r485","split":"test","family":"split_delivery","label":"MODIFICATION","language":"en","text":"Keep both items but ship to two separate addresses","source":"synthetic variations"}
+{"id":"r486","split":"test","family":"split_delivery","label":"MODIFICATION","language":"en","text":"Send the items in separate parcels","source":"synthetic variations"}
+{"id":"r487","split":"test","family":"split_delivery","label":"MODIFICATION","language":"en","text":"Divide the order into two deliveries","source":"synthetic variations"}
+{"id":"r488","split":"test","family":"split_delivery","label":"MODIFICATION","language":"roman_ur","text":"Dono items rakhna lekin alag paton par bhejna","source":"synthetic variations"}
+{"id":"r489","split":"test","family":"split_delivery","label":"MODIFICATION","language":"roman_ur","text":"Cheezein alag parcels mein bhejo","source":"synthetic variations"}
+{"id":"r490","split":"test","family":"split_delivery","label":"MODIFICATION","language":"roman_ur","text":"Order ko do deliveries mein baant dein","source":"synthetic variations"}
+{"id":"r491","split":"test","family":"split_delivery","label":"MODIFICATION","language":"ur","text":"دونوں چیزیں رکھیں مگر الگ پتوں پر بھیجیں","source":"synthetic variations"}
+{"id":"r492","split":"test","family":"split_delivery","label":"MODIFICATION","language":"ur","text":"چیزیں الگ پارسلوں میں بھیج دیں","source":"synthetic variations"}
+{"id":"r493","split":"test","family":"split_delivery","label":"MODIFICATION","language":"ur","text":"آرڈر دو ڈیلیوریوں میں بانٹ دیں","source":"synthetic variations"}
