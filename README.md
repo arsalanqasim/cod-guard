@@ -63,12 +63,14 @@ orders ──► intake ──► risk scoring ──► decision gate ──►
 
 Risky orders are verified on WhatsApp first (buttons, free text, or voice).
 A confirmation can release a flagged order; a denial can stop a passed one.
-Outcomes are recorded against the decision that was frozen at dispatch, so
-the system is always evaluated on what it actually recommended.
+The first recorded outcome freezes the current decision revision for
+evaluation. Later corrections retain that revision.
 
 ## Measured performance (synthetic benchmark)
 
-Baseline model on 1,184 held-out synthetic orders, threshold 0.50:
+Baseline v1 uses a threshold of 0.50 on 1,184 held-out synthetic orders.
+AMBER or RED counts as a flag before any reply.
+
 **false-positive rate 16.47%** (96 of 583 genuine orders flagged),
 **false-negative rate 59.23%** (356 of 601 failed orders passed).
 Illustrative cost PKR 274,600 vs PKR 390,650 for shipping everything —

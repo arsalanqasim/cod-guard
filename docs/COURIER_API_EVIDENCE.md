@@ -40,4 +40,4 @@ Reviewed 2026-11-19 for Pakistan merchant COD shipments. The review used public,
 
 **Open questions.** Confirm the current Sonic merchant endpoint, method, auth, request and response schemas, polling/webhook limits, and how to distinguish a requested, intercepted, or completed return and a consignee refusal. [SLGTrax courier service](https://slgtrax.com/ecommerce/courier)
 
-For the [WS-E outcome loop](CODEX_BRIEF_ROUND5.md#ws-e--courier-outcome-loop), CSV remains the baseline for all four couriers. Leave ambiguous, intermediate, and missing events unlabeled. In particular, a generic return supplies no evidence that the consignee refused the parcel.
+[CSV outcome import](COURIERS.md#csv-baseline) remains the baseline for all four couriers. Leave ambiguous, intermediate, and missing events unlabeled. In particular, a generic return supplies no evidence that the consignee refused the parcel.
