@@ -66,6 +66,11 @@ CONNECTOR_SCHEMA = (
         tenant_id TEXT NOT NULL, channel TEXT NOT NULL, account TEXT NOT NULL,
         cursor TEXT, last_poll TEXT, last_webhook TEXT, last_error TEXT,
         PRIMARY KEY (tenant_id, channel, account))""",
+    """CREATE TABLE IF NOT EXISTS storefront_order_status (
+        tenant_id TEXT NOT NULL, channel TEXT NOT NULL, account TEXT NOT NULL, external_id TEXT NOT NULL,
+        status TEXT NOT NULL,
+        updated_at TEXT, conflict INTEGER NOT NULL DEFAULT 0,
+        PRIMARY KEY (tenant_id, channel, account, external_id))""",
 )
 WHATSAPP_SCHEMA = (
     """CREATE TABLE IF NOT EXISTS whatsapp_consent (
@@ -77,6 +82,9 @@ WHATSAPP_SCHEMA = (
         message_id TEXT UNIQUE, status TEXT NOT NULL, billable INTEGER, category TEXT,
         estimated_usd_micros INTEGER, replied_at TEXT, PRIMARY KEY (tenant_id, order_id),
         FOREIGN KEY (tenant_id, order_id) REFERENCES orders(tenant_id, order_id))""",
+    """CREATE TABLE IF NOT EXISTS whatsapp_unclear_receipts (
+        attempt_id TEXT NOT NULL, reply_key TEXT NOT NULL, PRIMARY KEY (attempt_id, reply_key),
+        FOREIGN KEY (attempt_id) REFERENCES whatsapp_verifications(attempt_id) ON DELETE CASCADE)""",
 )
 
 
@@ -231,7 +239,7 @@ def _initialize(connection, legacy):
                             AND (intent='UNCLEAR' OR why LIKE 'Reply unclear;%')""")
     for statement in (*CONNECTOR_SCHEMA, *WHATSAPP_SCHEMA, *COURIER_SCHEMA, *NETWORK_SCHEMA):
         connection.execute(statement)
-    connection.execute("PRAGMA user_version=6")
+    connection.execute("PRAGMA user_version=8")
     connection.commit()
 
 
@@ -245,9 +253,9 @@ def connect(path):
             connection.execute("PRAGMA foreign_keys=ON")
             try:
                 version = connection.execute("PRAGMA user_version").fetchone()[0]
-                if version in (0, 1, 2, 3, 4, 5):
+                if 0 <= version < 8:
                     _initialize(connection, legacy)
-                elif version != 6:
+                elif version != 8:
                     raise ValueError("Unsupported state schema version")
             except (ValueError, KeyError, TypeError, AttributeError) as exc:
                 raise StateUnavailable("State migration is unavailable") from exc
@@ -286,8 +294,14 @@ def ensure_seeded(path, seed_path):
         connection.execute("INSERT INTO settings VALUES (?)", (key,))
 
 
+_QUEUE_ORDERS = """SELECT orders.*, COALESCE(source.status, 'open') AS queue_status,
+    COALESCE(source.conflict, 0) AS storefront_conflict
+    FROM orders LEFT JOIN external_orders USING (tenant_id, order_id)
+    LEFT JOIN storefront_order_status AS source USING (tenant_id, channel, account, external_id)"""
+
+
 def select_orders(connection, tenant_id, *, order_id=None):
-    query = "SELECT * FROM orders WHERE tenant_id=?"
+    query = f"{_QUEUE_ORDERS} WHERE tenant_id=?"
     parameters = (tenant_id,)
     if order_id is not None:
         query += " AND order_id=?"
@@ -302,6 +316,6 @@ def select_page(connection, tenant_id, limit, offset, search):
         where += " AND instr(lower(order_id || ' ' || customer_name || ' ' || product || ' ' || city), ?) > 0"
         params += (search.casefold(),)
     total = connection.execute(f"SELECT COUNT(*) FROM orders WHERE {where}", params).fetchone()[0]
-    rows = connection.execute(f"SELECT * FROM orders WHERE {where} ORDER BY order_id LIMIT ? OFFSET ?",
+    rows = connection.execute(f"{_QUEUE_ORDERS} WHERE {where} ORDER BY order_id LIMIT ? OFFSET ?",
                               (*params, limit, offset))
     return [dict(row) for row in rows], total

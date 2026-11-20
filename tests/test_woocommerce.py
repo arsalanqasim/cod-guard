@@ -14,6 +14,7 @@ from fastapi.testclient import TestClient
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "backend/app"))
 import main
+import operators
 import service
 import woocommerce as woo
 from connector_orders import connection_state
@@ -32,19 +33,20 @@ class WooCommerceTests(unittest.TestCase):
         folder = self.enterContext(tempfile.TemporaryDirectory())
         self.path = Path(folder) / "state.json"
         self.enterContext(patch.object(service, "STATE_PATH", self.path))
-        operators = {name: {"tenant_id": name, "key": f"sample-operator-key-for-{name}"}
-                     for name in ("alpha", "beta")}
-        self.enterContext(patch.dict(os.environ, COD_GUARD_OPERATORS=json.dumps(operators),
+        self.enterContext(patch.object(operators, "_write_windows", {}))
+        settings = {name: {"tenant_id": name, "key": f"sample-operator-key-for-{name}"}
+                    for name in ("alpha", "beta")}
+        self.enterContext(patch.dict(os.environ, COD_GUARD_OPERATORS=json.dumps(settings),
                                      COD_GUARD_WOOCOMMERCE=json.dumps({"shop": STORE})))
         self.client = self.enterContext(TestClient(main.app))
-        self.alpha = {"Authorization": f"Bearer {operators['alpha']['key']}"}
-        self.beta = {"Authorization": f"Bearer {operators['beta']['key']}"}
+        self.alpha = {"Authorization": f"Bearer {settings['alpha']['key']}"}
+        self.beta = {"Authorization": f"Bearer {settings['beta']['key']}"}
 
-    def webhook(self, data=ORDER, *, valid=True):
+    def webhook(self, data=ORDER, *, valid=True, topic="order.created"):
         body = json.dumps(data).encode()
         signature = base64.b64encode(hmac.digest(STORE["webhook_secret"].encode(), body, "sha256")).decode()
         return self.client.post(f"{PREFIX}/shop/webhook", content=body, headers={
-            "X-WC-Webhook-Topic": "order.created", "X-WC-Webhook-Signature": signature if valid else "wrong",
+            "X-WC-Webhook-Topic": topic, "X-WC-Webhook-Signature": signature if valid else "wrong",
         })
 
     def test_signed_intake_and_tenant_isolation(self):
@@ -64,6 +66,42 @@ class WooCommerceTests(unittest.TestCase):
         self.assertTrue(health["last_webhook"])
         self.assertNotIn("key", health)
         self.assertEqual(self.client.post(f"{PREFIX}/shop/poll", headers=self.beta).status_code, 404)
+
+    @patch("woocommerce.WooCommerceClient.request")
+    def test_webhook_refreshes_open_order_and_closes_it_on_source_cancellation(self, request):
+        created = ORDER | {"date_modified_gmt": "2026-11-20T09:00:00"}
+        self.assertEqual(self.webhook(created).json()["imported"], 1)
+        amended = created | {"total": "2600.50", "date_modified_gmt": "2026-11-20T09:01:00"}
+        self.assertEqual(self.webhook(amended, topic="order.updated").status_code, 200)
+        order, = self.client.get("/orders", headers=self.alpha).json()
+        self.assertEqual((order["queue_status"], order["amount_pkr"]), ("open", 2600.50))
+        cancelled = amended | {"status": "cancelled", "date_modified_gmt": "2026-11-20T09:02:00"}
+        for event in (cancelled, cancelled, created):
+            self.assertEqual(self.webhook(event, topic="order.updated").status_code, 200)
+        order, = self.client.get("/orders", headers=self.alpha).json()
+        self.assertEqual((order["queue_status"], order["storefront_conflict"]), ("closed_cancelled", False))
+        with service.connect(self.path) as db:
+            events = db.execute("SELECT reference FROM audit_events WHERE action='storefront_order_reconciled'")
+            self.assertEqual([row["reference"] for row in events], ["WOOCOMMERCE:open", "WOOCOMMERCE:closed_cancelled"])
+        request.assert_not_called()
+
+    @patch("woocommerce.WooCommerceClient.request")
+    def test_poll_marks_paid_order_out_of_scope_and_preserves_decision_and_outcome(self, request):
+        self.webhook()
+        order, = self.client.get("/orders", headers=self.alpha).json()
+        path = f"/orders/{order['order_id']}"
+        self.assertEqual(self.client.post(f"{path}/verify", headers=self.alpha,
+                                          json={"text": "Yes"}).json()["decision"], "SHIP")
+        self.assertEqual(self.client.post(f"{path}/outcome", headers=self.alpha,
+                                          json={"outcome": "delivered"}).status_code, 200)
+        paid = ORDER | {"date_paid_gmt": "2026-11-20T09:02:00", "date_modified_gmt": "2026-11-20T09:02:00"}
+        request.return_value = ([paid], 1)
+        self.assertEqual(self.client.post(f"{PREFIX}/shop/poll", headers=self.alpha).status_code, 200)
+        order = self.client.get(path, headers=self.alpha).json()
+        self.assertEqual((order["queue_status"], order["decision"], order["outcome"],
+                          order["storefront_conflict"], order["needs_review"], order["verified"]),
+                         ("out_of_cod_scope", "SHIP", "delivered", True, True, False))
+        self.assertIn("date_paid_gmt", request.call_args.kwargs["params"]["_fields"])
 
     @patch("woocommerce.WooCommerceClient.request")
     def test_poll_dedup_and_cursor_does_not_advance_on_failure(self, request):

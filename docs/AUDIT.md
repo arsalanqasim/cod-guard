@@ -332,3 +332,45 @@ preserve the previous decision and request review. The order API reports
 `verified=false` while a reply needs review. The reply and service regressions
 cover the three review examples, scope and time in three text forms, and
 preservation of a saved denial.
+
+### Round 6 — WS-2: Queued voice ordering
+
+[Re-review §2, “Queued voice ordering”](PRODUCTION_REVIEW_REREVIEW.md#storage-latency-and-voice).
+A queued apply compares its captured decision revision inside the write
+transaction. The paused-inference API regression queues a confirmation,
+records a newer manual denial and releases inference. The completed job
+reports supersession and the denial remains in effect.
+
+### Round 6 — WS-3: Model consistency
+
+[Re-review §1, “Unusable threshold and partial model publication”](PRODUCTION_REVIEW_REREVIEW.md#1-the-three-original-defects).
+Single-order scoring uses one bundle for identity, threshold and inference.
+Standalone training captures the expected pointer before fitting and only
+exports the non-atomic baseline diagnostics after activation. Controlled
+activation tests cover both races and assert that a rejected fit leaves
+prior diagnostics intact. [Consistency contract](METRIC_PROTOCOL.md).
+
+### Round 6 — WS-4: Readiness coherence
+
+[Re-review §2, “API failure matrix”](PRODUCTION_REVIEW_REREVIEW.md#api-failure-matrix).
+`/ready` checks the active bundle, corresponding JSON identity, version,
+training timestamp and threshold, and the Markdown generated from that JSON.
+The failure matrix covers each missing or mismatched artifact while health
+continues to report liveness. [The operator runbook](SHADOW_INTAKE.md)
+describes recovery after voice and retrain job status is lost on restart.
+
+### Round 6 — WS-6: WhatsApp clarification window
+
+[Re-review §4, “WhatsApp Cloud”](PRODUCTION_REVIEW_REREVIEW.md#4-round-5-integration-boundaries).
+The attempt remains open through a deduplicated unclear reply, with the
+original expiry and consent checks enforced. Synthetic callback fixtures
+exercise clarification, replay, expiry and STOP. [Operator workflow](WHATSAPP.md).
+
+### Round 6 — WS-5: Storefront reconciliation
+
+[Re-review §4, “WooCommerce” and “Shopify”](PRODUCTION_REVIEW_REREVIEW.md#4-round-5-integration-boundaries).
+Signed updates and WooCommerce polls reconcile lifecycle status and eligible
+order fields. Source changes after a decision or outcome surface a queue
+conflict and an audit event while preserving both records. Fixtures cover
+update, cancellation, paid status, replay and out-of-order delivery.
+[Queue contract](SHADOW_INTAKE.md#storefront-queue-status).

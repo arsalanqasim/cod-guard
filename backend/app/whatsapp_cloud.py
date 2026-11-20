@@ -96,6 +96,10 @@ def _consent(connection, account, recipient, enabled, source, actor):
     connection.execute("""INSERT INTO whatsapp_consent VALUES (?, ?, ?, ?, ?) ON CONFLICT DO UPDATE SET
         opted_in=excluded.opted_in, source=excluded.source, changed_at=excluded.changed_at""",
                        (account.tenant_id, recipient, int(enabled), source, now()))
+    if not enabled:
+        connection.execute("""UPDATE whatsapp_verifications SET expires=MIN(expires, ?)
+            WHERE tenant_id=? AND recipient=? AND replied_at IS NULL""",
+                           (int(time()), account.tenant_id, recipient))
     audit(connection, account.tenant_id, actor, "whatsapp_opt_in" if enabled else "whatsapp_opt_out")
 
 
@@ -271,8 +275,10 @@ def _receive_reply(db, account, message):
     context = (message.get("context") or {}).get("id")
     if not isinstance(context, str) or not context:
         return
-    attempt = db.execute("""SELECT * FROM whatsapp_verifications WHERE tenant_id=? AND recipient=?
-        AND message_id=? AND replied_at IS NULL AND expires>?""",
+    attempt = db.execute("""SELECT attempt.* FROM whatsapp_verifications AS attempt
+        JOIN whatsapp_consent AS consent USING (tenant_id, recipient)
+        WHERE attempt.tenant_id=? AND attempt.recipient=? AND attempt.message_id=?
+        AND attempt.replied_at IS NULL AND attempt.expires>? AND consent.opted_in=1""",
                          (account.tenant_id, recipient, context, int(time()))).fetchone()
     if not attempt:
         return
@@ -293,9 +299,21 @@ def _receive_reply(db, account, message):
     order, = select_orders(db, account.tenant_id, order_id=order_id)
     if normalize_phone(order["phone"]) != phone or order["data_source"].casefold() == "daraz":
         return
+    if intent == "UNCLEAR":
+        reply_id = message.get("id")
+        if not isinstance(reply_id, str) or not 0 < len(reply_id) <= 256:
+            return
+        receipt = db.execute("""INSERT INTO whatsapp_unclear_receipts VALUES (?, ?)
+            ON CONFLICT DO NOTHING""",
+                             (attempt["attempt_id"], _digest(account, "unclear-reply", reply_id)))
+        if not receipt.rowcount:
+            return
     with update_state(db, account.tenant_id, (order_id,)) as state:
         service.apply_verification(state, order, text, intent, "whatsapp", "whatsapp-webhook")
-    db.execute("UPDATE whatsapp_verifications SET replied_at=? WHERE attempt_id=?", (now(), attempt["attempt_id"]))
+    if intent != "UNCLEAR":
+        db.execute("UPDATE whatsapp_verifications SET replied_at=? WHERE attempt_id=?",
+                   (now(), attempt["attempt_id"]))
+        db.execute("DELETE FROM whatsapp_unclear_receipts WHERE attempt_id=?", (attempt["attempt_id"],))
 
 
 def process_callback(account, payload):

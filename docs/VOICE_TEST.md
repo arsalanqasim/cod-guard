@@ -49,3 +49,12 @@ four-job admission limit includes running jobs. A full queue returns 429.
 The same operator and order are required to retrieve a result. Finished
 results expire after ten minutes. Applied text follows the raw-reply retention
 policy. The dashboard keeps an explicit transcript preview and apply action.
+
+With `commit_decision=true`, the API applies an eligible transcript only if
+the decision revision still matches the submission. A superseded result
+remains visible in the completed job with `applied=false`, `superseded=true`
+and `needs_review=true`. Its audit event records the revisions. The decision
+and reply history retain the newer answer.
+
+Restarting the process discards all voice and retrain job IDs, including jobs
+still running. Check the order's saved decision before submitting audio again.

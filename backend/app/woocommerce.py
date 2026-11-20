@@ -13,7 +13,8 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode, urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
-from connector_orders import connection_state, ingest, linked_order, record_poll_error
+from connector_orders import (CANCELLED, CLOSED, NON_COD, OPEN, StorefrontSnapshot,
+                              connection_state, ingest, linked_order, record_poll_error, source_timestamp)
 from records import DEMO_TENANT, connect
 from risk_engine import validate_features
 
@@ -94,12 +95,20 @@ def signed_webhook(store, body, signature):
 def parse_order(payload):
     if not isinstance(payload, dict):
         raise ValueError("Expected a WooCommerce order")
-    if (payload.get("payment_method") != "cod" or payload.get("currency") != "PKR"
-            or payload.get("status") not in ("pending", "processing", "on-hold")):
-        return None
     external_id = payload.get("id")
     if type(external_id) is not int or not 0 < external_id < 2**63:
         raise ValueError("Invalid WooCommerce order ID")
+    updated_at = source_timestamp(payload.get("date_modified_gmt"))
+    status = payload.get("status")
+    if status == "cancelled":
+        return StorefrontSnapshot(str(external_id), CANCELLED, updated_at)
+    if not all(isinstance(payload.get(key), str) for key in ("status", "payment_method", "currency")):
+        raise ValueError("Missing WooCommerce lifecycle fields")
+    if (payload["payment_method"] != "cod" or payload["currency"] != "PKR"
+            or payload.get("date_paid_gmt") or payload.get("date_paid")):
+        return StorefrontSnapshot(str(external_id), NON_COD, updated_at)
+    if status not in ("pending", "processing", "on-hold"):
+        return StorefrontSnapshot(str(external_id), CLOSED, updated_at)
     billing = payload.get("billing") or {}
     shipping = payload.get("shipping") or {}
     items = payload.get("line_items") or []
@@ -124,11 +133,11 @@ def parse_order(payload):
         risk["address_words"] = len(address.split())
     if quantities and all(type(value) is int and 0 < value <= 100_000 for value in quantities):
         risk["items_count"] = sum(quantities)
-    return str(external_id), {
+    return StorefrontSnapshot(str(external_id), OPEN, updated_at, {
         "customer_name": name[:200] or "Name unavailable", "product": titles[:200] or "Items unavailable",
         "phone": phone, "city": text(shipping.get("city") or billing.get("city"))[:100],
         **validate_features(risk),
-    }
+    })
 
 
 class WooCommerceClient:
@@ -188,14 +197,15 @@ def poll_once(path, store, *, clock=lambda: datetime.now(timezone.utc)):
                     "modified_after": after.isoformat(), "modified_before": until.isoformat(),
                     "dates_are_gmt": "true", "orderby": "id", "order": "asc",
                     "per_page": PAGE_SIZE, "page": page,
-                    "_fields": "id,status,payment_method,currency,billing.first_name,billing.last_name,"
+                    "_fields": "id,status,payment_method,currency,date_modified_gmt,date_paid_gmt,"
+                               "billing.first_name,billing.last_name,"
                                "billing.phone,billing.city,billing.address_1,billing.address_2,shipping.city,"
                                "shipping.address_1,shipping.address_2,line_items.name,line_items.quantity,total",
                 })
                 if not isinstance(payload, list) or len(payload) > PAGE_SIZE:
                     raise WooCommerceError("WooCommerce returned an invalid order page")
                 final = page >= total_pages if total_pages is not None else len(payload) < PAGE_SIZE
-                parsed = [order for entry in payload if (order := parse_order(entry)) is not None]
+                parsed = [parse_order(entry) for entry in payload]
                 added += ingest(path, store.identity, parsed, "woocommerce-poll",
                                 cursor=until.isoformat() if final else None)
                 if final:

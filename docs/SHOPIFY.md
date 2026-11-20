@@ -4,13 +4,21 @@
 
 Create a distinct custom-distribution app in the Dev Dashboard for each store. New legacy apps can no longer be created in the Shopify admin as of January 1, 2026. Use Shopify CLI's app template for installation/authentication, select custom distribution, disable multi-store installs, and send the generated install link to the store owner. Shopify requires an IP allowlist for new installations outside your organization starting **November 20, 2026**, and for existing external installations starting **January 1, 2027**. [Distribution and allowlist](https://shopify.dev/docs/apps/launch/distribution/select-distribution-method) · [Legacy custom apps](https://shopify.dev/changelog/posts/legacy-custom-apps-can-t-be-created-after-january-1-2026).
 
-Use `read_orders`; no customer API access or Shopify write scope is needed by this receiver. Subscribe HTTPS `orders/create` deliveries to `/integrations/shopify/webhooks/<permanent-shop>.myshopify.com` (see [Shopify subscriptions](https://shopify.dev/docs/apps/build/webhooks/subscribe)). Set `COD_GUARD_SHOPIFY` to JSON keyed by that exact domain. Each object has `tenant_id` (a non-demo tenant), unique app client `secret`, `cod_gateway` (exact merchant COD method name) and optional `allow_protected_fields` (default `false`). Do not reuse a secret across stores, expose it, or log webhook bodies. Confirm delivery with the store's own test tools before enabling. The receiver verifies Shopify’s [raw-body signature](https://shopify.dev/docs/apps/build/webhooks/verify-deliveries) and deduplicates by store plus order ID. `GET /integrations/shopify/status` is tenant-only.
+Use `read_orders`; no customer API access or Shopify write scope is needed by this receiver. Subscribe HTTPS `orders/create`, `orders/updated`, `orders/cancelled` and `orders/paid` deliveries to `/integrations/shopify/webhooks/<permanent-shop>.myshopify.com`. Set `COD_GUARD_SHOPIFY` to JSON keyed by that exact domain. Each object has `tenant_id` (a non-demo tenant), unique app client `secret`, `cod_gateway` (exact merchant COD method name) and optional `allow_protected_fields` (default `false`). Do not reuse a secret across stores, expose it, or log webhook bodies. Confirm delivery with the store's own test tools before enabling. The receiver verifies Shopify’s raw-body signature and deduplicates by store plus order ID. `GET /integrations/shopify/status` is tenant-only. [Shopify webhook topics](https://shopify.dev/docs/api/webhooks/latest) · [Delivery verification](https://shopify.dev/docs/apps/build/webhooks/verify-deliveries)
 
 ## Data boundaries
 
 Check [Shopify’s protected customer data rules](https://shopify.dev/docs/apps/launch/protected-customer-data) before deployment. Public apps require review for protected data; Dev Dashboard custom-app access follows the custom-app column (not the legacy plan-dependent admin-app column). Select the minimum fields, check actual access with a redacted test event, then enable `allow_protected_fields` explicitly. The receiver never falls back to email or the customer record. It saves shipping name/phone and city only when enabled, and derives address word count without saving the address or raw payload. Null or masked data remains unavailable, not a validation success or consent for WhatsApp.
 
-Only open, pending, unfulfilled PKR orders with one exact configured gateway are queued; mixed gateways, already-paid, cancelled and Shopify test-flagged orders are skipped. `orders/create` is insert-only. Updates, cancellations, polling/reconciliation, privacy callbacks and install lifecycle automation are not implemented by this receiver; review status in Shopify before dispatch, disable config/secret on uninstall, and agree deletion/retention handling before any live pilot. Use synthetic payloads offline; no store install or real seller delivery was exercised.
+Only open, pending, unfulfilled PKR orders with one exact configured gateway
+enter the active queue. Signed updates refresh that status. Cancellation
+closes a linked order and a payment moves it out of COD scope. See the
+[queue and conflict rules](SHADOW_INTAKE.md#storefront-queue-status).
+Shopify uses webhook delivery for reconciliation. Review the source status
+before dispatch and disable the configuration and secret on uninstall.
+Arrange privacy, install lifecycle and retention handling before a live pilot.
+The tests use synthetic payloads. Live store installation and delivery
+remain unverified.
 
 ## Distribution limit
 

@@ -25,10 +25,11 @@ validation are pending.
   time. For changes, use ISO 8601 UTC bounds in `modified_after` and
   `modified_before` with `dates_are_gmt=true`. The controller confirms that
   `modified_before` is the upper bound. [Orders](https://developer.woocommerce.com/docs/apis/rest-api/v3/orders/#list-all-orders) · [Pagination](https://developer.woocommerce.com/docs/apis/rest-api/#pagination) · [Date filter source](https://woocommerce.github.io/code-reference/files/woocommerce-includes-rest-api-controllers-version3-class-wc-rest-crud-controller.html)
-- The connector inserts by store and Woo order ID, overlaps the previous cursor
-  by two minutes, and advances it only after all pages are saved. Updates can
-  recover missed creates but do not overwrite existing COD-Guard records. Check
-  WooCommerce for later edits, cancellations, or payment changes before dispatch.
+- The connector identifies orders by store and Woo order ID, overlaps the cursor
+  by two minutes, and advances it after all pages are saved. Both polling and
+  signed webhooks reconcile source status and supported intake fields.
+  The poll includes GMT modification and payment timestamps. Read the
+  [queue and conflict rules](SHADOW_INTAKE.md#storefront-queue-status) before dispatch.
 
 ## Webhooks
 
@@ -40,6 +41,9 @@ validation are pending.
   base64-encoded HMAC-SHA256 of the raw request body using the configured
   webhook secret. Compare in constant time before processing the JSON. Set an
   explicit secret and make intake safe to repeat. [Webhook payload and signature](https://developer.woocommerce.com/docs/apis/rest-api/v3/webhooks/)
+- A cancellation closes the queue entry. A recorded payment or a switch away
+  from eligible COD marks it out of scope. Other non-dispatchable Woo statuses
+  close it at source. [Order statuses and fields](https://developer.woocommerce.com/docs/apis/rest-api/v3/orders/).
 - Keep polling enabled during webhook delays or failures. Check **WooCommerce →
   Status → Scheduled Actions** for Action Scheduler or WP-Cron lag and
   **Status → Logs** for delivery errors. Repeated failures can disable the

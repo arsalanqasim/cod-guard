@@ -48,7 +48,8 @@ class EvaluationTests(unittest.TestCase):
         order = self.benchmark.iloc[0].to_dict()
         bundle = service._bundle()
         probability = bundle["model"].predict_proba(feature_frame(pd.DataFrame([order]), bundle["columns"]))[0][1]
-        self.assertAlmostEqual(service._ml_probability(order), probability)
+        assessment = service.assess_order(order, state={"decisions": {}, "outcomes": {}})
+        self.assertEqual(assessment["ml_probability"], round(probability, 3))
 
     def test_test_split_id_or_label_changes_abort_before_fitting(self):
         train, validation, test, demo = split_benchmark(self.benchmark)

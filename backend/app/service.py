@@ -16,7 +16,7 @@ import pandas as pd
 from risk_engine import OPTIONAL_MODEL_FEATURES, assess as rule_assess
 from verification import parse_reply, apply_reply, opening_message
 from artifacts import active_version
-from storage import queue_snapshot, read_state, transaction
+from storage import queue_snapshot, read_state, transaction, update_state
 from decision_events import append_event
 from records import (DEMO_TENANT, ORDER_FIELDS, StateUnavailable, add_model_version, audit,
                      connect, ensure_seeded, select_orders, select_page, write)
@@ -77,7 +77,8 @@ def load_orders(tenant_id=DEMO_TENANT):
     if tenant_id == DEMO_TENANT:
         ensure_seeded(STATE_PATH, SEED_PATH)
     with connect(STATE_PATH) as connection:
-        return pd.DataFrame(select_orders(connection, tenant_id), columns=("tenant_id", *ORDER_FIELDS))
+        return pd.DataFrame(select_orders(connection, tenant_id),
+                            columns=("tenant_id", *ORDER_FIELDS, "queue_status", "storefront_conflict"))
 
 
 def get_order(order_id, tenant_id=DEMO_TENANT):
@@ -88,14 +89,6 @@ def get_order(order_id, tenant_id=DEMO_TENANT):
     if not matches:
         raise KeyError(order_id)
     return matches[0]
-
-
-def _ml_probability(order):
-    try:
-        bundle = _bundle()
-    except Exception:
-        return None  # model_status exposes the failure to the UI/API
-    return _batch_probabilities(bundle, [order])[0]
 
 
 def _model_row(order, columns):
@@ -127,7 +120,8 @@ def _batch_probabilities(bundle, orders):
 def assess_order(order, *, state=None, tenant_id=DEMO_TENANT):
     if state is None:
         state = _load_state(tenant_id, (order["order_id"],), messages=False)
-    return _assessment(order, state, model_status(), _ml_probability(order))
+    bundle, status = _available_model()
+    return _assessment(order, state, status, _batch_probabilities(bundle, [order])[0])
 
 
 def _assessment(order, state, status, probability):
@@ -140,14 +134,17 @@ def _assessment(order, state, status, probability):
         risk["reasons"].append("Missing order features; request verification")
     saved = state["decisions"].get(order["order_id"])
     decision = saved or apply_reply(risk["zone"], "UNCLEAR")
+    storefront_conflict = bool(order.get("storefront_conflict"))
+    needs_review = storefront_conflict or bool((saved or {}).get("needs_review"))
     return {"order_id": order["order_id"], "rule_score": risk["risk_score"],
             "ml_probability": round(probability, 3) if probability is not None else None,
             "zone": risk["zone"], "reasons": risk["reasons"],
             "signal_count": risk["signal_count"], "signals": risk["signals"],
             "decision": decision["decision"], "decision_why": decision["why"],
-            "verified": bool(saved and saved.get("intent") in ("CONFIRM", "DENY") and not saved.get("needs_review")),
+            "queue_status": order.get("queue_status", "open"), "storefront_conflict": storefront_conflict,
+            "verified": bool(saved and saved.get("intent") in ("CONFIRM", "DENY") and not needs_review),
             "intent": (saved or {}).get("intent"),
-            "needs_review": bool((saved or {}).get("needs_review")),
+            "needs_review": needs_review,
             "outcome": state["outcomes"].get(order["order_id"]),
             "model_id": status.get("model_id"), "model_error": status["reason"]}
 
@@ -167,6 +164,25 @@ def order_page(tenant_id=DEMO_TENANT, *, limit=50, offset=0, search=""):
 def verify_reply(order, reply_text, source="text", *, actor="local-demo", tenant_id=DEMO_TENANT):
     with transaction(STATE_PATH, tenant_id, (order["order_id"],)) as state:
         return apply_verification(state, order, reply_text, parse_reply(reply_text), source, actor)
+
+
+def verification_revision(tenant_id, order_id):
+    state = _load_state(tenant_id, (order_id,), messages=False)
+    return state["decisions"].get(order_id, {}).get("revision")
+
+
+def apply_queued_verification(order, reply_text, intent, source, *, actor, tenant_id, expected_revision):
+    order_id = order["order_id"]
+    with write(STATE_PATH) as db, update_state(db, tenant_id, (order_id,)) as state:
+        current = state["decisions"].get(order_id, {})
+        revision = current.get("revision")
+        if revision != expected_revision:
+            audit(db, tenant_id, actor, "verification_superseded", order_id=order_id,
+                  reference=f"{source} expected={expected_revision} current={revision}")
+            return {"applied": False, "superseded": True, "needs_review": True,
+                    "decision": current.get("decision")}
+        return {"applied": True, "superseded": False,
+                **apply_verification(state, order, reply_text, intent, source, actor)}
 
 
 def apply_verification(state, order, reply_text, intent, source, actor):
@@ -250,15 +266,40 @@ def live_metrics(tenant_id=DEMO_TENANT):
                        else "Marked shadow outcomes; observational comparison only")}
 
 
+def _versioned_evaluation(version, bundle):
+    report = json.loads((version / "evaluation.json").read_text(encoding="utf-8"))
+    if (bundle and isinstance(report, dict)
+            and all(report[key] == bundle[key] for key in ("model_id", "version", "trained_at"))
+            and report["chosen"]["threshold"] == bundle["threshold"]):
+        return report
+    return None
+
+
+def model_readiness_error():
+    try:
+        version = active_version(MODEL_PATH)
+        bundle = _read_bundle(version / "model.pkl" if version else MODEL_PATH)
+    except Exception:
+        return "model_unavailable"
+    if bundle is None:
+        return "model_unavailable"
+    if version is not None:
+        from train_model import render_report
+
+        try:
+            report = _versioned_evaluation(version, bundle)
+            if report and (version / "report.md").read_text(encoding="utf-8") == render_report(report):
+                return None
+        except (OSError, ValueError, KeyError, IndexError, TypeError, AttributeError):
+            pass
+    return "evaluation_unavailable"
+
+
 def latest_evaluation():
     try:
         version = active_version(MODEL_PATH)
         if version is not None:
-            bundle = _read_bundle(version / "model.pkl")
-            report = json.loads((version / "evaluation.json").read_text(encoding="utf-8"))
-            if bundle and isinstance(report, dict) and report.get("model_id") == bundle.get("model_id"):
-                return report
-            return None
+            return _versioned_evaluation(version, _read_bundle(version / "model.pkl"))
     except Exception:
         return None
     status = model_status()

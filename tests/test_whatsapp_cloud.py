@@ -57,6 +57,53 @@ class WhatsAppTests(unittest.TestCase):
         return self.client.post(f"{PREFIX}/alpha/webhook", content=body,
                                 headers={"X-Hub-Signature-256": signature if good else "invalid"})
 
+    def text_reply(self, message_id, text):
+        return {"id": message_id, "from": "923001234567", "context": {"id": "wamid.demo"},
+                "type": "text", "text": {"body": text}}
+
+    def start_attempt(self, request):
+        self.assertEqual(self.consent().status_code, 200)
+        request.side_effect = [TEMPLATE, {"messages": [{"id": "wamid.demo"}]}]
+        self.assertTrue(self.post("cod1/send").json()["sent"])
+
+    @patch("whatsapp_cloud.CloudTransport.request")
+    def test_unclear_text_leaves_attempt_open_for_one_clear_follow_up(self, request):
+        self.start_attempt(request)
+        unclear = self.text_reply("wamid.unclear", "Yes, send the order without the blue shirt")
+        for _ in range(2):
+            self.assertEqual(self.callback(messages=[unclear]).status_code, 200)
+        attempt_path = f"{PREFIX}/orders/cod1"
+        self.assertIsNone(self.client.get(attempt_path, headers=self.alpha).json()["verification"]["replied_at"])
+        self.assertEqual([msg["intent"] for msg in service.conversation("cod1", "alpha")], ["UNCLEAR"])
+        self.assertTrue(self.client.get("/orders/cod1", headers=self.alpha).json()["needs_review"])
+
+        follow_up = self.text_reply("wamid.confirm", "Yes")
+        self.assertEqual(self.callback(messages=[follow_up, follow_up]).status_code, 200)
+        detail = self.client.get("/orders/cod1", headers=self.alpha).json()
+        self.assertEqual((detail["decision"], detail["needs_review"]), ("SHIP", False))
+        self.assertEqual([msg["intent"] for msg in detail["messages"]], ["UNCLEAR", "CONFIRM"])
+        self.assertIsNotNone(self.client.get(attempt_path, headers=self.alpha).json()["verification"]["replied_at"])
+
+    @patch("whatsapp_cloud.CloudTransport.request")
+    def test_stop_closes_pending_clarification_even_after_new_consent(self, request):
+        self.start_attempt(request)
+        self.callback(messages=[self.text_reply("wamid.unclear", "Maybe")])
+        self.callback(messages=[self.text_reply("wamid.stop", "STOP")])
+        self.assertEqual(self.post("cod2/send").status_code, 409)
+        self.assertEqual(self.consent().status_code, 200)
+        self.callback(messages=[self.text_reply("wamid.confirm", "Yes")])
+        self.assertEqual([msg["intent"] for msg in service.conversation("cod1", "alpha")], ["UNCLEAR"])
+
+    @patch("whatsapp_cloud.CloudTransport.request")
+    def test_clarification_does_not_extend_original_reply_window(self, request):
+        with patch.object(cloud, "time", return_value=1_000_000_000):
+            self.start_attempt(request)
+        with patch.object(cloud, "time", return_value=1_000_000_000 + cloud.REPLY_TTL - 1):
+            self.callback(messages=[self.text_reply("wamid.unclear", "Maybe")])
+        with patch.object(cloud, "time", return_value=1_000_000_000 + cloud.REPLY_TTL):
+            self.callback(messages=[self.text_reply("wamid.confirm", "Yes")])
+        self.assertEqual([msg["intent"] for msg in service.conversation("cod1", "alpha")], ["UNCLEAR"])
+
     @patch("whatsapp_cloud.CloudTransport.request")
     def test_send_requires_consent_exact_utility_copy_and_non_daraz_order(self, request):
         self.assertEqual(self.post("cod1/send").status_code, 409)

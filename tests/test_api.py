@@ -43,22 +43,53 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(response.json()["decision"], "HOLD_CANCEL")
         self.assertNotIn("label_failed", self.client.get(f"/orders/{self.order_id}").json())
 
+    def completed_voice(self, path, response):
+        self.assertEqual(response.status_code, 202)
+        url = f"{path}/{response.json()['job_id']}"
+        deadline = monotonic() + 5
+        while monotonic() < deadline:
+            status = self.client.get(url).json()
+            if status["status"] in {"done", "failed"}:
+                self.assertEqual(status["status"], "done", status)
+                return status["result"]
+            sleep(0.01)
+        self.fail("Voice job did not finish")
+
+    def test_queued_voice_confirmation_cannot_replace_a_newer_manual_denial(self):
+        order_path = f"/orders/{self.order_id}"
+        voice_path = f"{order_path}/voice"
+        started, resume = Event(), Event()
+
+        def pause(*args, **kwargs):
+            started.set()
+            if not resume.wait(5):
+                raise RuntimeError("Voice fixture did not resume")
+            return {"ok": True, "text": "Yes", "warning": None}
+
+        with patch.object(main, "transcribe_voice_note", side_effect=pause):
+            submitted = self.client.post(voice_path, params={"commit_decision": "true"},
+                                         files={"file": ("note.ogg", b"audio", "audio/ogg")})
+            try:
+                self.assertEqual(submitted.status_code, 202)
+                self.assertTrue(started.wait(5))
+                decision = self.client.post(f"{order_path}/verify", json={"text": "No, cancel"}).json()
+                self.assertEqual(decision["decision"], "HOLD_CANCEL")
+            finally:
+                resume.set()
+            result = self.completed_voice(voice_path, submitted)
+        detail = self.client.get(order_path).json()
+        self.assertEqual(detail["decision"], "HOLD_CANCEL")
+        self.assertEqual([entry["intent"] for entry in detail["messages"]], ["DENY"])
+        self.assertEqual((result["applied"], result["superseded"], result["needs_review"]),
+                         (False, True, True))
+        with service.connect(service.STATE_PATH) as db:
+            event = db.execute("SELECT order_id FROM audit_events WHERE action='verification_superseded'").fetchone()
+            self.assertEqual(event["order_id"], self.order_id)
+
     def test_voice_preview_requires_an_explicit_apply_action(self):
         result = {"ok": True, "text": "جی نہیں", "warning": None}
         path = f"/orders/{self.order_id}/voice"
         audio = {"file": ("note.ogg", b"audio", "audio/ogg")}
-
-        def completed(response):
-            self.assertEqual(response.status_code, 202)
-            url = f"{path}/{response.json()['job_id']}"
-            deadline = monotonic() + 5
-            while monotonic() < deadline:
-                status = self.client.get(url).json()
-                if status["status"] in {"done", "failed"}:
-                    self.assertEqual(status["status"], "done", status)
-                    return status["result"]
-                sleep(0.01)
-            self.fail("Voice job did not finish")
 
         started, resume = Event(), Event()
 
@@ -80,14 +111,14 @@ class ApiTests(unittest.TestCase):
                 self.assertEqual(service.conversation(self.order_id), [])
             finally:
                 resume.set()
-            self.assertFalse(completed(preview)["applied"])
+            self.assertFalse(self.completed_voice(path, preview)["applied"])
             self.assertEqual(service.conversation(self.order_id), [])
         with patch.object(main, "transcribe_voice_note", return_value=result):
-            applied = completed(self.client.post(path + "?commit_decision=true", files=audio))
+            applied = self.completed_voice(path, self.client.post(path + "?commit_decision=true", files=audio))
             self.assertEqual(applied["decision"], "HOLD_CANCEL")
         result["warning"] = "Low transcription confidence"
         with patch.object(main, "transcribe_voice_note", return_value=result):
-            response = completed(self.client.post(path + "?commit_decision=true", files=audio))
+            response = self.completed_voice(path, self.client.post(path + "?commit_decision=true", files=audio))
             self.assertFalse(response["applied"])
             self.assertEqual(response["intent"], "UNCLEAR")
 
