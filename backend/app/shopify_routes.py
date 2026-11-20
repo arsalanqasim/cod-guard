@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from starlette.concurrency import run_in_threadpool
 
 import service
+from address_quality import classify_address
 from connector_orders import CANCELLED, CLOSED, NON_COD, OPEN, StorefrontSnapshot, connection_state, ingest, source_timestamp
 from operators import Operator, require_operator
 from records import DEMO_TENANT
@@ -108,10 +109,12 @@ def parse_order(shop, payload, topic):
     amounts = [item.get("quantity") for item in items]
     if amounts and all(type(amount) is int and 0 < amount <= 100_000 for amount in amounts):
         flags["items_count"] = sum(amounts)
+    city = _text(shipping.get("city"))[:100]
     return StorefrontSnapshot(str(external_id), OPEN, updated_at, {
         "customer_name": _text(shipping.get("name")) or "Name unavailable",
         "product": ", ".join(filter(None, (_text(item.get("title")) for item in items)))[:200] or "Items unavailable",
-        "city": _text(shipping.get("city"))[:100], "phone": phone, **validate_features(flags),
+        "city": city, "phone": phone, **validate_features(flags),
+        "address_issues": classify_address(address, city) if address.strip() else None,
     })
 
 

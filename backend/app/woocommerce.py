@@ -16,6 +16,7 @@ from urllib.request import HTTPRedirectHandler, Request, build_opener
 from connector_orders import (CANCELLED, CLOSED, NON_COD, OPEN, StorefrontSnapshot,
                               connection_state, ingest, linked_order, record_poll_error, source_timestamp)
 from records import DEMO_TENANT, connect
+from address_quality import classify_address
 from risk_engine import validate_features
 
 
@@ -133,9 +134,11 @@ def parse_order(payload):
         risk["address_words"] = len(address.split())
     if quantities and all(type(value) is int and 0 < value <= 100_000 for value in quantities):
         risk["items_count"] = sum(quantities)
+    city = text(shipping.get("city") or billing.get("city"))[:100]
     return StorefrontSnapshot(str(external_id), OPEN, updated_at, {
         "customer_name": name[:200] or "Name unavailable", "product": titles[:200] or "Items unavailable",
-        "phone": phone, "city": text(shipping.get("city") or billing.get("city"))[:100],
+        "phone": phone, "city": city,
+        "address_issues": classify_address(address, city) if address.strip() else None,
         **validate_features(risk),
     })
 

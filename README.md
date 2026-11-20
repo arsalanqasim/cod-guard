@@ -96,21 +96,21 @@ python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 $env:PYTHONUTF8 = '1'
 .\.venv\Scripts\python.exe scripts/build_demo.py
-.\.venv\Scripts\python.exe -m streamlit run frontend/dashboard.py
+.\.venv\Scripts\python.exe scripts/run_demo.py
 ```
 
 On Linux, use `.venv/bin/python`. `build_demo.py` regenerates the
 synthetic benchmark, trains the baseline model, seeds 80 demo orders
 (reserved outside training/validation/test at baseline), and runs the
-full check suite. The dashboard is a local WhatsApp-style simulator —
-it sends no real messages unless a Meta WhatsApp account is configured
-(see [WhatsApp Cloud](docs/WHATSAPP_CLOUD.md)); unconfigured tenants see
-an openly labelled simulation.
+full check suite. The demo launcher starts a disposable offline session
+with simulated WhatsApp. Close it and rerun the same command to clear
+demo decisions, outcomes and learned model state.
 
 Voice (once, while online): `scripts/prepare_voice.py` caches Whisper
 `small` weights under `data/whisper/`; inference then runs **offline**.
 The bundled sample clip is general Urdu speech from Google FLEURS
-(CC BY 4.0), not a customer recording — see [VOICE_TEST.md](docs/VOICE_TEST.md).
+(CC BY 4.0). See [Urdu voice accuracy](docs/VOICE_ACCURACY.md) for the
+read-speech measurement and its scope.
 
 ## API
 
@@ -139,6 +139,7 @@ active model bundle, and that its evaluation artifacts match.
 | Social / DM | Paste or sheet import, review-before-save | [SOCIAL_INTAKE.md](docs/SOCIAL_INTAKE.md) |
 | WhatsApp | Meta Cloud API, utility template, consent + opt-out, per-message cost accounting | [WHATSAPP_CLOUD.md](docs/WHATSAPP_CLOUD.md) |
 | Couriers | CSV outcomes + read-only TCS adapter; shadow retraining | [COURIERS.md](docs/COURIERS.md) |
+| Dispatch advice | Shadow prepaid offers and courier guidance, plus address clarification drafts | [DISPATCH_ADVICE.md](docs/DISPATCH_ADVICE.md) |
 | Reputation network | Opt-in, hashed, governed, off by default, never affects dispatch | [NETWORK.md](docs/NETWORK.md) |
 
 ## Status & roadmap

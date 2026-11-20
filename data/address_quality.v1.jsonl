@@ -1,0 +1,44 @@
+{"id":"a01","city":"Lahore","address":"House 12, Street 5, Model Town, Lahore","issues":[]}
+{"id":"a02","city":"Karachi","address":"Flat B12, Garden View Apartments, Block 2, Karachi","issues":[]}
+{"id":"a03","city":"Peshawar","address":"Plot 47, Gali 8, Hayatabad, Peshawar","issues":[]}
+{"id":"a04","city":"Quetta","address":"House 104-A, Jinnah Road, Quetta","issues":[]}
+{"id":"a05","city":"Islamabad","address":"Flat 3, Cedar Court, Sector F-8, Islamabad","issues":[]}
+{"id":"a06","city":"Rawalpindi","address":"Ghar 26, Gali 7, Satellite Town, Pindi","issues":[]}
+{"id":"a07","city":"Faisalabad","address":"42 Bluebell Lane, Peoples Colony, Faisalabad","issues":[]}
+{"id":"a08","city":"Multan","address":"Shop 17, Market Street, Gulgasht, Multan","issues":[]}
+{"id":"a09","city":"Lahore","address":"مکان ۱۲، گلی ۳، گلبرگ، لاہور","issues":[]}
+{"id":"a10","city":"Karachi","address":"فلیٹ ۹، بہار بلڈنگ، ناظم آباد، کراچی","issues":[]}
+{"id":"a11","city":"Hyderabad","address":"مکان ۱۹، گلی نمبر ۴، لطیف آباد، حیدر آباد","issues":[]}
+{"id":"a12","city":"Peshawar","address":"گھر ۴، سٹریٹ ۲، یونیورسٹی ٹاؤن، پشاور","issues":[]}
+{"id":"a13","city":"Multan","address":"House 30, Lahore Road, Cantt, Multan","issues":[]}
+{"id":"a14","city":"Sialkot","address":"House No. 36, Green Street, Cantt, Sialkot","issues":[]}
+{"id":"a15","city":"Lahore","address":"House A, Gali A, Synthetic Garden, Lahore","issues":[]}
+{"id":"a16","city":"Islamabad","address":"Near the main gate, Plot 14, Street 7, Islamabad","issues":[]}
+{"id":"a17","city":"Faisalabad","address":"Shop 6, Block B, کوئی مسجد کے قریب، فیصل آباد","issues":[]}
+{"id":"a18","city":"Karachi","address":"House 8, Clifton Karachi","issues":[]}
+{"id":"a19","city":"Lahore","address":"Defence","issues":["too_short","missing_identifier"]}
+{"id":"a20","city":"Lahore","address":"near hospital","issues":["too_short","missing_identifier","landmark_only"]}
+{"id":"a21","city":"Karachi","address":"Near the Sample Mosque in Gulshan, Karachi","issues":["missing_identifier","landmark_only"]}
+{"id":"a22","city":"Multan","address":"Behind the school, Pearl Society, Multan","issues":["missing_identifier","landmark_only"]}
+{"id":"a23","city":"Islamabad","address":"F-8 Markaz, Islamabad","issues":["missing_identifier"]}
+{"id":"a24","city":"Quetta","address":"Market side behind the old hospital, Quetta","issues":["missing_identifier","landmark_only"]}
+{"id":"a25","city":"Rawalpindi","address":"Satellite Town, near school, Rawalpindi","issues":["missing_identifier","landmark_only"]}
+{"id":"a26","city":"Faisalabad","address":"Near Sample electronics store in Madina Town, Faisalabad","issues":["missing_identifier","landmark_only"]}
+{"id":"a27","city":"Karachi","address":"کورنگی سیکٹر پانچ کراچی","issues":["missing_identifier"]}
+{"id":"a28","city":"Lahore","address":"لاہور","issues":["too_short","missing_identifier"]}
+{"id":"a29","city":"Peshawar","address":"مسجد کے سامنے یونیورسٹی روڈ پشاور","issues":["missing_identifier","landmark_only"]}
+{"id":"a30","city":"Quetta","address":"ہسپتال کے قریب، کویٹہ","issues":["missing_identifier","landmark_only","city_misspelling"]}
+{"id":"a31","city":"Karachi","address":"House 77, Street 11, Winter Colony, Lahore","issues":["city_mismatch"]}
+{"id":"a32","city":"Sialkot","address":"Flat 5, Sample Apartments, Multan","issues":["city_mismatch"]}
+{"id":"a33","city":"Faisalabad","address":"مکان ۲۳، گلی ۸، نمونہ کالونی، سرگودھا","issues":["city_mismatch"]}
+{"id":"a34","city":"Gujranwala","address":"Shop 23, Market Street, Sialkot","issues":["city_mismatch"]}
+{"id":"a35","city":"Islamabad","address":"Flat 14, Cedar Court, Rawalpindi","issues":["city_mismatch"]}
+{"id":"a36","city":"Lahore","address":"Street 22, Model Town, Lahroe","issues":["city_misspelling"]}
+{"id":"a37","city":"Karachi","address":"House 12, Street 4, Water Lane, Karach","issues":["city_misspelling"]}
+{"id":"a38","city":"Peshawar","address":"Plot 8, Lilac Lane, Peshwar","issues":["city_misspelling"]}
+{"id":"a39","city":"Faisalabad","address":"Flat 9, Street 4, Faislbad","issues":["city_misspelling"]}
+{"id":"a40","city":"Multan","address":"House 13, Street 4, Mulan","issues":["city_misspelling"]}
+{"id":"a41","city":"Sialkot","address":"Building 12, Sample Colony, Sialkot","issues":[]}
+{"id":"a42","city":"Multan","address":"House 7","issues":["too_short"]}
+{"id":"a43","city":"Islamabad","address":"","issues":["too_short","missing_identifier"]}
+{"id":"a44","city":"Lahore","address":"Gulberg, Karachi","issues":["too_short","missing_identifier","city_mismatch"]}

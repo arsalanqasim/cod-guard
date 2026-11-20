@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, File, Header, HTTPException, UploadFile
 from pydantic import BaseModel, ConfigDict, Field, StrictBool
 
 import service
+from address_quality import classify_address
 from connector_orders import ingest
 from operators import Operator, write_operator
 from order_intake import IdempotencyConflict, MAX_CSV_BYTES, import_orders
@@ -83,7 +84,8 @@ def confirm(body: ConfirmedOrder, operator: Operator = Depends(write_operator)):
         raise HTTPException(422, "Enter a valid Pakistan mobile number")
     features = validate_features({"address_words": len(body.address.split()), "amount_pkr": float(body.amount_pkr)})
     source = f"DM_{body.channel.upper()}"
-    order = {"customer_name": body.name, "phone": phone, "city": body.city, "product": body.items, **features}
+    order = {"customer_name": body.name, "phone": phone, "city": body.city, "product": body.items,
+             "address_issues": classify_address(body.address, body.city), **features}
     queued = ingest(service.STATE_PATH, (operator.tenant_id, source, "seller-confirmed"),
                     [(body.confirmation_id, order)], operator.actor)
     return {"queued": queued}

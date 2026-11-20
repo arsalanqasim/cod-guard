@@ -4,7 +4,7 @@ import hashlib
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
-from records import audit, connect, insert_order, now, write
+from records import audit, connect, insert_order, now, store_address_finding, write
 
 
 OPEN = "open"
@@ -97,6 +97,8 @@ def _reconcile(db, identity, order_id, previous, snapshot, actor):
         if committed and (status_changed or not conflict):
             audit(db, tenant_id, actor, "storefront_dispatch_conflict", order_id=order_id, reference=reference)
         conflict = conflict or committed
+    if snapshot.details is not None and "address_issues" in snapshot.details and not conflict:
+        store_address_finding(db, tenant_id, order_id, snapshot.details["address_issues"])
     _record_status(db, identity, snapshot, previous_time=previous["updated_at"] if previous else None,
                    conflict=conflict)
 

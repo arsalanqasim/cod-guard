@@ -1,0 +1,129 @@
+{
+  "version": 1,
+  "manifest_sha256": "4e11458a613731931dffcced95fd7c9f76ea7e4c22476abc7f1dd110efd2b744",
+  "model": "small",
+  "wer": 0.31381733021077285,
+  "intent_accuracy": 1,
+  "rows": [
+    {
+      "id": 2009,
+      "transcript": "پوضو کے سب سے اسانی سے ملنے والے وسائل کی پتیوں اور دانوں میں پڑوٹین ہوتے ہیں لیکن یہ ہم جیسی مقلوق کے لیے حضم کرنا مشکل ہے جب تک کہ وہ پکنا جائے",
+      "predicted_intent": "UNCLEAR",
+      "reference_words": 35,
+      "word_edits": 9,
+      "seconds": 13.529,
+      "ok": true,
+      "warning": null
+    },
+    {
+      "id": 1847,
+      "transcript": "اس کا اس تقبال سنگاپل کے نائف وزیریازن وونگ کونٹ سینگ کی جانی پسے کیا گیا اور سنگاپل کے وزیریازن لیس اور لونگ کے ساتھ تجارت اور دیشت گردی کی حمل پر بات چیت ہوئی",
+      "predicted_intent": "UNCLEAR",
+      "reference_words": 36,
+      "word_edits": 17,
+      "seconds": 9.658,
+      "ok": true,
+      "warning": null
+    },
+    {
+      "id": 1932,
+      "transcript": "دیسپلی میں پانچ منٹ دیکھنے کے بعد ہوا اندر داکھیل ہونے لگی ایک منٹ پات ہوا سبتر کلومیٹر کھنٹا گی رفتار سے ہوا پہنچنے لگی اس کے بعد بای شروع ہو گئی لیکن یہ بنتِ اتنی تیز بڑی تھی کہ یہ آپ کی جلد میں سوئی کی طرح چھوپ رہی تھی اس کے بعد اولے آسمان سے گرنے لگے جس سے لوگ خوف صدا ہو گئے اور چیکنے چلنے لگے اور ایک دوسرے کی طرف تورنے لگے",
+      "predicted_intent": "UNCLEAR",
+      "reference_words": 76,
+      "word_edits": 19,
+      "seconds": 19.045,
+      "ok": true,
+      "warning": null
+    },
+    {
+      "id": 1711,
+      "transcript": "یہ نظریات اس سے بحث کرتے ہیں کہ وہ کیا امامل ہے جو باز اشخاص کو ان باتوں کے کرنے پر امادہ کرتے ہیں جن کو وہ کرتے ہیں اور ان کے محال کی وہ کیا اشیا ہے جو ان کو باز اشیا کی کرنے یا نہ کرنے پر امادہ کرتے ہیں",
+      "predicted_intent": "UNCLEAR",
+      "reference_words": 52,
+      "word_edits": 12,
+      "seconds": 10.128,
+      "ok": true,
+      "warning": null
+    },
+    {
+      "id": 1769,
+      "transcript": "مصریوں کے ذریعے تیسری سدی قبل مصیح میں بنایا گیا عظیم احرام کئی ایک واضی احرام کے امرتوں میں سے ایک ہے جو مدھا فیرون کے احترام میں تعمیر کی گئی",
+      "predicted_intent": "UNCLEAR",
+      "reference_words": 31,
+      "word_edits": 10,
+      "seconds": 9.202,
+      "ok": true,
+      "warning": null
+    },
+    {
+      "id": 1768,
+      "transcript": "اس کمپیکس کے کناروں پر اکثرت امراد کی دبارہ تعمیر ہوئی تاکہ ٹرورٹس کو سہی پتہ چل سکے کہ بوسلن کیا سی تھی",
+      "predicted_intent": "UNCLEAR",
+      "reference_words": 24,
+      "word_edits": 10,
+      "seconds": 7.977,
+      "ok": true,
+      "warning": null
+    },
+    {
+      "id": 1829,
+      "transcript": "دوسرے ممالی کے مسافروں کو بھاری ٹیکس دنے کا پابن کر کے باز حقات مقطار میں رکم بچائی جا سکتی ہے خاص طور پر تمباخ ہو شراب جیسی مشروبات پر",
+      "predicted_intent": "UNCLEAR",
+      "reference_words": 31,
+      "word_edits": 10,
+      "seconds": 8.752,
+      "ok": true,
+      "warning": null
+    },
+    {
+      "id": 1869,
+      "transcript": "اس کے لام بے جھبڑوں میں ستر سے زیادہ اثر سے تیستان چھوڑے تھے اور اس کے ساتھ اس کے مو کے تالوے میں داتوں کی ایک مزید لڑی تھی اس کے معاہ نے یہ ہے کہ اس کے راستے میں آنے والا کوئی شے اس سے بھاگ نہیں سکتی",
+      "predicted_intent": "UNCLEAR",
+      "reference_words": 49,
+      "word_edits": 17,
+      "seconds": 10.613,
+      "ok": true,
+      "warning": null
+    },
+    {
+      "id": 1817,
+      "transcript": "تو ہم شینجن کا علاقہ اس سلسلے میں کسی ہتک ایک ملک کیتانا کام کرتا ہے",
+      "predicted_intent": "UNCLEAR",
+      "reference_words": 17,
+      "word_edits": 6,
+      "seconds": 6.493,
+      "ok": true,
+      "warning": null
+    },
+    {
+      "id": 1721,
+      "transcript": "سن 1963 میں دیم کی تامیر کے بعد موسمی سلاب جو دریہ بھر میں تلچھر پہلاتی تھے کو روک دیا گیا تھا",
+      "predicted_intent": "UNCLEAR",
+      "reference_words": 22,
+      "word_edits": 8,
+      "seconds": 7.048,
+      "ok": true,
+      "warning": null
+    },
+    {
+      "id": 1705,
+      "transcript": "پندرہ اگرست انیس سو چالیس کو اتحادی افواہج نے جنوبی فرانس پر حملہ کر دیا اس حملے کو اپریشون ٹریکن کا نام دیا گیا",
+      "predicted_intent": "UNCLEAR",
+      "reference_words": 21,
+      "word_edits": 8,
+      "seconds": 9.434,
+      "ok": true,
+      "warning": null
+    },
+    {
+      "id": 1954,
+      "transcript": "ان کے منظم دفعہ بال ہینڈلن کی محارت اور امدہ ٹیم ورک نے انے پامردی سے کھڑے ہونے کا حاصلہ دیا اور یہ بات واضح ہو گئی کہ یہی ٹیم شکست دینے والی ہے",
+      "predicted_intent": "UNCLEAR",
+      "reference_words": 33,
+      "word_edits": 8,
+      "seconds": 10.777,
+      "ok": true,
+      "warning": null
+    }
+  ]
+}

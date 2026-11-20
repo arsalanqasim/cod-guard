@@ -23,15 +23,15 @@ def _fasttext_text(text):
     return cleaned.replace("__label__", "label") or "<empty>"
 
 
-def train_fasttext(rows, destination):
+def train_fasttext(rows, destination, *, lr=0.3, epoch=45, word_ngrams=2, minn=2, maxn=4):
     import fasttext
 
     with TemporaryDirectory(dir=destination.parent) as temp:
         training = Path(temp) / "train.txt"
         training.write_text("".join(f"__label__{row['label']} {_fasttext_text(row['text'])}\n"
                                     for row in rows), encoding="utf-8")
-        model = fasttext.train_supervised(str(training), lr=0.3, epoch=45, dim=48,
-                                         wordNgrams=2, minn=2, maxn=4, bucket=16000,
+        model = fasttext.train_supervised(str(training), lr=lr, epoch=epoch, dim=48,
+                                         wordNgrams=word_ngrams, minn=minn, maxn=maxn, bucket=16000,
                                          thread=1, verbose=0)
         model.save_model(str(destination))
 

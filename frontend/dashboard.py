@@ -146,6 +146,12 @@ with tab_orders:
                      "ML estimate": risk["ml_probability"], "Zone": risk["zone"],
                      "Decision": risk["decision"], "Follow-up": "Clarify reply" if risk["needs_review"] else "",
                      "Outcome": risk["outcome"] or "Unmarked"})
+        if "prepaid_offer" in risk:
+            rows[-1]["Prepaid offer · shadow"] = (risk["prepaid_offer"] or {}).get("text", "")
+        if "courier_recommendation" in risk:
+            rows[-1]["Courier · shadow"] = (risk["courier_recommendation"] or {}).get("courier", "")
+        if "address_quality" in risk:
+            rows[-1]["Address check"] = ", ".join(risk["address_quality"]["reasons"])
     if rows:
         frame = pd.DataFrame(rows)
         colors = {"GREEN": "background-color:#E5F4EB;color:#17613B", "AMBER": "background-color:#FFF2D5;color:#805500", "RED": "background-color:#FDE7E7;color:#963431"}
@@ -167,6 +173,11 @@ with tab_orders:
         for reason in detail["reasons"] or ["No adverse signals detected"]:
             st.write("• " + reason)
         st.caption("A rule score is not a probability. Model estimates come from synthetic training data.")
+        if recommendation := detail.get("courier_recommendation"):
+            st.write(f"Courier suggestion · {recommendation['courier'].title()}")
+            for evidence in recommendation["evidence"]:
+                st.caption(f"{evidence['courier'].title()} · {evidence['return_rate']:.1%} smoothed return rate "
+                           f"· {evidence['returned']} actual returns / {evidence['n']} outcomes")
 
 with tab_verification:
     st.subheader("Customer verification")
@@ -176,6 +187,18 @@ with tab_verification:
     st.caption("A clear confirmation ships even a flagged order. A denial stops even a GREEN order. Unclear replies never erase an earlier explicit answer.")
     with st.chat_message("assistant"):
         st.write(service.opening_message(order))
+        assessment = assessments[oid]
+        if offer := assessment.get("prepaid_offer"):
+            st.caption(f"Prepaid offer · shadow draft · {offer['text']}")
+        address = assessment.get("address_quality") or {}
+        if address.get("status") == "flagged":
+            st.caption("Address check · " + ", ".join(address["reasons"]))
+            if address.get("clarification"):
+                st.write("Address clarification draft · " + address["clarification"])
+            elif assessment["queue_status"] == "open" and st.button("Prepare address clarification",
+                                                                    key=f"address_clarify_{oid}"):
+                service.prepare_verification(oid)
+                st.rerun()
     messages = service.conversation(oid)
     for message in messages:
         with st.chat_message("user"):
