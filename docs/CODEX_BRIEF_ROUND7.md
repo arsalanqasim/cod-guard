@@ -33,6 +33,13 @@ Jev) against ≈ Rs 4 for the WhatsApp message itself — API cost is not
 the constraint. Language coverage is: none of the published benchmarks
 test Roman Urdu or Urdu script. Our corpus decides.
 
+**Cost order of preference (owner's instruction): free and local first.**
+A local model has zero marginal cost, works offline (the exhibition
+demo and sellers on bad connections), and sends no buyer text to any
+provider. An API model is adopted only if every local contender fails
+the WS-2 gate and the API contender passes it — and even then the
+cheapest passing API wins, not the highest leaderboard score.
+
 ## WS-1 — Evaluation spike FIRST (gates everything else)
 
 Build the reply-understanding benchmark before integrating anything:
@@ -42,9 +49,18 @@ Build the reply-understanding benchmark before integrating anything:
   set), plus generated variations, in English, Roman Urdu and Urdu
   script, labelled CONFIRM / DENY / UNCLEAR / MODIFICATION. Freeze it
   as a versioned file with a hash, in the spirit of the test-split lock.
-- Contenders: Jev 1.14, d1.2-ultra, Celeris-1.1 (API, if keys are
-  obtainable), the current rules parser (baseline), and a locally
-  trained fastText classifier (offline baseline).
+- Contenders, in the cost order above:
+  1. **Local, free:** a trained fastText classifier; a fine-tuned
+     multilingual MiniLM (ONNX, CPU) trained on the corpus's training
+     portion; a zero-shot multilingual classifier (e.g. mDeBERTa-v3
+     zero-shot) with no training; a small local model via Ollama
+     (Llama 3.2 1B/3B or Qwen 2.5 small class) constrained to the
+     choice set, if it runs acceptably on CPU.
+  2. **Very-low-rate API:** Celeris-1.1 ($14 / 1M tasks).
+  3. **Premium API (only if the above fail the gate):** Jev 1.14,
+     d1.2-ultra — keys only if obtainable without payment commitments.
+  4. The current rules parser, as the standing baseline every contender
+     must beat.
 - Metrics per contender, overall and per language: accuracy, Brier
   score / calibration, and **abstention quality** — at the operating
   threshold, how often a committed decision is wrong (the only number
