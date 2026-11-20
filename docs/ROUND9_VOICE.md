@@ -7,12 +7,18 @@ and requires separate permission for commercial use. Its published
 accuracy figures are outside this evaluation.
 [Model card and access request](https://huggingface.co/Loudness-ai/urdu-sukhan-asr-v1)
 
-## Measured stock baseline
+## Measured comparison
 
-| Set | Whisper small word error | End-to-end intent |
-| --- | ---: | ---: |
-| [PK-REAL] FLEURS Urdu read speech | 134/427 (31.38%) | 12/12 expected abstentions |
-| [PK-SYNTH] Short Urdu replies | 17/19 (89.47%) | 5/12 correct |
+| Set | Stock small WER | Stock intent | Public Urdu Tiny WER | Public Urdu Tiny intent |
+| --- | ---: | ---: | ---: | ---: |
+| [PK-REAL] FLEURS Urdu read speech | 134/427 (31.38%) | 12/12 expected abstentions | 204/427 (47.78%) | 12/12 expected abstentions |
+| [PK-SYNTH] Short Urdu replies | 17/19 (89.47%) | 5/12 correct | 19/19 (100.00%) | 5/12 correct |
+
+The public, Apache-2.0 Urdu Tiny checkpoint is a secondary comparator.
+It was pinned at revision `ad901b65fb2a711bc0ed4c7a3409a15eeab86cc8`
+and converted to CTranslate2 INT8. Stock small had lower WER and tied
+intent accuracy on both sets. The Urdu Sukhan comparison remains
+unmeasured. [Public Urdu Tiny checkpoint](https://huggingface.co/sharjeel103/whisper-tiny-urdu)
 
 [PK-REAL] The FLEURS row uses the exact frozen Round 8 stock run.
 All reference labels are UNCLEAR. [Round 8 evidence and clip hashes](VOICE_ACCURACY.md)
@@ -20,7 +26,7 @@ All reference labels are UNCLEAR. [Round 8 evidence and clip hashes](VOICE_ACCUR
 [PK-SYNTH] The short set has 12 one- or two-word Urdu prompts with
 four confirmations, three denials and five unclear replies. Audio was
 generated locally using the single-speaker MMS VITS checkpoint.
-The stock pipeline routed every clip to UNCLEAR, including all seven
+Both pipelines routed every clip to UNCLEAR, including all seven
 confirmations or denials. The short set measures a synthetic accent and
 recording condition. Buyer audio and commercial model fitness remain
 unmeasured. [Versioned prompts](../data/urdu_short_replies.v1.json) ·

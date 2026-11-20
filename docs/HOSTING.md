@@ -1,6 +1,6 @@
 # Single-host deployment
 
-From a clean checkout with Python 3.13, run:
+Use Python 3.13 to bootstrap a clean checkout with this command.
 
 ```text
 python scripts/run_host.py --bootstrap
@@ -44,10 +44,21 @@ anonymous access rejection, checks dashboard health, then stops both.
 This is a single-host native package. Merchant throughput, uptime and
 monthly hosting cost remain unmeasured on a paid host.
 
+## Local verification
+
+A clean Windows clone passed `run_host.py --bootstrap --smoke` with a
+fresh virtual environment. The API returned
+200 on `/ready`, rejected anonymous `/orders` with 401, and the
+dashboard health endpoint returned 200. The full local suite passed
+114 unittest cases and eight legacy standalone checks. The checkout
+passed a tracked-file scan for common private key and token patterns.
+A rejected webhook challenge kept its synthetic verify token out of
+the captured API logs.
+
 ## Seller-scoped risk shadow
 
-Train with an authorized seller’s own settled COD orders. Supply private
-UTF-8 CSV with one row per order and these exact columns:
+Train with an authorized seller’s own settled COD orders. Use this
+header in a private UTF-8 CSV with one row per order.
 
 ```text
 order_id,customer_id,order_day,amount_pkr,items_count,label_failed
