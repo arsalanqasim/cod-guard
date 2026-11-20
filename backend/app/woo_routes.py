@@ -52,7 +52,7 @@ async def webhook(account: str, request: Request):
     try:
         parsed = woo.parse_order(json.loads(body))
         count = await run_in_threadpool(ingest, service.STATE_PATH, store.identity,
-                                        [parsed] if parsed else [], "woocommerce-webhook", webhook=True)
+                                        [parsed], "woocommerce-webhook", webhook=True)
     except (ValueError, RecursionError):
         raise HTTPException(status_code=422, detail="Invalid WooCommerce order payload") from None
     return {"imported": count}

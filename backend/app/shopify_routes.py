@@ -1,4 +1,4 @@
-"""Signed, merchant-specific Shopify order creation intake."""
+"""Signed, merchant-specific Shopify order intake and reconciliation."""
 
 import base64
 import hmac
@@ -12,13 +12,14 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from starlette.concurrency import run_in_threadpool
 
 import service
-from connector_orders import connection_state, ingest
+from connector_orders import CANCELLED, CLOSED, NON_COD, OPEN, StorefrontSnapshot, connection_state, ingest, source_timestamp
 from operators import Operator, require_operator
 from records import DEMO_TENANT
 from risk_engine import validate_features
 
 
 router = APIRouter(prefix="/integrations/shopify")
+ORDER_TOPICS = {"orders/create", "orders/updated", "orders/cancelled", "orders/paid"}
 
 
 @dataclass(frozen=True)
@@ -65,19 +66,32 @@ def _text(value):
     return value.strip()[:200] if isinstance(value, str) else ""
 
 
-def parse_order(shop, payload):
+def parse_order(shop, payload, topic):
     if not isinstance(payload, dict):
         raise ValueError("Expected Shopify order payload")
-    gateways = payload.get("payment_gateway_names")
-    if (not isinstance(gateways, list) or len(gateways) != 1
-            or _text(gateways[0]).casefold() != shop.cod_gateway.strip().casefold()
-            or payload.get("currency") != "PKR" or payload.get("financial_status") != "pending"
-            or payload.get("fulfillment_status") is not None or payload.get("cancelled_at") is not None
-            or payload.get("test") is not False):
+    if payload.get("test") is True:
         return None
     external_id = payload.get("id")
     if type(external_id) is not int or not 0 < external_id < 2**64:
         raise ValueError("Invalid Shopify order ID")
+    updated_at = source_timestamp(payload.get("updated_at") or payload.get("cancelled_at"))
+    if payload.get("cancelled_at") is not None:
+        return StorefrontSnapshot(str(external_id), CANCELLED, updated_at)
+    if topic == "orders/cancelled":
+        raise ValueError("Missing signed Shopify cancellation status")
+    if topic == "orders/paid":
+        if payload.get("financial_status") != "paid":
+            raise ValueError("Missing signed Shopify payment status")
+        return StorefrontSnapshot(str(external_id), NON_COD, updated_at)
+    gateways = payload.get("payment_gateway_names")
+    if (not isinstance(gateways, list) or not isinstance(payload.get("currency"), str)
+            or not isinstance(payload.get("financial_status"), str) or payload.get("test") is not False):
+        raise ValueError("Missing Shopify lifecycle fields")
+    if (len(gateways) != 1 or _text(gateways[0]).casefold() != shop.cod_gateway.strip().casefold()
+            or payload["currency"] != "PKR" or payload["financial_status"] != "pending"):
+        return StorefrontSnapshot(str(external_id), NON_COD, updated_at)
+    if payload.get("fulfillment_status") is not None or payload.get("closed_at") is not None:
+        return StorefrontSnapshot(str(external_id), CLOSED, updated_at)
     shipping = (payload.get("shipping_address") or {}) if shop.allow_protected_fields else {}
     items = payload.get("line_items") or []
     if not isinstance(shipping, dict) or not isinstance(items, list) or any(not isinstance(item, dict) for item in items):
@@ -94,10 +108,11 @@ def parse_order(shop, payload):
     amounts = [item.get("quantity") for item in items]
     if amounts and all(type(amount) is int and 0 < amount <= 100_000 for amount in amounts):
         flags["items_count"] = sum(amounts)
-    return str(external_id), {"customer_name": _text(shipping.get("name")) or "Name unavailable",
-                              "product": ", ".join(filter(None, (_text(item.get("title")) for item in items)))[:200]
-                              or "Items unavailable", "city": _text(shipping.get("city"))[:100],
-                              "phone": phone, **validate_features(flags)}
+    return StorefrontSnapshot(str(external_id), OPEN, updated_at, {
+        "customer_name": _text(shipping.get("name")) or "Name unavailable",
+        "product": ", ".join(filter(None, (_text(item.get("title")) for item in items)))[:200] or "Items unavailable",
+        "city": _text(shipping.get("city"))[:100], "phone": phone, **validate_features(flags),
+    })
 
 
 @router.get("/status")
@@ -115,10 +130,11 @@ async def webhook(domain: str, request: Request):
     if (not shop or request.headers.get("X-Shopify-Shop-Domain") != domain or not signature.isascii()
             or not hmac.compare_digest(base64.b64encode(hmac.digest(shop.secret.encode(), body, "sha256")).decode(), signature)):
         raise HTTPException(401, "Invalid Shopify webhook authentication")
-    if request.headers.get("X-Shopify-Topic") != "orders/create":
+    topic = request.headers.get("X-Shopify-Topic")
+    if topic not in ORDER_TOPICS:
         raise HTTPException(422, "Unsupported Shopify webhook topic")
     try:
-        order = parse_order(shop, json.loads(body))
+        order = parse_order(shop, json.loads(body), topic)
         inserted = await run_in_threadpool(ingest, service.STATE_PATH, shop.identity,
                                            [order] if order else [], "shopify-webhook", webhook=True)
     except (ValueError, TypeError, RecursionError):

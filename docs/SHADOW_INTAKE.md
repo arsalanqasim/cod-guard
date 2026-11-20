@@ -48,3 +48,26 @@ change it. Raw audio is transient. Apply the same retention policy separately
 to SQLite snapshots and the legacy JSON archive. Use a restricted backup
 directory and test restoration with `python scripts/backup_state.py SOURCE
 DESTINATION` before migration. Shadow recommendations are for human review.
+
+## Storefront queue status
+
+The order list and detail include `queue_status` and `storefront_conflict`.
+Use only `open` entries without a storefront conflict for routine COD review.
+`closed_cancelled` means cancellation at source. `out_of_cod_scope` means
+payment or a change outside eligible COD. `closed_at_source` covers other
+closed or ineligible fulfillment states. Inactive entries remain visible
+for history.
+
+When source status or supported intake fields change after an explicit
+decision or a marked outcome, the source status still updates. The earlier
+decision, order details and outcome remain as saved, and the queue shows
+`storefront_conflict=true` and `needs_review=true`. The audit trail logs a
+`storefront_dispatch_conflict` for operator reconciliation. Resolve against
+the authoritative storefront before acting. Earlier decision values describe
+recorded history even after the queue closes.
+
+Provider modification timestamps order updates and retries. An equal or
+missing timestamp cannot reopen a closed entry. A timestamped closure
+arriving before intake prevents an older create from queueing the order.
+Existing linked orders get lifecycle state on their next accepted source
+observation.
