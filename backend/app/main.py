@@ -99,8 +99,9 @@ def order_detail(order_id: str, operator: Operator = Depends(require_operator)):
     order = _order(order_id, operator)
     service.record_access(operator.tenant_id, operator.actor, "phone_read", order_id=order_id)
     # Evaluation ground-truth labels are deliberately not returned to the seller.
+    assessment = service.assess_order(order, tenant_id=operator.tenant_id)
     return {**{key: value for key, value in order.items() if key != "label_failed"},
-            **service.assess_order(order, tenant_id=operator.tenant_id),
+            **assessment, **service.order_advice(order, assessment, operator.tenant_id),
             "messages": service.conversation(order_id, operator.tenant_id)}
 
 
@@ -120,6 +121,31 @@ def verify(order_id: str, reply: Reply, operator: Operator = Depends(write_opera
     order = _order(order_id, operator)
     return {"order_id": order_id, **service.verify_reply(order, reply.text, actor=operator.actor,
                                                          tenant_id=operator.tenant_id)}
+
+
+@app.post("/orders/{order_id}/verification/preview")
+def prepare_verification(order_id: str, operator: Operator = Depends(write_operator)):
+    try:
+        preview = service.prepare_verification(order_id, actor=operator.actor, tenant_id=operator.tenant_id)
+    except KeyError:
+        raise HTTPException(404, "Order not found") from None
+    if preview is None:
+        raise HTTPException(409, "Shadow verification preview is disabled")
+    return preview
+
+
+class PrepaidOfferOutcome(BaseModel):
+    stage: Literal["sent", "accepted", "paid"]
+
+
+@app.post("/orders/{order_id}/prepaid/outcome")
+def prepaid_outcome(order_id: str, body: PrepaidOfferOutcome, operator: Operator = Depends(write_operator)):
+    try:
+        return service.record_prepaid_offer(order_id, body.stage, actor=operator.actor, tenant_id=operator.tenant_id)
+    except KeyError:
+        raise HTTPException(404, "Order not found") from None
+    except ValueError as exc:
+        raise HTTPException(409, str(exc)) from None
 
 
 class ReplyCorrection(BaseModel):

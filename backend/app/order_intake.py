@@ -5,6 +5,7 @@ import io
 import json
 import re
 
+from address_quality import classify_address
 from records import audit, insert_order, write
 from risk_engine import validate_features
 
@@ -27,7 +28,7 @@ def _parse(contents):
         source = io.StringIO(contents.decode("utf-8-sig"), newline="")
         reader = csv.DictReader(source, strict=True)
         fields = reader.fieldnames or []
-        if len(set(fields)) != len(fields) or REQUIRED - set(fields) or set(fields) - (REQUIRED | FEATURES | {"city"}):
+        if len(set(fields)) != len(fields) or REQUIRED - set(fields) or set(fields) - (REQUIRED | FEATURES | {"city", "address"}):
             raise ValueError("CSV header must contain order_id, customer_name, product and phone, with optional risk features")
         rows, errors = [], []
         for index, row in enumerate(reader, start=2):
@@ -46,9 +47,12 @@ def _parse(contents):
                 city = row.get("city", "")
                 if len(city) > 100:
                     raise ValueError("City must be at most 100 characters")
+                if len(row.get("address", "")) > 500:
+                    raise ValueError("Address must be at most 500 characters")
                 values = validate_features({key: row[key] for key in FEATURES if row.get(key)})
                 rows.append((index, {**{key: row[key] for key in REQUIRED}, **values,
-                                     "city": city, "data_source": "SHADOW"}))
+                                     "city": city, "data_source": "SHADOW",
+                                     "address_issues": classify_address(row.get("address"), city)}))
             except ValueError as exc:
                 errors.append({"row": index, "error": str(exc)})
         return rows, errors

@@ -6,7 +6,7 @@ from tempfile import TemporaryDirectory
 from round7_models import LABELS
 
 
-def train_minilm(rows, checkpoint, output):
+def train_minilm(rows, checkpoint, output, *, epochs=6):
     import torch
     from onnxruntime.quantization import QuantType, quantize_dynamic
     from torch import nn
@@ -37,7 +37,7 @@ def train_minilm(rows, checkpoint, output):
         {"params": model.head.parameters(), "lr": 2e-3},
     ])
     model.train()
-    for _ in range(6):
+    for _ in range(epochs):
         for indices in torch.randperm(len(rows)).split(16):
             batch = [rows[int(index)] for index in indices]
             inputs = tokenizer([row["text"] for row in batch], padding=True, truncation=True,

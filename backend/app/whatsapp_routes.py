@@ -69,7 +69,14 @@ def send(order_id: str, operator: Operator = Depends(write_operator)):
     if order["data_source"].casefold() == "daraz":
         raise HTTPException(status_code=409, detail="Daraz is score-and-queue only")
     try:
-        return cloud.send_verification(_account(operator.tenant_id), order, operator.actor)
+        account = _account(operator.tenant_id)
+        preview = service.prepare_verification(order_id, actor=operator.actor, tenant_id=operator.tenant_id)
+        result = cloud.send_verification(account, order, operator.actor)
+        if preview is not None:
+            result["shadow"] = preview
+            if account is None:
+                result["preview"] = preview["preview"]
+        return result
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from None
     except cloud.CloudError as exc:

@@ -110,3 +110,91 @@ python scripts/evaluate_reply_models.py --work-dir .venv/round7/run --minilm-che
 ```
 
 The script writes per-split and per-language metrics, threshold decisions, wrong commit IDs and DM failure examples to `metrics.json` in the work directory. FastText uses word and character n-grams. MiniLM trains the final encoder block and a linear head for six epochs, then exports and evaluates dynamic INT8 ONNX. LaMini-Flan-T5 gets one extractive prompt per field with greedy decoding. The model downloads contain public weights and tokenizers. Scoring uses local inference. [MiniLM source checkpoint](https://huggingface.co/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2) · [Zero-shot ONNX checkpoint](https://huggingface.co/onnx-community/multilingual-MiniLMv2-L6-mnli-xnli-ONNX)
+
+## Round 8 addendum · Reply-model rematch
+
+**The rules retain verification authority.** Both ensemble policies failed
+the frozen gate. These are offline experiments. The policies’ proposed
+commits include the errors introduced when a model expands beyond the
+rules.
+
+### What was frozen before scoring
+
+The reply manifest and its original 198 train, 72 validation, 144 novel
+test and 79 known regression rows stayed fixed. Round 7 had already
+reported the held-out results on these corpora. The Round 8 run used the
+train and validation rows for fitting and selection, wrote the configuration
+and artifact hashes to a plan, then scored both finalists in one holdout
+pass. The plan’s SHA-256 was
+`c499fdaf3ae5822084aa59908344073dfcdafd8587cdcfab56ecc6aac9ddaf1c`.
+
+- FastText swept 12 combinations of word and character n-grams, learning
+  rate (0.15 or 0.35), and epochs (30 or 80). Four word-only fits
+  produced NaN. Selection among the eight completed runs maximized the
+  number of safe validation commits, then top-1 validation accuracy.
+  The selected fit used word bigrams, character 2–4-grams, 0.35 learning
+  rate and 80 epochs.
+- MiniLM fine-tuned the last encoder block for 14 epochs and ran the INT8
+  export. Both models were temperature-scaled on validation.
+- Per-language cutoffs allow a model commit when rules agree and the
+  agreement cutoff is met, or when rules abstain and the strictly higher
+  expansion cutoff is met. A conflict abstains. Cutoffs maximize the
+  number of error-free validation commitments with ties favoring higher
+  cutoffs. 1.01 disables expansion.
+
+| Policy | English agreement / expansion | Roman Urdu | Urdu script | Validation wrong / committed |
+| --- | --- | --- | --- | ---: |
+| fastText | 0.90 / 1.01 | 0.70 / 0.80 | 0.70 / 0.80 | 0/3 |
+| MiniLM | 0.70 / 0.80 | 0.90 / 0.95 | 0.70 / 0.80 | 0/14 |
+
+### Final policy results
+
+| Policy | All commits | All wrong / committed | Novel commits | Novel wrong / committed | DENY → SHIP wrong / committed | CONFIRM → HOLD wrong / committed | Review-only commits | Raw ECE |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Rules | 26/223 | 0/26 (0.0%) | 0/144 | — | 0/16 | 0/10 | 0 | — |
+| fastText policy | 28/223 | 7/28 (25.0%) | 19/144 | 7/19 (36.8%) | 0/18 | 4/7 | 3 | 0.129 |
+| MiniLM policy | 63/223 | 30/63 (47.6%) | 27/144 | 8/27 (29.6%) | 0/24 | 4/13 | 26 | 0.177 |
+
+| Novel-test wrong / committed | English | Roman Urdu | Urdu script |
+| --- | ---: | ---: | ---: |
+| fastText policy | — | 4/9 (44.4%) | 3/10 (30.0%) |
+| MiniLM policy | 6/18 (33.3%) | 1/1 (100.0%) | 1/8 (12.5%) |
+
+FastText expanded to 19 novel replies and got seven wrong. MiniLM
+expanded to 27 novel replies and got eight wrong. Each caused four false
+holds in the confirmation family. The MiniLM policy also committed on
+26 review-only cases across the novel and regression sets. No model
+authorized dispatch in the application. Warm CPU p95 was
+0.08 ms for fastText and 16.93 ms for MiniLM. Artifacts were
+3.17 MB and 127.16 MB. Both fit the serving budgets and exceeded the
+0.10 calibration ceiling. Wrong holdout IDs are emitted in
+`test-results.json` by the evaluator.
+
+Use the Round 7 dependencies and checkpoint. Run `tune` with
+`--checkpoint`, then run `test` in the same work directory. The test
+command refuses to overwrite an existing run.
+
+```text
+python scripts/rematch_reply_models.py tune --work-dir PATH_TO_RUN --checkpoint PATH_TO_ORIGINAL_MINILM
+python scripts/rematch_reply_models.py test --work-dir PATH_TO_RUN
+```
+
+## Round 8 addendum · Synthetic address quality
+
+The [44-address synthetic set](../data/address_quality.v1.jsonl) is
+[frozen by SHA-256](../data/address_quality.v1.lock.json). The rules
+matched clear-versus-flagged on **41/44 (93.18%)**, with 24 true flags,
+17 true clears, two false flags, and one missed flag. The complete
+reason set matched on 41/44. Errors included a two-edit city typo
+and false missing-identifier findings for an alphabetic house number
+and a building number. These labels are generated examples.
+
+| Reason | True positives | False positives | False negatives |
+| --- | ---: | ---: | ---: |
+| Missing identifier | 14 | 2 | 0 |
+| Too short | 6 | 0 | 0 |
+| Landmark only | 8 | 0 | 0 |
+| City mismatch | 6 | 0 | 0 |
+| City misspelling | 5 | 0 | 1 |
+
+[Shadow prepaid and courier results, address rollout and reproduction](DISPATCH_ADVICE.md)

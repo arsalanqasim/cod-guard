@@ -12,6 +12,7 @@ from logging import getLogger
 from pathlib import Path
 
 import pandas as pd
+import dispatch_advice
 
 from risk_engine import OPTIONAL_MODEL_FEATURES, assess as rule_assess
 from verification import parse_reply, apply_reply, opening_message
@@ -154,13 +155,64 @@ def _assessment(order, state, status, probability):
 def order_page(tenant_id=DEMO_TENANT, *, limit=50, offset=0, search=""):
     if tenant_id == DEMO_TENANT:
         ensure_seeded(STATE_PATH, SEED_PATH)
+    config = dispatch_advice.settings(tenant_id)
     with connect(STATE_PATH) as connection:
         connection.execute("BEGIN")
         orders, total = select_page(connection, tenant_id, limit, offset, search)
-        state = queue_snapshot(connection, tenant_id, tuple(order["order_id"] for order in orders))
+        order_ids = tuple(order["order_id"] for order in orders)
+        state = queue_snapshot(connection, tenant_id, order_ids)
+        context = dispatch_advice.queue_context(connection, tenant_id, order_ids, config)
     bundle, status = _available_model()
     scores = _batch_probabilities(bundle, orders)
-    return orders, [_assessment(order, state, status, score) for order, score in zip(orders, scores)], total
+    assessments = [_assessment(order, state, status, score) for order, score in zip(orders, scores)]
+    for order, assessment in zip(orders, assessments):
+        assessment.update(dispatch_advice.annotate(order, assessment, context, config))
+    return orders, assessments, total
+
+
+def order_advice(order, assessment, tenant_id):
+    config = dispatch_advice.settings(tenant_id)
+    if config == dispatch_advice.Settings():
+        return {}
+    with connect(STATE_PATH) as db:
+        db.execute("BEGIN")
+        context = dispatch_advice.queue_context(db, tenant_id, (order["order_id"],), config)
+    return dispatch_advice.annotate(order, assessment, context, config)
+
+
+def _assess_in_transaction(db, tenant, order_id):
+    orders = select_orders(db, tenant, order_id=order_id)
+    if not orders:
+        raise KeyError(order_id)
+    order = orders[0]
+    state = queue_snapshot(db, tenant, (order_id,))
+    return order, assess_order(order, state=state)
+
+
+def prepare_verification(order_id, *, actor="local-demo", tenant_id=DEMO_TENANT):
+    config = dispatch_advice.settings(tenant_id)
+    if not config.address_quality and not config.prepaid:
+        return None
+    with write(STATE_PATH) as db:
+        order, assessment = _assess_in_transaction(db, tenant_id, order_id)
+        context = dispatch_advice.queue_context(db, tenant_id, (order_id,), config)
+        advice = dispatch_advice.annotate(order, assessment, context, config)
+        clarification = dispatch_advice.draft_address_clarification(db, tenant_id, actor, assessment, advice)
+        offer = advice.get("prepaid_offer")
+        message = [opening_message(order)]
+        if offer:
+            message.append(offer["text"])
+        if clarification:
+            message.append(clarification["text"])
+        return {"mode": "shadow", "sent": False, "preview": "\n".join(message),
+                "prepaid_offer": offer, "address_clarification": clarification}
+
+
+def record_prepaid_offer(order_id, stage, *, actor, tenant_id):
+    config = dispatch_advice.settings(tenant_id)
+    with write(STATE_PATH) as db:
+        _, assessment = _assess_in_transaction(db, tenant_id, order_id)
+        return dispatch_advice.record_offer(db, tenant_id, actor, assessment, stage, config)
 
 
 def verify_reply(order, reply_text, source="text", *, actor="local-demo", tenant_id=DEMO_TENANT):

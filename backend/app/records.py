@@ -131,7 +131,22 @@ REPLY_CORRECTION_SCHEMA = (
         FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE)""",
     "CREATE INDEX IF NOT EXISTS reply_shadows_by_message ON reply_shadow_predictions(tenant_id, message_id)",
 )
-STATE_SCHEMA_VERSION = 10
+DISPATCH_ADVICE_SCHEMA = (
+    """CREATE TABLE IF NOT EXISTS address_findings (
+        tenant_id TEXT NOT NULL, order_id TEXT NOT NULL, issues TEXT NOT NULL,
+        PRIMARY KEY (tenant_id, order_id),
+        FOREIGN KEY (tenant_id, order_id) REFERENCES orders(tenant_id, order_id) ON DELETE CASCADE)""",
+    """CREATE TABLE IF NOT EXISTS address_clarifications (
+        tenant_id TEXT NOT NULL, order_id TEXT NOT NULL, drafted_at TEXT NOT NULL,
+        PRIMARY KEY (tenant_id, order_id),
+        FOREIGN KEY (tenant_id, order_id) REFERENCES orders(tenant_id, order_id) ON DELETE CASCADE)""",
+    """CREATE TABLE IF NOT EXISTS prepaid_offer_outcomes (
+        tenant_id TEXT NOT NULL, order_id TEXT NOT NULL, discount_pct INTEGER NOT NULL,
+        payment_method TEXT NOT NULL, sent_at TEXT NOT NULL, accepted_at TEXT, paid_at TEXT,
+        PRIMARY KEY (tenant_id, order_id),
+        FOREIGN KEY (tenant_id, order_id) REFERENCES orders(tenant_id, order_id) ON DELETE CASCADE)""",
+)
+STATE_SCHEMA_VERSION = 11
 
 
 class StateUnavailable(RuntimeError):
@@ -153,6 +168,17 @@ def insert_order(connection, tenant_id, order):
     parameters = ", ".join("?" for _ in range(len(ORDER_FIELDS) + 1))
     connection.execute(f"INSERT INTO orders ({fields}) VALUES ({parameters})",
                        (tenant_id, *(order.get(field) for field in ORDER_FIELDS)))
+    if order.get("address_issues") is not None:
+        store_address_finding(connection, tenant_id, order["order_id"], order["address_issues"])
+
+
+def store_address_finding(connection, tenant_id, order_id, issues):
+    if issues is None:
+        connection.execute("DELETE FROM address_findings WHERE tenant_id=? AND order_id=?", (tenant_id, order_id))
+    else:
+        connection.execute("""INSERT INTO address_findings VALUES (?, ?, ?)
+            ON CONFLICT(tenant_id, order_id) DO UPDATE SET issues=excluded.issues""",
+                           (tenant_id, order_id, json.dumps(issues)))
 
 
 def add_decision(connection, tenant_id, order_id, event):
@@ -260,7 +286,7 @@ def _initialize(connection, legacy):
         connection.execute("""UPDATE messages SET source='whatsapp_legacy'
             WHERE source='whatsapp' AND ((text='Confirm' AND intent='CONFIRM') OR (text='Cancel' AND intent='DENY'))""")
     for statement in (*CONNECTOR_SCHEMA, *WHATSAPP_SCHEMA, *COURIER_SCHEMA, *NETWORK_SCHEMA,
-                      *REPLY_CORRECTION_SCHEMA):
+                      *REPLY_CORRECTION_SCHEMA, *DISPATCH_ADVICE_SCHEMA):
         connection.execute(statement)
     connection.execute(f"PRAGMA user_version={STATE_SCHEMA_VERSION}")
     connection.commit()
