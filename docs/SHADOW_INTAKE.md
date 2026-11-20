@@ -18,8 +18,13 @@ with the same key and contents returns the same receipt. A changed payload
 with that key returns 409. The import accepts 1 MiB and 2,000 data rows.
 
 Order lists mask phone numbers. Authenticated order detail logs full-phone
-access. Reply and outcome writes retain the actor and tenant. Synthetic
-retraining is restricted to the demo tenant and returns a job ID. Its
+access. Reply and outcome writes retain the actor and tenant. Reply parsing
+requires an approved whole-order answer to the order-specific
+prompt. An unclear answer keeps the prior decision and requests review.
+On order detail and list, `verified` means an explicit answer is current and
+there is no unresolved reply requiring review. `intent` there is the effective
+saved intent. The verify response and reply history show the new reply's intent.
+Synthetic retraining is restricted to the demo tenant and returns a job ID. Its
 submitting operator can poll `GET /model/retrain/{job_id}` in that process.
 `/health` checks the process and
 `/ready` checks SQLite and the risk model. Write requests are limited to 60

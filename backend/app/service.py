@@ -145,7 +145,8 @@ def _assessment(order, state, status, probability):
             "zone": risk["zone"], "reasons": risk["reasons"],
             "signal_count": risk["signal_count"], "signals": risk["signals"],
             "decision": decision["decision"], "decision_why": decision["why"],
-            "verified": bool(saved), "intent": (saved or {}).get("intent"),
+            "verified": bool(saved and saved.get("intent") in ("CONFIRM", "DENY") and not saved.get("needs_review")),
+            "intent": (saved or {}).get("intent"),
             "needs_review": bool((saved or {}).get("needs_review")),
             "outcome": state["outcomes"].get(order["order_id"]),
             "model_id": status.get("model_id"), "model_error": status["reason"]}
@@ -175,10 +176,10 @@ def apply_verification(state, order, reply_text, intent, source, actor):
     effective_intent = intent
     if intent == "UNCLEAR":
         result["why"] += ". Please clarify with the customer."
-    if intent == "UNCLEAR" and previous and previous.get("intent") in ("CONFIRM", "DENY"):
-        effective_intent = previous["intent"]
+    if intent == "UNCLEAR" and previous:
+        effective_intent = previous.get("intent") or "UNCLEAR"
         result = {"decision": previous["decision"],
-                  "why": "Reply unclear; keeping the customer's previous explicit answer. Please clarify."}
+                  "why": "Reply unclear; keeping the previous decision. Please clarify with the customer."}
     event = append_event(state, order["order_id"], "decision", actor, **result,
                          intent=effective_intent, zone=assessment["zone"], model_id=assessment["model_id"],
                          needs_review=intent == "UNCLEAR")

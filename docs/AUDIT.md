@@ -323,3 +323,12 @@ deferred Meta review path. Tests exercise API storage and the review screen.
 tenant/consent scope, count suppression, expiry, corrections and appeals.
 The size counter counts actual contributors in the selected deployment.
 Shadow-only counts cannot alter a score or hold an order.
+
+### Round 6 — WS-1: Whole-order reply scope
+
+[Re-review §1, “Negated confirmation and item-scoped cancellation”](PRODUCTION_REVIEW_REREVIEW.md#1-the-three-original-defects).
+Only complete approved replies can change a dispatch decision. Other replies
+preserve the previous decision and request review. The order API reports
+`verified=false` while a reply needs review. The reply and service regressions
+cover the three review examples, scope and time in three text forms, and
+preservation of a saved denial.
