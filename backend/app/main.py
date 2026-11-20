@@ -23,7 +23,7 @@ from savings_report import seller_report
 from shopify_routes import router as shopify_router
 from social_routes import router as social_router
 from network_routes import router as network_router
-from reply_corrections import CorrectionConflict, export_page
+from reply_corrections import CorrectionConflict, export_page, shadow_agreement
 
 app = FastAPI(title="COD-Guard — shadow intake", version="0.3")
 app.add_middleware(RequestBodyLimit, limit=VOICE_LIMIT_BYTES + 1024 * 1024)
@@ -148,6 +148,11 @@ def export_reply_corrections(after: Annotated[int, Query(ge=0, le=2**63 - 1)] = 
                     media_type="application/x-ndjson",
                     headers={"Cache-Control": "no-store", "X-Next-Cursor": str(rows[-1]["id"] if rows else after),
                              "Content-Disposition": 'attachment; filename="reply-corrections.v1.jsonl"'})
+
+
+@app.get("/reply-corrections/shadow")
+def reply_shadow_report(operator: Operator = Depends(require_operator)):
+    return shadow_agreement(service.STATE_PATH, operator.tenant_id)
 
 
 class Outcome(BaseModel):

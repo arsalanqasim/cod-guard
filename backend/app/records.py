@@ -123,8 +123,15 @@ REPLY_CORRECTION_SCHEMA = (
         FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE)""",
     "CREATE INDEX IF NOT EXISTS corrections_by_tenant ON reply_corrections(tenant_id, id)",
     "CREATE INDEX IF NOT EXISTS corrections_by_message ON reply_corrections(message_id, id)",
+    """CREATE TABLE IF NOT EXISTS reply_shadow_predictions (
+        tenant_id TEXT NOT NULL, message_id INTEGER NOT NULL, model TEXT NOT NULL,
+        label TEXT NOT NULL CHECK(label IN ('CONFIRM','DENY','UNCLEAR','MODIFICATION')),
+        confidence REAL NOT NULL CHECK(confidence BETWEEN 0 AND 1), at TEXT NOT NULL,
+        PRIMARY KEY (tenant_id, model, message_id),
+        FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE)""",
+    "CREATE INDEX IF NOT EXISTS reply_shadows_by_message ON reply_shadow_predictions(tenant_id, message_id)",
 )
-STATE_SCHEMA_VERSION = 9
+STATE_SCHEMA_VERSION = 10
 
 
 class StateUnavailable(RuntimeError):

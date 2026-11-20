@@ -115,7 +115,7 @@ The bundled sample clip is general Urdu speech from Google FLEURS
 ## API
 
 Operators can correct the latest classified reply and export versioned labels
-for offline retraining. See [reply corrections and retraining](docs/REPLY_CORRECTIONS.md)
+for offline retraining. See [reply corrections and shadow evaluation](docs/REPLY_CORRECTIONS.md)
 and the [Round 7 benchmark](docs/DECISION_MODEL_EVAL.md).
 
 ```powershell

@@ -16,6 +16,7 @@ import operators
 import service
 from scripts.purge_replies import purge
 from records import connect, insert_order, write
+from reply_corrections import run_shadow
 
 
 class ReplyCorrectionTests(unittest.TestCase):
@@ -84,6 +85,22 @@ class ReplyCorrectionTests(unittest.TestCase):
         revision = self.alpha.get(self.url).json()["decision_revision"]
         self.assertEqual(self.correct(revision, revision, "DENY").status_code, 409)
         self.assertEqual(self.export(), [])
+
+    def test_shadow_is_idempotent_advisory_and_pairs_with_operator_labels(self):
+        source = self.reply("ہاں، نیلی قمیض کے بغیر بھیج دیں")
+        before = service.assess_order(self.order, tenant_id="alpha")
+        predict = unittest.mock.Mock(return_value=("MODIFICATION", 0.95))
+        self.assertEqual(run_shadow(self.path, "alpha", "fixture-v1", predict), 1)
+        self.assertEqual(run_shadow(self.path, "alpha", "fixture-v1", predict), 0)
+        predict.assert_called_once_with("ہاں، نیلی قمیض کے بغیر بھیج دیں")
+        self.assertEqual(service.assess_order(self.order, tenant_id="alpha"), before)
+        self.assertEqual(self.alpha.get("/reply-corrections/shadow").json()[0]["labeled"], 0)
+        self.assertEqual(self.correct(source, source, "MODIFICATION").status_code, 201)
+        self.assertEqual(self.alpha.get("/reply-corrections/shadow").json(), [
+            {"model": "fixture-v1", "predicted": 1, "labeled": 1, "agreement": 1, "agreement_rate": 1.0}
+        ])
+        self.assertEqual(self.beta.get("/reply-corrections/shadow").json(), [])
+        self.assertEqual(self.export()[0]["language"], "ur")
 
     def test_purge_removes_the_exported_text_without_copying_it_into_the_log(self):
         revision = self.reply("I am afraid the order won't work for me")
