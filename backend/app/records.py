@@ -114,6 +114,24 @@ NETWORK_SCHEMA = (
     "CREATE INDEX IF NOT EXISTS network_phone ON network_contributions(phone_key, tenant_id)",
     "CREATE TABLE IF NOT EXISTS network_suppressions (phone_key TEXT PRIMARY KEY)",
 )
+REPLY_CORRECTION_SCHEMA = (
+    """CREATE TABLE IF NOT EXISTS reply_corrections (
+        id INTEGER PRIMARY KEY, tenant_id TEXT NOT NULL, message_id INTEGER NOT NULL,
+        label TEXT NOT NULL CHECK(label IN ('CONFIRM','DENY','UNCLEAR','MODIFICATION')),
+        language TEXT NOT NULL, decision_revision INTEGER NOT NULL,
+        at TEXT NOT NULL, actor TEXT NOT NULL, schema_version INTEGER NOT NULL DEFAULT 1,
+        FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE)""",
+    "CREATE INDEX IF NOT EXISTS corrections_by_tenant ON reply_corrections(tenant_id, id)",
+    "CREATE INDEX IF NOT EXISTS corrections_by_message ON reply_corrections(message_id, id)",
+    """CREATE TABLE IF NOT EXISTS reply_shadow_predictions (
+        tenant_id TEXT NOT NULL, message_id INTEGER NOT NULL, model TEXT NOT NULL,
+        label TEXT NOT NULL CHECK(label IN ('CONFIRM','DENY','UNCLEAR','MODIFICATION')),
+        confidence REAL NOT NULL CHECK(confidence BETWEEN 0 AND 1), at TEXT NOT NULL,
+        PRIMARY KEY (tenant_id, model, message_id),
+        FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE)""",
+    "CREATE INDEX IF NOT EXISTS reply_shadows_by_message ON reply_shadow_predictions(tenant_id, message_id)",
+)
+STATE_SCHEMA_VERSION = 10
 
 
 class StateUnavailable(RuntimeError):
@@ -237,9 +255,14 @@ def _initialize(connection, legacy):
         connection.execute("ALTER TABLE decisions ADD COLUMN needs_review INTEGER NOT NULL DEFAULT 0")
         connection.execute("""UPDATE decisions SET needs_review=1 WHERE default_snapshot=0
                             AND (intent='UNCLEAR' OR why LIKE 'Reply unclear;%')""")
-    for statement in (*CONNECTOR_SCHEMA, *WHATSAPP_SCHEMA, *COURIER_SCHEMA, *NETWORK_SCHEMA):
+    if 4 <= version < 9:
+        # Older Cloud records used the same source for a signed tap and typed text.
+        connection.execute("""UPDATE messages SET source='whatsapp_legacy'
+            WHERE source='whatsapp' AND ((text='Confirm' AND intent='CONFIRM') OR (text='Cancel' AND intent='DENY'))""")
+    for statement in (*CONNECTOR_SCHEMA, *WHATSAPP_SCHEMA, *COURIER_SCHEMA, *NETWORK_SCHEMA,
+                      *REPLY_CORRECTION_SCHEMA):
         connection.execute(statement)
-    connection.execute("PRAGMA user_version=8")
+    connection.execute(f"PRAGMA user_version={STATE_SCHEMA_VERSION}")
     connection.commit()
 
 
@@ -253,9 +276,9 @@ def connect(path):
             connection.execute("PRAGMA foreign_keys=ON")
             try:
                 version = connection.execute("PRAGMA user_version").fetchone()[0]
-                if 0 <= version < 8:
+                if 0 <= version < STATE_SCHEMA_VERSION:
                     _initialize(connection, legacy)
-                elif version != 8:
+                elif version != STATE_SCHEMA_VERSION:
                     raise ValueError("Unsupported state schema version")
             except (ValueError, KeyError, TypeError, AttributeError) as exc:
                 raise StateUnavailable("State migration is unavailable") from exc

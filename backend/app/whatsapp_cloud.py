@@ -309,7 +309,8 @@ def _receive_reply(db, account, message):
         if not receipt.rowcount:
             return
     with update_state(db, account.tenant_id, (order_id,)) as state:
-        service.apply_verification(state, order, text, intent, "whatsapp", "whatsapp-webhook")
+        source = "whatsapp_button" if message.get("type") == "button" else "whatsapp"
+        service.apply_verification(state, order, text, intent, source, "whatsapp-webhook")
     if intent != "UNCLEAR":
         db.execute("UPDATE whatsapp_verifications SET replied_at=? WHERE attempt_id=?",
                    (now(), attempt["attempt_id"]))

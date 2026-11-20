@@ -22,6 +22,7 @@ from records import (DEMO_TENANT, ORDER_FIELDS, StateUnavailable, add_model_vers
                      connect, ensure_seeded, select_orders, select_page, write)
 from model_schema import probabilities, validate_bundle
 from jobs import JobQueue
+from reply_corrections import CorrectionConflict, LABELS as REPLY_LABELS, record as record_correction
 
 ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = Path(os.environ.get("COD_GUARD_DATA_DIR", ROOT / "data"))
@@ -144,6 +145,7 @@ def _assessment(order, state, status, probability):
             "queue_status": order.get("queue_status", "open"), "storefront_conflict": storefront_conflict,
             "verified": bool(saved and saved.get("intent") in ("CONFIRM", "DENY") and not needs_review),
             "intent": (saved or {}).get("intent"),
+            "decision_revision": (saved or {}).get("revision"),
             "needs_review": needs_review,
             "outcome": state["outcomes"].get(order["order_id"]),
             "model_id": status.get("model_id"), "model_error": status["reason"]}
@@ -208,6 +210,52 @@ def apply_verification(state, order, reply_text, intent, source, actor):
 
 def conversation(order_id, tenant_id=DEMO_TENANT):
     return _load_state(tenant_id, (order_id,))["messages"].get(order_id, [])
+
+
+def correct_reply(order_id, reply_revision, expected_revision, label, *, actor="local-demo", tenant_id=DEMO_TENANT):
+    if label not in REPLY_LABELS:
+        raise ValueError("Invalid reply label")
+    with write(STATE_PATH) as db:
+        orders = select_orders(db, tenant_id, order_id=order_id)
+        if not orders:
+            raise KeyError(order_id)
+        order = orders[0]
+        with update_state(db, tenant_id, (order_id,)) as state:
+            current = state["decisions"].get(order_id, {})
+            if current.get("revision") != expected_revision or order.get("queue_status") != "open":
+                raise CorrectionConflict("The order changed. Reload the order before correcting its reply.")
+            message = db.execute("""SELECT * FROM messages WHERE tenant_id=? AND order_id=?
+                AND decision_revision=? AND source IN ('text','voice','whatsapp')
+                ORDER BY id DESC LIMIT 1""", (tenant_id, order_id, reply_revision)).fetchone()
+            if message is None or not message["text"]:
+                raise CorrectionConflict("This reply is unavailable for correction.")
+            last_correction = db.execute("""SELECT decision_revision FROM reply_corrections
+                WHERE tenant_id=? AND message_id=? ORDER BY id DESC LIMIT 1""",
+                                         (tenant_id, message["id"])).fetchone()
+            active_revision = last_correction["decision_revision"] if last_correction else reply_revision
+            if active_revision != expected_revision:
+                raise CorrectionConflict("This reply has been superseded.")
+
+            assessment = assess_order(order, state=state)
+            zone = assessment["zone"]
+            needs_review = label in ("UNCLEAR", "MODIFICATION")
+            if needs_review:
+                earlier = next((event for event in reversed(state["events"][order_id])
+                                if event["revision"] < reply_revision and event["kind"] == "decision"
+                                and event.get("intent") in ("CONFIRM", "DENY")), None)
+                decision = "HOLD" if zone == "RED" else "VERIFY_FIRST"
+                if earlier and earlier["intent"] == "DENY":
+                    decision = earlier["decision"]
+                why = "Operator requested follow-up on this reply."
+            else:
+                decision = apply_reply(zone, label)["decision"]
+                why = "Operator confirmed the order." if label == "CONFIRM" else "Operator denied the order."
+            event = append_event(state, order_id, "decision", actor, decision=decision, why=why,
+                                 intent=label, zone=zone, model_id=assessment["model_id"], needs_review=needs_review)
+            state["decisions"][order_id] = event.copy()
+            correction_id = record_correction(db, tenant_id, actor, message, label, event["revision"])
+            return {"id": correction_id, "decision_revision": event["revision"], "intent": label,
+                    "decision": decision, "why": why, "needs_review": needs_review}
 
 
 def mark_outcome(order_id, outcome, *, actor="local-demo", tenant_id=DEMO_TENANT):

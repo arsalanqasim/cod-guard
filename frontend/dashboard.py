@@ -11,6 +11,7 @@ import streamlit as st
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "backend/app"))
 import service
+from reply_corrections import CorrectionConflict, LABELS as REPLY_LABELS
 from records import StateUnavailable
 from jobs import QueueFull
 from verification import transcribe_voice_note, parse_reply
@@ -175,13 +176,37 @@ with tab_verification:
     st.caption("A clear confirmation ships even a flagged order. A denial stops even a GREEN order. Unclear replies never erase an earlier explicit answer.")
     with st.chat_message("assistant"):
         st.write(service.opening_message(order))
-    for message in service.conversation(oid):
+    messages = service.conversation(oid)
+    for message in messages:
         with st.chat_message("user"):
             st.write(message["text"] or "Reply text expired")
-            st.caption("Urdu voice transcript" if message["source"] == "voice" else "Customer text reply")
+            st.caption({"voice": "Urdu voice transcript", "whatsapp_button": "Signed WhatsApp reply"}
+                       .get(message["source"], "Customer text reply"))
         with st.chat_message("assistant"):
             st.write(f"**{message['intent']} → {message['decision']}**")
             st.write(message["why"])
+    if messages and (latest := messages[-1])["source"] in ("text", "voice", "whatsapp"):
+        reply_revision = latest.get("decision_revision")
+        current_revision = assessments[oid]["decision_revision"]
+        if latest["text"] and reply_revision and current_revision and assessments[oid]["queue_status"] == "open":
+            with st.expander("Correct the latest reply"):
+                with st.form(f"correct_{oid}_{reply_revision}_{current_revision}"):
+                    label = st.selectbox("Operator label", REPLY_LABELS, index=None, key=f"reply_label_{oid}_{current_revision}",
+                                         format_func={"CONFIRM": "Confirm whole order",
+                                                      "DENY": "Cancel whole order",
+                                                      "UNCLEAR": "Ask for clarification",
+                                                      "MODIFICATION": "Review requested change"}.get)
+                    save = st.form_submit_button("Save correction")
+                if save:
+                    if label is None:
+                        st.warning("Choose a label.")
+                    else:
+                        try:
+                            service.correct_reply(oid, reply_revision, current_revision, label)
+                        except CorrectionConflict as exc:
+                            st.warning(str(exc))
+                        else:
+                            st.rerun()
     reply = st.chat_input("Customer reply: English / Roman Urdu / اردو", key=f"reply_{oid}")
     if reply:
         service.verify_reply(order, reply)
