@@ -107,3 +107,29 @@ def zero_shot_predictor(folder):
         return softmax(logits[:, entailment].astype(float))
 
     return predict
+
+
+def dm_predictor(folder):
+    tokenizer = _tokenizer(folder / "tokenizer.json", 512)
+    encoder = _session(folder / "onnx/encoder_model_int8.onnx")
+    decoder = _session(folder / "onnx/decoder_model_int8.onnx")
+    pad, end = (tokenizer.token_to_id(token) for token in ("<pad>", "</s>"))
+
+    def predict(text, field):
+        prompt = (f"Extract the buyer's final {field} from this shop chat. Answer with its exact "
+                  f"value only. If missing, answer UNKNOWN.\nChat:\n{text}\nAnswer:")
+        inputs = _inputs([tokenizer.encode(prompt)])
+        hidden, = _run(encoder, inputs)
+        tokens = [pad]
+        for _ in range(48):
+            results = _run(decoder, {
+                "input_ids": np.array([tokens], dtype=np.int64),
+                "encoder_hidden_states": hidden, "encoder_attention_mask": inputs["attention_mask"],
+            })
+            token = int(results[0][0, -1].argmax())
+            if token == end:
+                break
+            tokens.append(token)
+        return tokenizer.decode(tokens).strip()
+
+    return predict

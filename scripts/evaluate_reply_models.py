@@ -1,4 +1,4 @@
-"""Replay the frozen Round 7 reply benchmark."""
+"""Replay the frozen Round 7 reply and social-intake benchmarks."""
 import argparse
 from collections import Counter
 import hashlib
@@ -11,14 +11,17 @@ import numpy as np
 from scipy.optimize import minimize_scalar
 from scipy.special import softmax
 
-from round7_models import (LABELS, fasttext_predictor, minilm_predictor,
+from round7_models import (LABELS, dm_predictor, fasttext_predictor, minilm_predictor,
                            train_fasttext, zero_shot_predictor)
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "backend/app"))
+from pakistan_phone import normalize_phone
+from social_routes import extract
 from verification import parse_reply
 
 LANGUAGES = ("en", "roman_ur", "ur", "other")
+DM_FIELDS = ("name", "phone", "address", "items")
 COMMIT = {"CONFIRM", "DENY"}
 TRAPS = ("DENY→SHIP", "CONFIRM→HOLD")
 
@@ -43,7 +46,7 @@ def load_corpus():
             raise ValueError(f"Split overlap at {row['id']}")
     if len({row["id"] for row in replies}) != len(replies):
         raise ValueError("Duplicate reply IDs")
-    return replies
+    return replies, corpora["dm_extraction.v1.jsonl"]
 
 
 def _training_rows(corpus, corrections):
@@ -179,6 +182,38 @@ def gate(candidate, rules):
     }
 
 
+def _normalized(text):
+    return " ".join(text.casefold().split()).rstrip(" .،۔")
+
+
+def measure_dm(predict, rows):
+    fields = {field: Counter() for field in DM_FIELDS}
+    examples = []
+    exact = 0
+    for row in rows:
+        draft = predict(row["text"])
+        matches = []
+        for field, expected in row["expected"].items():
+            raw = draft[field]
+            guess = "" if _normalized(raw) in {"", "unknown"} else raw
+            if field == "phone" and guess:
+                guess = normalize_phone(guess) or guess
+            match = _normalized(guess) == _normalized(expected)
+            matches.append(match)
+            counts = fields[field]
+            counts["total"] += 1
+            counts["present"] += bool(expected)
+            counts["correct_present"] += bool(expected) and match
+            if match:
+                counts["correct"] += 1
+                continue
+            error = "spurious" if not expected else "wrong" if guess else "missing"
+            counts[error] += 1
+            examples.append({"id": row["id"], "field": field, "error": error, "guess": guess})
+        exact += all(matches)
+    return {"n": len(rows), "exact": exact, "fields": fields, "errors": examples}
+
+
 def file_size(directory, *names):
     return sum((directory / name).stat().st_size for name in names)
 
@@ -190,10 +225,11 @@ def main():
     minilm.add_argument("--minilm-checkpoint", type=Path, help="Local original MiniLM checkpoint to fine-tune")
     minilm.add_argument("--minilm-model", type=Path, help="Directory containing a previously fine-tuned INT8 model")
     parser.add_argument("--zero-shot", type=Path, help="Local quantized multilingual MiniLMv2 NLI checkpoint")
+    parser.add_argument("--dm-model", type=Path, help="Local LaMini-Flan-T5 ONNX checkpoint")
     parser.add_argument("--corrections", type=Path, help="Reviewed local version 1 correction export")
     parser.add_argument("--train-only", action="store_true")
     args = parser.parse_args()
-    corpus = load_corpus()
+    corpus, dm = load_corpus()
     args.work_dir.mkdir(parents=True, exist_ok=True)
     training = _training_rows(corpus, args.corrections)
     fasttext_path = args.work_dir / "reply.fasttext.bin"
@@ -219,7 +255,11 @@ def main():
             file_size(args.zero_shot, "onnx/model_int8.onnx", "tokenizer.json", "config.json"), held_out)
     for contender in contenders.values():
         contender["gate"] = gate(contender, rules)
-    report = {"replies": {"Rules": rules, **contenders}}
+    report = {"replies": {"Rules": rules, **contenders}, "dm": {"Rules": measure_dm(extract, dm)}}
+    if args.dm_model:
+        predict_dm = dm_predictor(args.dm_model)
+        report["dm"]["LaMini-Flan-T5"] = measure_dm(
+            lambda transcript: {field: predict_dm(transcript, field) for field in DM_FIELDS}, dm)
     output = args.work_dir / "metrics.json"
     output.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     print(output)

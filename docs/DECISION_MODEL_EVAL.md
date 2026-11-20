@@ -4,7 +4,7 @@
 
 ## WS-1 · Reply benchmark
 
-[Reply corpus v1](../data/reply_intents.v1.jsonl) contains 493 rows. The [SHA-256 lock](../data/reply_evaluation.v1.lock.json) covers the corpus. The evaluator verifies canonical UTF-8 with LF line endings, split sizes, reply IDs, and family and normalized text separation. The reply corpus digest is `2c1db743167c41f979ad300103cbb47318c983cd3d531c3f547d4255fd902313`.
+[Reply corpus v1](../data/reply_intents.v1.jsonl) contains 493 rows. The [SHA-256 lock](../data/reply_evaluation.v1.lock.json) covers both corpora. The evaluator verifies canonical UTF-8 with LF line endings, split sizes, reply IDs, and family and normalized text separation. The reply corpus digest is `2c1db743167c41f979ad300103cbb47318c983cd3d531c3f547d4255fd902313`.
 
 - **198 train**, **72 validation**, **144 novel test**, **79 known regressions**. Novel test has 48 rows per language and 36 per label. All generated variants of each phrasing family, including its three language forms, live in one split. The known cases come from parser, voice, and webhook tests and both production reviews (historical commits `0286ce1` and `ad0d3af`). The rules were designed with known cases in view, so the novel test is reported separately.
 - Labels represent whole-order `CONFIRM` or `DENY`, a requested `MODIFICATION`, or `UNCLEAR`. Scoped changes are modifications. Conditional, hypothetical, timed and contradictory replies require clarification. Roman Urdu includes spelling variants such as `g`, `jee`, and `ji`, code-switching, and indirect refusals. The non-linguistic rows are empty and null legacy regression inputs. Transport commands such as STOP are still handled separately by WhatsApp.
@@ -84,6 +84,17 @@ Each critical family is defined by the gold whole-order intent. A wrong accepted
 
 Fine-tuned MiniLM's validation cutoff accepted 13 replies with zero wrong. In novel test it accepted 21 with seven wrong. It held orders for unqualified confirmations such as “No cancellation please, get the complete order out to me” and committed to conditional cancellation in “Cancel the whole order next week if you haven't sent it.” It also committed on 19 known review-only cases. FastText and zero-shot MiniLM found no usable operating point. Agreement with the existing rules would limit commits to the rules’ existing recognized phrases. Keep both the signed-button authority and operator review flow. Collect operator labels and evaluate a fresh, independently labeled merchant holdout before revisiting adoption. The synthetic corpus gives no estimate of merchant error rates or operator load.
 
+## WS-3 · DM extraction
+
+The [DM corpus](../data/dm_extraction.v1.jsonl) contains 18 synthetic chats, six in each language form. It includes labeled lines, normal chat, seller versus buyer numbers, missing values, and later corrections. Evaluate the final buyer name, phone, address and items. Scores use casefolded, whitespace-normalized exact matches and existing Pakistani phone normalization. Correctly blank fields count in per-field accuracy. The present-field column excludes missing gold values.
+
+| Extractor | All four exact | Name | Phone | Address | Items | Present fields correct | Missing / wrong / spurious |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Rules | 4/18 | 12/18 | 12/18 | 13/18 | 8/18 | 17/44 | 25 / 2 / 0 |
+| LaMini-Flan-T5 | 1/18 | 3/18 | 4/18 | 4/18 | 4/18 | 1/44 | 14 / 29 / 14 |
+
+The labeled-line parser usually omitted unlabeled details. It kept an older item count and an older address when a later turn changed them. LaMini-Flan-T5 often emitted commentary, copied the wrong field, or returned prose for missing fields. It extracted one of 44 present values and got one conversation fully right by leaving all four fields empty. Keep seller-reviewed extraction. [LaMini-Flan-T5 ONNX checkpoint](https://huggingface.co/Xenova/LaMini-Flan-T5-77M)
+
 ## Reproduce on CPU
 
 Use the base requirements and optional benchmark dependencies below in an activated virtual environment. The application and normal checks do not load the experiment dependencies or model weights.
@@ -93,8 +104,9 @@ python -m pip install fasttext-community==0.11.8 tokenizers==0.23.3 onnxruntime=
 python -m pip install torch==2.15.0+cpu --index-url https://download.pytorch.org/whl/cpu --extra-index-url https://pypi.org/simple
 hf download sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2 config.json model.safetensors tokenizer.json tokenizer_config.json special_tokens_map.json --revision e8f8c211226b894fcb81acc59f3b34ba3efd5f42 --local-dir .venv/round7/original
 hf download onnx-community/multilingual-MiniLMv2-L6-mnli-xnli-ONNX config.json tokenizer.json onnx/model_int8.onnx --revision ca5daf3d11b6c4b3143b1f4602a2edfb64c3ad7e --local-dir .venv/round7/zero
+hf download Xenova/LaMini-Flan-T5-77M tokenizer.json onnx/encoder_model_int8.onnx onnx/decoder_model_int8.onnx --revision ac7ed8d --local-dir .venv/round7/dm
 $env:HF_HUB_OFFLINE = '1'
-python scripts/evaluate_reply_models.py --work-dir .venv/round7/run --minilm-checkpoint .venv/round7/original --zero-shot .venv/round7/zero
+python scripts/evaluate_reply_models.py --work-dir .venv/round7/run --minilm-checkpoint .venv/round7/original --zero-shot .venv/round7/zero --dm-model .venv/round7/dm
 ```
 
-The script writes per-split and per-language metrics, threshold decisions and wrong commit IDs to `metrics.json` in the work directory. FastText uses word and character n-grams. MiniLM trains the final encoder block and a linear head for six epochs, then exports and evaluates dynamic INT8 ONNX. The model downloads contain public weights and tokenizers. Scoring uses local inference. [MiniLM source checkpoint](https://huggingface.co/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2) · [Zero-shot ONNX checkpoint](https://huggingface.co/onnx-community/multilingual-MiniLMv2-L6-mnli-xnli-ONNX)
+The script writes per-split and per-language metrics, threshold decisions, wrong commit IDs and DM failure examples to `metrics.json` in the work directory. FastText uses word and character n-grams. MiniLM trains the final encoder block and a linear head for six epochs, then exports and evaluates dynamic INT8 ONNX. LaMini-Flan-T5 gets one extractive prompt per field with greedy decoding. The model downloads contain public weights and tokenizers. Scoring uses local inference. [MiniLM source checkpoint](https://huggingface.co/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2) · [Zero-shot ONNX checkpoint](https://huggingface.co/onnx-community/multilingual-MiniLMv2-L6-mnli-xnli-ONNX)
