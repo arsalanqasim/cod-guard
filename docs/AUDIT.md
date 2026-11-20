@@ -358,3 +358,10 @@ training timestamp and threshold, and the Markdown generated from that JSON.
 The failure matrix covers each missing or mismatched artifact while health
 continues to report liveness. [The operator runbook](SHADOW_INTAKE.md)
 describes recovery after voice and retrain job status is lost on restart.
+
+### Round 6 — WS-6: WhatsApp clarification window
+
+[Re-review §4, “WhatsApp Cloud”](PRODUCTION_REVIEW_REREVIEW.md#4-round-5-integration-boundaries).
+The attempt remains open through a deduplicated unclear reply, with the
+original expiry and consent checks enforced. Synthetic callback fixtures
+exercise clarification, replay, expiry and STOP. [Operator workflow](WHATSAPP.md).

@@ -77,6 +77,9 @@ WHATSAPP_SCHEMA = (
         message_id TEXT UNIQUE, status TEXT NOT NULL, billable INTEGER, category TEXT,
         estimated_usd_micros INTEGER, replied_at TEXT, PRIMARY KEY (tenant_id, order_id),
         FOREIGN KEY (tenant_id, order_id) REFERENCES orders(tenant_id, order_id))""",
+    """CREATE TABLE IF NOT EXISTS whatsapp_unclear_receipts (
+        attempt_id TEXT NOT NULL, reply_key TEXT NOT NULL, PRIMARY KEY (attempt_id, reply_key),
+        FOREIGN KEY (attempt_id) REFERENCES whatsapp_verifications(attempt_id) ON DELETE CASCADE)""",
 )
 
 
@@ -231,7 +234,7 @@ def _initialize(connection, legacy):
                             AND (intent='UNCLEAR' OR why LIKE 'Reply unclear;%')""")
     for statement in (*CONNECTOR_SCHEMA, *WHATSAPP_SCHEMA, *COURIER_SCHEMA, *NETWORK_SCHEMA):
         connection.execute(statement)
-    connection.execute("PRAGMA user_version=6")
+    connection.execute("PRAGMA user_version=7")
     connection.commit()
 
 
@@ -245,9 +248,9 @@ def connect(path):
             connection.execute("PRAGMA foreign_keys=ON")
             try:
                 version = connection.execute("PRAGMA user_version").fetchone()[0]
-                if version in (0, 1, 2, 3, 4, 5):
+                if 0 <= version < 7:
                     _initialize(connection, legacy)
-                elif version != 6:
+                elif version != 7:
                     raise ValueError("Unsupported state schema version")
             except (ValueError, KeyError, TypeError, AttributeError) as exc:
                 raise StateUnavailable("State migration is unavailable") from exc

@@ -39,3 +39,5 @@ Public Meta sources checked 2026-11-19. Account-specific evidence is listed belo
 5. `GET /integrations/whatsapp/status` reports tenant mode and delivery counters; `GET /integrations/whatsapp/orders/{order_id}` reports the individual attempt. Costs are list-rate estimates, not invoice totals. The code estimates known billable utility deliveries during the October–December rate-card window and leaves other paid amounts unset. The connector does not send outbound service messages or manually decrement a free-service counter.
 
 Missing credentials keep sends simulated. The exhibition dashboard remains explicitly simulated. Daraz is score-and-queue only in both modes. Cloud handles signed quick replies and context-bound text; voice is not ingested by this callback. No live send, template approval, or paid delivery was exercised in this workstream.
+
+See [WhatsApp clarification](WHATSAPP.md) for the reply window and opt-out behavior.
