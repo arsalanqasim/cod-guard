@@ -146,7 +146,13 @@ DISPATCH_ADVICE_SCHEMA = (
         PRIMARY KEY (tenant_id, order_id),
         FOREIGN KEY (tenant_id, order_id) REFERENCES orders(tenant_id, order_id) ON DELETE CASCADE)""",
 )
-STATE_SCHEMA_VERSION = 11
+RISK_SHADOW_SCHEMA = (
+    """CREATE TABLE IF NOT EXISTS risk_shadow_decisions (
+        tenant_id TEXT NOT NULL, order_id TEXT NOT NULL, revision INTEGER NOT NULL, advisory TEXT NOT NULL,
+        PRIMARY KEY (tenant_id, order_id, revision),
+        FOREIGN KEY (tenant_id, order_id, revision) REFERENCES decisions(tenant_id, order_id, revision))""",
+)
+STATE_SCHEMA_VERSION = 12
 
 
 class StateUnavailable(RuntimeError):
@@ -286,7 +292,7 @@ def _initialize(connection, legacy):
         connection.execute("""UPDATE messages SET source='whatsapp_legacy'
             WHERE source='whatsapp' AND ((text='Confirm' AND intent='CONFIRM') OR (text='Cancel' AND intent='DENY'))""")
     for statement in (*CONNECTOR_SCHEMA, *WHATSAPP_SCHEMA, *COURIER_SCHEMA, *NETWORK_SCHEMA,
-                      *REPLY_CORRECTION_SCHEMA, *DISPATCH_ADVICE_SCHEMA):
+                      *REPLY_CORRECTION_SCHEMA, *DISPATCH_ADVICE_SCHEMA, *RISK_SHADOW_SCHEMA):
         connection.execute(statement)
     connection.execute(f"PRAGMA user_version={STATE_SCHEMA_VERSION}")
     connection.commit()

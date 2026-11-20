@@ -13,6 +13,7 @@ from pathlib import Path
 
 import pandas as pd
 import dispatch_advice
+import risk_shadow
 
 from risk_engine import OPTIONAL_MODEL_FEATURES, assess as rule_assess
 from verification import parse_reply, apply_reply, opening_message
@@ -167,7 +168,22 @@ def order_page(tenant_id=DEMO_TENANT, *, limit=50, offset=0, search=""):
     assessments = [_assessment(order, state, status, score) for order, score in zip(orders, scores)]
     for order, assessment in zip(orders, assessments):
         assessment.update(dispatch_advice.annotate(order, assessment, context, config))
+    if shadow_config := risk_shadow.configuration(tenant_id):
+        shadow_scores = risk_shadow.predictions(shadow_config, orders, [row["intent"] for row in assessments])
+        for assessment, result in zip(assessments, shadow_scores):
+            assessment["risk_shadow"] = result
     return orders, assessments, total
+
+
+def shadow_decisions(order, tenant_id, after):
+    if os.environ.get("COD_GUARD_EXHIBITION") == "1":
+        return {"current": None, "revisions": []}
+    assessment = assess_order(order, tenant_id=tenant_id)
+    config = risk_shadow.configuration(tenant_id)
+    preview = risk_shadow.predictions(config, [order], [assessment["intent"]])[0] if config else None
+    with connect(STATE_PATH) as db:
+        history = risk_shadow.history(db, tenant_id, order["order_id"], after)
+    return {"current": preview, "revisions": history}
 
 
 def order_advice(order, assessment, tenant_id):

@@ -20,7 +20,7 @@ from records import insert_order, write
 PREFIX = "/integrations/whatsapp"
 ACCOUNT = {"waba_id": "1", "phone_number_id": "2", "template_id": "3", "token": "demo-cloud-access-token",
            "app_secret": "demo-cloud-app-secret", "verify_token": "demo-cloud-verify-token",
-           "signing_key": "simulated-key-not-for-production-32"}
+           "signing_key": "simulated-key-not-for-production-32", "business_verified": True}
 TEMPLATE = {"name": "confirm_cod", "status": "APPROVED", "category": "UTILITY", "language": "en_US", "components": [
     {"type": "BODY", "text": cloud.TEMPLATE_BODY}, {"type": "BUTTONS", "buttons": [
         {"type": "QUICK_REPLY", "text": "Confirm"}, {"type": "QUICK_REPLY", "text": "Cancel"}]}]}
@@ -47,6 +47,16 @@ class WhatsAppTests(unittest.TestCase):
 
     def consent(self):
         return self.post("cod1/consent", json={"opted_in": True, "evidence_reference": "checkout-record-42"})
+
+    def test_configured_account_requires_verified_business_for_live_send(self):
+        unverified = {"alpha": {**ACCOUNT, "business_verified": False}}
+        with patch.dict(os.environ, COD_GUARD_WHATSAPP=json.dumps(unverified)), \
+             patch.object(cloud.CloudTransport, "request") as request:
+            response = self.post("cod1/send")
+            self.assertEqual(response.status_code, 200)
+            self.assertFalse(response.json()["sent"])
+            self.assertEqual(self.consent().status_code, 409)
+            request.assert_not_called()
 
     def callback(self, *, messages=None, statuses=None, good=True, phone_id="2"):
         data = {"object": "whatsapp_business_account", "entry": [{"id": "1", "changes": [{"field": "messages",

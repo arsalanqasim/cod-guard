@@ -7,6 +7,9 @@ backend/app/model.publish.sqlite3*
 data/state.json
 data/state.json.archive
 .venv/
+.env
+.env.*
+host-data/
 data/*.sqlite3*
 data/whisper/
 data/latest_evaluation.json

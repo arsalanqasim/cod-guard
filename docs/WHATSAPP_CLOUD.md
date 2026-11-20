@@ -32,12 +32,22 @@ Public Meta sources checked 2026-11-19. Account-specific evidence is listed belo
 
 ## Operator setup
 
-1. For a non-demo tenant only, set `COD_GUARD_WHATSAPP` to a JSON object keyed by tenant ID. Each entry needs `waba_id`, `phone_number_id`, `template_id`, `token`, `app_secret`, `verify_token` and a unique random `signing_key` (32+ characters); `api_version` is optional. Configure these as secrets. Keep the signing key stable: replacing it without a consent migration loses contact suppression state.
+Before enabling a sender, verify the Meta business portfolio in Business
+Suite and match it to the WhatsApp Business Account and registered phone
+number. Confirm the display name and messaging access, approve the
+transactional template, and configure payment and buyer consent. Record
+who checked the business and when. [Meta onboarding checklist](https://whatsappbusiness.com/wp-content/uploads/2026/04/Onboarding-to-the-WhatsApp-Business-Platform.pdf)
+
+1. For a non-demo tenant, set `COD_GUARD_WHATSAPP` to a JSON object keyed by tenant ID. Each entry needs `waba_id`, `phone_number_id`, `template_id`, `token`, `app_secret`, `verify_token` and a unique random `signing_key`. `api_version` is optional. Store credentials in the host secret store. Keep the signing key stable to retain contact suppression history. Set `"business_verified": true` only after verifying the business in Meta. This flag is the operator's attestation. It defaults to false and blocks account use for live sends and callbacks while false.
 2. Create an English (US) utility template with exactly `Please confirm or cancel cash-on-delivery order {{1}}. To stop WhatsApp order messages, reply STOP.` and two quick replies, `Confirm` then `Cancel`. The connector checks the approved body, language, category and buttons before each submission. Use a token authorized to inspect templates and send on the configured WABA.
 3. Subscribe the WABA to `messages` at `GET/POST /integrations/whatsapp/{tenant_id}/webhook` over HTTPS. Disable or redact query-string logs at the application and reverse proxy so webhook handshake tokens are not logged. Deploy one application instance; the send/consent interlock is process-local.
 4. Use `POST /integrations/whatsapp/orders/{order_id}/consent` with `opted_in` and a non-PII `evidence_reference` only after the operator records actual buyer consent or a withdrawal. Never infer consent from order intake. `POST /integrations/whatsapp/orders/{order_id}/send` submits once. Accepted is not delivered; an ambiguous timeout blocks automatic resend and can reconcile through a later signed status callback.
 5. `GET /integrations/whatsapp/status` reports tenant mode and delivery counters; `GET /integrations/whatsapp/orders/{order_id}` reports the individual attempt. Costs are list-rate estimates, not invoice totals. The code estimates known billable utility deliveries during the October–December rate-card window and leaves other paid amounts unset. The connector does not send outbound service messages or manually decrement a free-service counter.
 
-Missing credentials keep sends simulated. The exhibition dashboard remains explicitly simulated. Daraz is score-and-queue only in both modes. Cloud handles signed quick replies and context-bound text; voice is not ingested by this callback. No live send, template approval, or paid delivery was exercised in this workstream.
+Missing credentials or a pending business verification keep sends
+simulated. The exhibition dashboard remains explicitly simulated. Daraz
+is score-and-queue only. Cloud handles signed quick replies and
+context-bound text. Live sender, template approval and paid delivery
+still require verified account evidence.
 
 See [WhatsApp clarification](WHATSAPP.md) for the reply window and opt-out behavior.

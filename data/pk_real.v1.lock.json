@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "dataset": "[PK-REAL]",
+  "archive_sha256": "6db2476c34887025ec98a1a068d1a8753f4e5d276d63e0170bef1de9dc59bbcd",
+  "source_counts": {
+    "raw_lines": 584524,
+    "raw_orders": 408782,
+    "raw_customers": 115326,
+    "cod_lines": 271960,
+    "cod_orders": 182449,
+    "cod_customers": 76068,
+    "invalid_cod_orders": 920,
+    "incomplete_label_orders": 18246,
+    "mixed_label_orders": 0,
+    "eligible_orders": 163283,
+    "discarded_to_isolate_windows": 89863
+  },
+  "splits": {
+    "train": {
+      "orders": 60628,
+      "customers": 22405,
+      "failed": 17465,
+      "start": "2016-07-01",
+      "end": "2017-06-02",
+      "sha256": "98dcbe64267ffc6df52ddfb4242f4293b5ca09b0b9a130af16f515a894f84988"
+    },
+    "validation": {
+      "orders": 6581,
+      "customers": 3935,
+      "failed": 2916,
+      "start": "2017-06-03",
+      "end": "2017-11-23",
+      "sha256": "c8ed3b811df347c5c8a3dd6246ff176bb291ade74792f9a673d041090a6f921b"
+    },
+    "test": {
+      "orders": 6211,
+      "customers": 4036,
+      "failed": 2778,
+      "start": "2017-11-24",
+      "end": "2018-08-27",
+      "sha256": "a116cabd32c758f2217a617184bd802af1a18e294fc3a59d82ec4dc6cb1e98f9"
+    }
+  }
+}

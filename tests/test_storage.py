@@ -61,7 +61,7 @@ class StorageTests(unittest.TestCase):
                             [("CONFIRM", "Reply unclear; previous answer kept", 0),
                              ("UNCLEAR", "Please clarify", 0), ("CONFIRM", "Explicit answer", 0)])
         with connect(self.path) as db:
-            self.assertEqual(db.execute("PRAGMA user_version").fetchone()[0], 11)
+            self.assertEqual(db.execute("PRAGMA user_version").fetchone()[0], 12)
             self.assertEqual([row[0] for row in db.execute("SELECT needs_review FROM decisions ORDER BY rowid")],
                              [1, 1, 0])
 
@@ -88,7 +88,7 @@ class StorageTests(unittest.TestCase):
                 (tenant_id,message_id,label,language,decision_revision,at,actor)
                 VALUES ('alpha',1,'DENY','en',2,'2026-11-20','operator')""")
         with connect(self.path) as db:
-            self.assertEqual(db.execute("PRAGMA user_version").fetchone()[0], 11)
+            self.assertEqual(db.execute("PRAGMA user_version").fetchone()[0], 12)
             self.assertEqual(db.execute("SELECT label FROM reply_corrections").fetchone()[0], "DENY")
             self.assertEqual(db.execute("SELECT COUNT(*) FROM reply_shadow_predictions").fetchone()[0], 0)
 
