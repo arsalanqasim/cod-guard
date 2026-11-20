@@ -12,6 +12,7 @@ from fastapi.testclient import TestClient
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "backend/app"))
 import main
+import operators
 import service
 
 
@@ -28,18 +29,55 @@ class ShopifyTests(unittest.TestCase):
     def setUp(self):
         path = Path(self.enterContext(tempfile.TemporaryDirectory())) / "state.json"
         self.enterContext(patch.object(service, "STATE_PATH", path))
+        self.enterContext(patch.object(operators, "_write_windows", {}))
         self.config = {STORE: {"tenant_id": "alpha", "secret": SECRET, "cod_gateway": "Cash on Delivery (COD)"}}
-        operators = {name: {"tenant_id": name, "key": f"shopify-fixture-operator-key-{name}"}
-                     for name in ("alpha", "beta")}
+        settings = {name: {"tenant_id": name, "key": f"shopify-fixture-operator-key-{name}"}
+                    for name in ("alpha", "beta")}
         self.enterContext(patch.dict(os.environ, COD_GUARD_SHOPIFY=json.dumps(self.config),
-                                     COD_GUARD_OPERATORS=json.dumps(operators)))
+                                     COD_GUARD_OPERATORS=json.dumps(settings)))
         self.client = self.enterContext(TestClient(main.app))
 
-    def submit(self, payload, *, domain=STORE, secret=SECRET):
+    def submit(self, payload, *, domain=STORE, secret=SECRET, topic="orders/create"):
         body = json.dumps(payload).encode()
         signature = base64.b64encode(hmac.digest(secret.encode(), body, "sha256")).decode()
         return self.client.post(f"/integrations/shopify/webhooks/{STORE}", content=body, headers={
-            "X-Shopify-Hmac-Sha256": signature, "X-Shopify-Shop-Domain": domain, "X-Shopify-Topic": "orders/create"})
+            "X-Shopify-Hmac-Sha256": signature, "X-Shopify-Shop-Domain": domain, "X-Shopify-Topic": topic})
+
+    def test_cancel_after_confirmation_closes_queue_and_audits_without_rewriting_decision(self):
+        headers = {"Authorization": "Bearer shopify-fixture-operator-key-alpha"}
+        created = ORDER | {"updated_at": "2026-11-20T09:00:00+05:00"}
+        self.assertEqual(self.submit(created).json()["queued"], 1)
+        order, = self.client.get("/orders", headers=headers).json()
+        path = f"/orders/{order['order_id']}"
+        self.assertEqual(self.client.post(f"{path}/verify", headers=headers, json={"text": "Yes"}).status_code, 200)
+        cancelled = {"id": ORDER["id"], "updated_at": "2026-11-20T04:02:00Z",
+                     "cancelled_at": "2026-11-20T04:02:00Z"}
+        for _ in range(2):
+            self.assertEqual(self.submit(cancelled, topic="orders/cancelled").status_code, 200)
+        self.assertEqual(self.submit(created, topic="orders/updated").status_code, 200)
+        order = self.client.get(path, headers=headers).json()
+        self.assertEqual((order["queue_status"], order["decision"], order["storefront_conflict"]),
+                         ("closed_cancelled", "SHIP", True))
+        with service.connect(service.STATE_PATH) as db:
+            events = db.execute("""SELECT action FROM audit_events WHERE tenant_id='alpha' AND order_id=?
+                AND action LIKE 'storefront_%' ORDER BY id""", (order["order_id"],))
+            self.assertEqual([row["action"] for row in events],
+                             ["storefront_order_reconciled", "storefront_dispatch_conflict"])
+
+    def test_paid_topic_marks_linked_order_out_of_scope(self):
+        headers = {"Authorization": "Bearer shopify-fixture-operator-key-alpha"}
+        self.assertEqual(self.submit(ORDER).json()["queued"], 1)
+        paid = {"id": ORDER["id"], "financial_status": "paid"}
+        self.assertEqual(self.submit(paid, topic="orders/paid").status_code, 200)
+        order, = self.client.get("/orders", headers=headers).json()
+        self.assertEqual((order["queue_status"], order["storefront_conflict"]), ("out_of_cod_scope", False))
+
+    def test_late_create_cannot_queue_an_order_already_cancelled_at_source(self):
+        cancelled = {"id": ORDER["id"], "cancelled_at": "2026-11-20T04:02:00Z"}
+        self.assertEqual(self.submit(cancelled, topic="orders/cancelled").json()["queued"], 0)
+        earlier = ORDER | {"updated_at": "2026-11-20T09:00:00+05:00"}
+        self.assertEqual(self.submit(earlier).json()["queued"], 0)
+        self.assertTrue(service.load_orders("alpha").empty)
 
     def test_signature_idempotence_and_protected_fields_default_off(self):
         self.assertEqual(self.submit(ORDER, secret="wrong").status_code, 401)

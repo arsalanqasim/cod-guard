@@ -365,3 +365,12 @@ describes recovery after voice and retrain job status is lost on restart.
 The attempt remains open through a deduplicated unclear reply, with the
 original expiry and consent checks enforced. Synthetic callback fixtures
 exercise clarification, replay, expiry and STOP. [Operator workflow](WHATSAPP.md).
+
+### Round 6 — WS-5: Storefront reconciliation
+
+[Re-review §4, “WooCommerce” and “Shopify”](PRODUCTION_REVIEW_REREVIEW.md#4-round-5-integration-boundaries).
+Signed updates and WooCommerce polls reconcile lifecycle status and eligible
+order fields. Source changes after a decision or outcome surface a queue
+conflict and an audit event while preserving both records. Fixtures cover
+update, cancellation, paid status, replay and out-of-order delivery.
+[Queue contract](SHADOW_INTAKE.md#storefront-queue-status).

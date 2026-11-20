@@ -77,7 +77,8 @@ def load_orders(tenant_id=DEMO_TENANT):
     if tenant_id == DEMO_TENANT:
         ensure_seeded(STATE_PATH, SEED_PATH)
     with connect(STATE_PATH) as connection:
-        return pd.DataFrame(select_orders(connection, tenant_id), columns=("tenant_id", *ORDER_FIELDS))
+        return pd.DataFrame(select_orders(connection, tenant_id),
+                            columns=("tenant_id", *ORDER_FIELDS, "queue_status", "storefront_conflict"))
 
 
 def get_order(order_id, tenant_id=DEMO_TENANT):
@@ -133,14 +134,17 @@ def _assessment(order, state, status, probability):
         risk["reasons"].append("Missing order features; request verification")
     saved = state["decisions"].get(order["order_id"])
     decision = saved or apply_reply(risk["zone"], "UNCLEAR")
+    storefront_conflict = bool(order.get("storefront_conflict"))
+    needs_review = storefront_conflict or bool((saved or {}).get("needs_review"))
     return {"order_id": order["order_id"], "rule_score": risk["risk_score"],
             "ml_probability": round(probability, 3) if probability is not None else None,
             "zone": risk["zone"], "reasons": risk["reasons"],
             "signal_count": risk["signal_count"], "signals": risk["signals"],
             "decision": decision["decision"], "decision_why": decision["why"],
-            "verified": bool(saved and saved.get("intent") in ("CONFIRM", "DENY") and not saved.get("needs_review")),
+            "queue_status": order.get("queue_status", "open"), "storefront_conflict": storefront_conflict,
+            "verified": bool(saved and saved.get("intent") in ("CONFIRM", "DENY") and not needs_review),
             "intent": (saved or {}).get("intent"),
-            "needs_review": bool((saved or {}).get("needs_review")),
+            "needs_review": needs_review,
             "outcome": state["outcomes"].get(order["order_id"]),
             "model_id": status.get("model_id"), "model_error": status["reason"]}
 
