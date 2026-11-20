@@ -7,17 +7,62 @@ import unittest
 from threading import Event
 from time import monotonic, sleep
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "backend/app"))
+sys.path[:0] = [str(ROOT / "backend/app"), str(ROOT)]
 import service
 import artifacts
 import train_model
 from records import connect
+from test_regressions import clean_order
 
 
 class LearningTests(unittest.TestCase):
+    def test_single_order_assessment_uses_one_bundle_during_activation(self):
+        first = {"model_id": "before", "threshold": .50, "columns": ["phone_valid"],
+                 "model": SimpleNamespace(predict_proba=lambda frame: [[.80, .20]])}
+        second = {"model_id": "after", "threshold": .90, "columns": ["phone_valid"],
+                  "model": SimpleNamespace(predict_proba=lambda frame: [[.15, .85]])}
+        state = {"decisions": {}, "outcomes": {}}
+        order = clean_order(phone_velocity_24h=2, amount_pkr=22000)
+        with patch.object(service, "_bundle", side_effect=[first, second]) as active:
+            result = service.assess_order(order, state=state)
+        self.assertEqual((result["model_id"], result["ml_probability"], result["zone"]),
+                         ("before", .20, "GREEN"))
+        self.assertEqual(active.call_count, 1)
+
+    def test_standalone_fit_cannot_replace_an_activation_during_training(self):
+        report = json.loads((ROOT / "data/evaluation.json").read_text(encoding="utf-8"))
+        bundle = service._bundle() | {"model_id": report["model_id"]}
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            model_path = root / "backend/app/model.pkl"
+            (root / "data").mkdir()
+            shutil.copyfile(ROOT / "data/benchmark_orders.csv", root / "data/benchmark_orders.csv")
+            shutil.copyfile(ROOT / "data/test_split.lock.json", root / "data/test_split.lock.json")
+            prior = root / "data/evaluation.json"
+            prior.write_text("prior diagnostics", encoding="utf-8")
+            artifacts.publish(bundle, report, "old", model_path, expected=None)
+            expected = artifacts.active_version(model_path)
+            newest = bundle | {"model_id": "feedback", "feedback": {"CG-00001": "refused"}}
+
+            def fit(*args, **kwargs):
+                artifacts.publish(newest, report | {"model_id": "feedback"}, "feedback",
+                                  model_path, expected=expected)
+                return bundle, report
+
+            with patch.object(sys, "path", sys.path.copy()), \
+                 patch.object(train_model, "ROOT", root), patch("public_benchmark.ROOT", root), \
+                 patch.object(train_model, "fit_and_evaluate", side_effect=fit):
+                with self.assertRaisesRegex(ValueError, "active model changed during training"):
+                    train_model.main()
+            active = artifacts.active_version(model_path)
+            self.assertEqual(json.loads((active / "evaluation.json").read_text())["model_id"], "feedback")
+            self.assertEqual(prior.read_text(), "prior diagnostics")
+            self.assertFalse((root / "docs/EVAL_REPORT.md").exists())
+
     def test_mark_retrain_and_restart_consumes_the_observed_label(self):
         with tempfile.TemporaryDirectory() as directory:
             directory = Path(directory)

@@ -277,17 +277,23 @@ def main():
     sys.path.insert(0, str(ROOT))
     from data.generate_benchmark import generate_benchmark
 
+    model_path = ROOT / "backend/app/model.pkl"
+    expected = active_version(model_path)
     benchmark = pd.read_csv(ROOT / "data/benchmark_orders.csv")
     generated, oracle = generate_benchmark()
     if not benchmark.equals(generated):
         raise ValueError("Benchmark differs from the generator. Run data/generate_benchmark.py before training.")
     bundle, report = fit_and_evaluate(benchmark, oracle=oracle.set_index("order_id"))
-    model_path = ROOT / "backend/app/model.pkl"
     markdown = render_report(report)
-    atomic_write(ROOT / "data/evaluation.json", json.dumps(report, indent=2).encode("utf-8"))
-    atomic_write(ROOT / "docs/EVAL_REPORT.md", markdown.encode("utf-8"))
-    atomic_write(ROOT / "docs/BENCHMARK.md", benchmark_markdown(report).encode("utf-8"))
-    publish(bundle, report, markdown, model_path, expected=active_version(model_path))
+    public_markdown = benchmark_markdown(report)
+    publish(bundle, report, markdown, model_path, expected=expected)
+    # These standalone diagnostics are not the active version's artifact set.
+    try:
+        atomic_write(ROOT / "data/evaluation.json", json.dumps(report, indent=2).encode("utf-8"))
+        atomic_write(ROOT / "docs/EVAL_REPORT.md", markdown.encode("utf-8"))
+        atomic_write(ROOT / "docs/BENCHMARK.md", public_markdown.encode("utf-8"))
+    except OSError as exc:
+        raise OSError("Model activation succeeded, but standalone diagnostics are incomplete") from exc
     print(json.dumps({"model_id": bundle["model_id"], "model": bundle["model_name"],
                       "chosen": report["chosen"], "split": report["split"],
                       "baselines": report["baselines"]}, indent=2))
