@@ -61,9 +61,21 @@ class StorageTests(unittest.TestCase):
                             [("CONFIRM", "Reply unclear; previous answer kept", 0),
                              ("UNCLEAR", "Please clarify", 0), ("CONFIRM", "Explicit answer", 0)])
         with connect(self.path) as db:
-            self.assertEqual(db.execute("PRAGMA user_version").fetchone()[0], 8)
+            self.assertEqual(db.execute("PRAGMA user_version").fetchone()[0], 9)
             self.assertEqual([row[0] for row in db.execute("SELECT needs_review FROM decisions ORDER BY rowid")],
                              [1, 1, 0])
+
+    def test_migrate_v8_distinguishes_possible_historical_button_taps(self):
+        with connect(self.path) as db, db:
+            db.execute("DROP TABLE reply_corrections")
+            db.execute("PRAGMA user_version=8")
+            db.executemany("""INSERT INTO messages (tenant_id,order_id,text,source,intent,actor)
+                VALUES ('alpha','ORD-1',?,'whatsapp',?,'webhook')""",
+                           [("Confirm", "CONFIRM"), ("Cancel", "DENY"), ("Yes", "CONFIRM")])
+        with connect(self.path) as db:
+            sources = [row["source"] for row in db.execute("SELECT source FROM messages ORDER BY id")]
+            self.assertEqual(sources, ["whatsapp_legacy", "whatsapp_legacy", "whatsapp"])
+            self.assertEqual(db.execute("SELECT COUNT(*) FROM reply_corrections").fetchone()[0], 0)
 
     def test_distinct_events_survive_eight_writers_and_failed_transaction(self):
         def append_batch(worker):

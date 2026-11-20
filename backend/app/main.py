@@ -1,10 +1,11 @@
 """Single-instance COD-Guard API for tenant-scoped shadow intake."""
+import json
 import sys
 from pathlib import Path
 from typing import Annotated, Literal
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from fastapi import Depends, FastAPI, File, Header, HTTPException, Query, Response, UploadFile
+from fastapi import Depends, FastAPI, File, Header, HTTPException, Path as PathParam, Query, Response, UploadFile
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, field_validator
 import service
@@ -22,6 +23,7 @@ from savings_report import seller_report
 from shopify_routes import router as shopify_router
 from social_routes import router as social_router
 from network_routes import router as network_router
+from reply_corrections import CorrectionConflict, export_page
 
 app = FastAPI(title="COD-Guard — shadow intake", version="0.3")
 app.add_middleware(RequestBodyLimit, limit=VOICE_LIMIT_BYTES + 1024 * 1024)
@@ -118,6 +120,34 @@ def verify(order_id: str, reply: Reply, operator: Operator = Depends(write_opera
     order = _order(order_id, operator)
     return {"order_id": order_id, **service.verify_reply(order, reply.text, actor=operator.actor,
                                                          tenant_id=operator.tenant_id)}
+
+
+class ReplyCorrection(BaseModel):
+    label: Literal["CONFIRM", "DENY", "UNCLEAR", "MODIFICATION"]
+    expected_revision: int = Field(ge=1, le=2**63 - 1)
+
+
+@app.post("/orders/{order_id}/replies/{reply_revision}/correction", status_code=201)
+def correct_reply(order_id: str, reply_revision: Annotated[int, PathParam(ge=1, le=2**63 - 1)],
+                  body: ReplyCorrection, operator: Operator = Depends(write_operator)):
+    try:
+        return service.correct_reply(order_id, reply_revision, body.expected_revision, body.label,
+                                     actor=operator.actor, tenant_id=operator.tenant_id)
+    except KeyError:
+        raise HTTPException(404, "Order not found") from None
+    except CorrectionConflict as exc:
+        raise HTTPException(409, str(exc)) from exc
+
+
+@app.get("/reply-corrections/export")
+def export_reply_corrections(after: Annotated[int, Query(ge=0, le=2**63 - 1)] = 0,
+                             limit: Annotated[int, Query(ge=1, le=500)] = 500,
+                             operator: Operator = Depends(require_operator)):
+    rows = export_page(service.STATE_PATH, operator.tenant_id, operator.actor, after=after, limit=limit)
+    return Response("".join(json.dumps(row, ensure_ascii=False) + "\n" for row in rows),
+                    media_type="application/x-ndjson",
+                    headers={"Cache-Control": "no-store", "X-Next-Cursor": str(rows[-1]["id"] if rows else after),
+                             "Content-Disposition": 'attachment; filename="reply-corrections.v1.jsonl"'})
 
 
 class Outcome(BaseModel):
