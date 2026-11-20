@@ -30,7 +30,7 @@ class ServiceRegressionTests(unittest.TestCase):
         self.state_patch = patch.object(service, "STATE_PATH", Path(self.temp.name) / "state.json")
         self.state_patch.start()
         self.addCleanup(self.state_patch.stop)
-        for target, value in [("load_orders", pd.DataFrame([self.order])), ("_ml_probability", None)]:
+        for target, value in [("load_orders", pd.DataFrame([self.order])), ("_batch_probabilities", [None])]:
             active = patch.object(service, target, return_value=value)
             active.start()
             self.addCleanup(active.stop)
@@ -57,7 +57,7 @@ class ServiceRegressionTests(unittest.TestCase):
             service.mark_outcome("MISSING", "delivered")
 
     def test_ml_cannot_hold_an_order_on_one_signal(self):
-        with patch.object(service, "_ml_probability", return_value=0.99):
+        with patch.object(service, "_batch_probabilities", return_value=[0.99]):
             self.assertEqual(service.assess_order(clean_order(phone_fraud_history=1))["zone"], "GREEN")
 
     def test_later_denial_cannot_rewrite_a_recorded_dispatch_decision(self):

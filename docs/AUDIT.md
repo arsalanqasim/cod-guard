@@ -340,3 +340,12 @@ A queued apply compares its captured decision revision inside the write
 transaction. The paused-inference API regression queues a confirmation,
 records a newer manual denial and releases inference. The completed job
 reports supersession and the denial remains in effect.
+
+### Round 6 — WS-3: Model consistency
+
+[Re-review §1, “Unusable threshold and partial model publication”](PRODUCTION_REVIEW_REREVIEW.md#1-the-three-original-defects).
+Single-order scoring uses one bundle for identity, threshold and inference.
+Standalone training captures the expected pointer before fitting and only
+exports the non-atomic baseline diagnostics after activation. Controlled
+activation tests cover both races and assert that a rejected fit leaves
+prior diagnostics intact. [Consistency contract](METRIC_PROTOCOL.md).

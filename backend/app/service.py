@@ -90,14 +90,6 @@ def get_order(order_id, tenant_id=DEMO_TENANT):
     return matches[0]
 
 
-def _ml_probability(order):
-    try:
-        bundle = _bundle()
-    except Exception:
-        return None  # model_status exposes the failure to the UI/API
-    return _batch_probabilities(bundle, [order])[0]
-
-
 def _model_row(order, columns):
     if not order.get("city") or any(order.get(key) is None for key in columns if not key.startswith("city_")):
         return None
@@ -127,7 +119,8 @@ def _batch_probabilities(bundle, orders):
 def assess_order(order, *, state=None, tenant_id=DEMO_TENANT):
     if state is None:
         state = _load_state(tenant_id, (order["order_id"],), messages=False)
-    return _assessment(order, state, model_status(), _ml_probability(order))
+    bundle, status = _available_model()
+    return _assessment(order, state, status, _batch_probabilities(bundle, [order])[0])
 
 
 def _assessment(order, state, status, probability):

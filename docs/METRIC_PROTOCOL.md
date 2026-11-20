@@ -14,3 +14,14 @@ The baseline v1 evaluation is kept in `data/evaluation.json` and
 `docs/EVAL_REPORT.md`. Outcome-fed models receive their own versioned report.
 Report their holdout counts, model ID and feedback count in a fresh section
 with any differences from baseline v1. Marked demo outcomes remain synthetic.
+
+The active pointer selects one immutable directory containing the serving
+model, matching evaluation JSON and rendered evaluation. Standalone training
+captures the expected version before fitting and refuses activation if
+another publisher changes it.
+
+`data/evaluation.json`, `docs/EVAL_REPORT.md` and `docs/BENCHMARK.md` are
+standalone baseline diagnostics. The trainer exports them only after successful
+activation. Each file is replaced atomically, and the group is non-atomic.
+Export failure is reported separately from activation. Avoid concurrent
+diagnostic exports and use the versioned set for a coherent serving snapshot.
