@@ -26,8 +26,18 @@ there is no unresolved reply requiring review. `intent` there is the effective
 saved intent. The verify response and reply history show the new reply's intent.
 Synthetic retraining is restricted to the demo tenant and returns a job ID. Its
 submitting operator can poll `GET /model/retrain/{job_id}` in that process.
-`/health` checks the process and
-`/ready` checks SQLite and the risk model. Write requests are limited to 60
+Voice and retrain job IDs and statuses are process-local and lost on restart.
+Check `/model` and its pending feedback before retrying training. An already
+activated version remains on disk. Resubmit voice audio for preview if needed.
+
+`/health` reports process liveness. `/ready` returns 200 when SQLite can read
+the order, decision and outcome tables and the active pointer selects a
+valid model with matching evaluation JSON and rendered Markdown. Readiness
+returns 503 with `state_unavailable`, `model_unavailable` or
+`evaluation_unavailable` when those checks fail. A legacy model can still
+score orders while a missing versioned evaluation leaves the API unready.
+This probe covers local reads and artifacts. Provider and worker status
+need separate checks. Write requests are limited to 60
 per operator per minute in one process. The API accepts at most 13 MiB per
 request, including multipart framing.
 

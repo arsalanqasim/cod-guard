@@ -262,15 +262,40 @@ def live_metrics(tenant_id=DEMO_TENANT):
                        else "Marked shadow outcomes; observational comparison only")}
 
 
+def _versioned_evaluation(version, bundle):
+    report = json.loads((version / "evaluation.json").read_text(encoding="utf-8"))
+    if (bundle and isinstance(report, dict)
+            and all(report[key] == bundle[key] for key in ("model_id", "version", "trained_at"))
+            and report["chosen"]["threshold"] == bundle["threshold"]):
+        return report
+    return None
+
+
+def model_readiness_error():
+    try:
+        version = active_version(MODEL_PATH)
+        bundle = _read_bundle(version / "model.pkl" if version else MODEL_PATH)
+    except Exception:
+        return "model_unavailable"
+    if bundle is None:
+        return "model_unavailable"
+    if version is not None:
+        from train_model import render_report
+
+        try:
+            report = _versioned_evaluation(version, bundle)
+            if report and (version / "report.md").read_text(encoding="utf-8") == render_report(report):
+                return None
+        except (OSError, ValueError, KeyError, IndexError, TypeError, AttributeError):
+            pass
+    return "evaluation_unavailable"
+
+
 def latest_evaluation():
     try:
         version = active_version(MODEL_PATH)
         if version is not None:
-            bundle = _read_bundle(version / "model.pkl")
-            report = json.loads((version / "evaluation.json").read_text(encoding="utf-8"))
-            if bundle and isinstance(report, dict) and report.get("model_id") == bundle.get("model_id"):
-                return report
-            return None
+            return _versioned_evaluation(version, _read_bundle(version / "model.pkl"))
     except Exception:
         return None
     status = model_status()
