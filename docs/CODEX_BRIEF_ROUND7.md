@@ -61,11 +61,21 @@ Build the reply-understanding benchmark before integrating anything:
      d1.2-ultra — keys only if obtainable without payment commitments.
   4. The current rules parser, as the standing baseline every contender
      must beat.
+- Corpus composition requirements: spelling variants of the same reply
+  (Roman Urdu is unstandardised — "g" / "jee" / "ji" for the same word),
+  code-switched replies mixing English and Urdu in one message, and
+  polite-indirect refusals. A contender that only handles clean text
+  has not been tested on our buyers.
 - Metrics per contender, overall and per language: accuracy, Brier
   score / calibration, and **abstention quality** — at the operating
   threshold, how often a committed decision is wrong (the only number
   that can lose a seller money), plus coverage (how much operator load
   it actually removes).
+- Serving budget for local contenders, reported alongside accuracy:
+  p95 latency per reply on CPU and model artifact size. Budget:
+  **p95 < 100 ms and artifact < 250 MB** — a "local" contender that
+  needs seconds per reply or gigabytes on disk fails the round's
+  purpose even if it wins on accuracy.
 - Deliverable: `docs/DECISION_MODEL_EVAL.md` with the full table and a
   recommendation. No integration in this workstream.
 
@@ -92,6 +102,25 @@ calibration good enough that the abstention threshold is meaningful.
   stays fully offline.
 - Regression: the full Round 1–6 parser/voice/decision suites must pass
   with the model path disabled and enabled (fixture provider).
+
+## WS-2b — The correction flywheel (build regardless of the WS-2 gate)
+
+The local contenders are only as good as their training data, and the
+frozen corpus is small and synthetic. So, independent of which
+contender wins:
+
+- Every time an operator resolves an UNCLEAR (or overrides any reply
+  classification), record `(reply text, final label, language guess)`
+  into a versioned, exportable corrections log — the same
+  outcome-loop pattern as courier outcomes, applied to language.
+- Contenders may also run in **shadow mode**: they predict on replies
+  they did not decide, predictions are logged next to the operator's
+  actual decision, and agreement is reported. Shadow predictions never
+  affect a decision.
+- Deliverable: the log, the export, and a documented manual retraining
+  path for the local classifiers. This is what turns a few hundred real
+  corrections into a model that beats the APIs on *our* language —
+  data nobody else has.
 
 ## WS-3 — DM extraction assessment (report only)
 
