@@ -19,9 +19,10 @@ def sha256(path):
         return hashlib.file_digest(stream, "sha256").hexdigest()
 
 
-def load_orders(archive):
+def load_orders(archive, *, include_purchase_history=False):
+    fields = FIELDS + ["sku", "discount_amount"] if include_purchase_history else FIELDS
     with zipfile.ZipFile(archive) as package, package.open(DATA_FILE) as csv:
-        lines = pd.read_csv(csv, encoding="latin-1", usecols=FIELDS, dtype="string").dropna(how="all")
+        lines = pd.read_csv(csv, encoding="latin-1", usecols=fields, dtype="string").dropna(how="all", subset=FIELDS)
     is_cod = lines["payment_method"].str.strip().str.casefold().eq("cod").fillna(False)
     cod = lines.loc[is_cod].copy()
     source = {"raw_lines": len(lines), "raw_orders": lines[ORDER].nunique(),
@@ -36,12 +37,18 @@ def load_orders(archive):
                     & ~cod["item_id"].duplicated(keep=False) & ~cod[ORDER].isin(non_cod)
                     & np.isfinite(cod["amount"]) & (cod["amount"] > 0)
                     & np.isfinite(cod["quantity"]) & (cod["quantity"] > 0) & (cod["quantity"] % 1 == 0)).fillna(False)
+    basket_details = {}
+    if include_purchase_history:
+        cod["discount"] = pd.to_numeric(cod["discount_amount"], errors="coerce")
+        cod.loc[~np.isfinite(cod["discount"]) | cod["discount"].lt(0), "discount"] = np.nan
+        cod["sku"] = cod["sku"].str.strip().replace("", pd.NA)
+        basket_details = {"distinct_skus": ("sku", "nunique"), "max_line_discount": ("discount", "max")}
     orders = cod.groupby(ORDER, sort=True).agg(
         customer_id=(CUSTOMER, "first"), customers=(CUSTOMER, "nunique"),
         order_day=("day", "first"), days=("day", "nunique"),
         amount_pkr=("amount", "min"), max_amount=("amount", "max"), items_count=("quantity", "sum"),
         all_valid=("valid", "all"), lines=("valid", "size"),
-        labeled=("label", "count"), label_low=("label", "min"), label_high=("label", "max"),
+        labeled=("label", "count"), label_low=("label", "min"), label_high=("label", "max"), **basket_details,
     ).reset_index(names="order_id")
     structurally_valid = (orders["all_valid"] & orders["customers"].eq(1) & orders["days"].eq(1)
                           & orders["amount_pkr"].eq(orders["max_amount"]))
@@ -57,6 +64,11 @@ def load_orders(archive):
     result["label_failed"] = orders.loc[result.index, "label_low"].astype(int)
     result["items_count"] = result["items_count"].astype(int)
     result["amount_pkr"] = result["amount_pkr"].astype(float)
+    if include_purchase_history:
+        # Purchase history includes structurally valid baskets regardless of terminal status.
+        purchases = orders[["order_id", "customer_id", "order_day", "amount_pkr", "lines",
+                            "distinct_skus", "max_line_discount"]]
+        return result, source, purchases
     return result, source
 
 
