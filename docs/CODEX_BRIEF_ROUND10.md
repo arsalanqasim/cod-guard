@@ -114,6 +114,48 @@ order to verification does not count — Round 9 already caught that).
   next. A precise negative is a deliverable; an inflated positive is
   a defect.
 
+## Addendum (2026-11-21) — independent web research, fold into WS-1
+
+A parallel research pass over production systems and papers landed the
+same day as this brief. Treat its findings as leads to verify in WS-1,
+not as settled fact — but two results are strong enough to shape the
+experiments now:
+
+- **Meesho TRUST (AAAI 2026 paper + engineering blog):** a heterogeneous
+  identity graph (users linked by shared phone/email/device/bank IDs)
+  plus a sequence model over order history beat XGBoost on the same
+  task: precision 68.3% vs 58.7%, AUCPR 0.47 vs 0.34. Critically, the
+  graph helped even users with ZERO prior failures (AUCPR 0.27 → 0.36)
+  and cold-start users (0.28 → 0.34) — linkage itself is information.
+  Note their best AUCPR is still 0.47: the ceiling is real everywhere;
+  the graph moves it, it does not remove it.
+- **Flipkart (WWW'23):** history features (user/product/seller/pincode
+  RTO ratios) were the base model; adding external features lifted
+  recall ~20pp at similar precision. History features beating
+  order-intrinsic features is the consistent pattern across studies;
+  reported delivery-failure AUCs cluster at 0.70–0.84.
+
+Consequences for WS-2: build the identifier clusters (phone ↔ address
+↔ name) as connected components, and make the splits
+**component-disjoint as well as customer- and time-disjoint** — if the
+lift only appears under random splits, it is leakage, not signal.
+Report the linked vs unlinked slices separately; expect the lift to
+concentrate in linked/repeat buyers and to be ~zero for unlinked
+first-timers, and say so if that is what the data shows.
+
+One more protocol requirement, for WS-3: non-response is not refusal.
+Any honest costing of the verification policy needs a ship-anyway
+control slice of non-responders (Flipkart used a 5% no-intervention
+control). We cannot run that live, but the scenario analysis must
+state what the policy assumes about non-responders and how sensitive
+the result is to that assumption.
+
+And a WS-4 lead: the most credible causal intervention found is a
+small risk-tiered partial prepayment (one published case: a ₹99
+deposit cut RTO from 24.3% to 11% while delivered orders per 1,000
+checkouts rose). The raw COD-vs-prepaid gap (7–13×) is mostly
+self-selection — never present it as the intervention's effect.
+
 ## Non-negotiables
 
 - Frozen splits and hashes unchanged. No feature design, threshold
