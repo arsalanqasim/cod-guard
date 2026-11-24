@@ -173,6 +173,11 @@ with tab_orders:
         for reason in detail["reasons"] or ["No adverse signals detected"]:
             st.write("• " + reason)
         st.caption("A rule score is not a probability. Model estimates come from synthetic training data.")
+        detail_order = orders[detail_id]
+        traffic_parts = [f"{label}: {detail_order[key]}" for key, label in (
+            ("utm_source", "source"), ("utm_medium", "medium"),
+            ("utm_campaign", "campaign"), ("referring_site", "referrer")) if detail_order.get(key)]
+        st.caption("Traffic source · " + (" · ".join(traffic_parts) if traffic_parts else "Not recorded"))
         if recommendation := detail.get("courier_recommendation"):
             st.write(f"Courier suggestion · {recommendation['courier'].title()}")
             for evidence in recommendation["evidence"]:

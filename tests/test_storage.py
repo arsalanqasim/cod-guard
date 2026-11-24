@@ -61,7 +61,7 @@ class StorageTests(unittest.TestCase):
                             [("CONFIRM", "Reply unclear; previous answer kept", 0),
                              ("UNCLEAR", "Please clarify", 0), ("CONFIRM", "Explicit answer", 0)])
         with connect(self.path) as db:
-            self.assertEqual(db.execute("PRAGMA user_version").fetchone()[0], 12)
+            self.assertEqual(db.execute("PRAGMA user_version").fetchone()[0], 13)
             self.assertEqual([row[0] for row in db.execute("SELECT needs_review FROM decisions ORDER BY rowid")],
                              [1, 1, 0])
 
@@ -88,7 +88,7 @@ class StorageTests(unittest.TestCase):
                 (tenant_id,message_id,label,language,decision_revision,at,actor)
                 VALUES ('alpha',1,'DENY','en',2,'2026-11-20','operator')""")
         with connect(self.path) as db:
-            self.assertEqual(db.execute("PRAGMA user_version").fetchone()[0], 12)
+            self.assertEqual(db.execute("PRAGMA user_version").fetchone()[0], 13)
             self.assertEqual(db.execute("SELECT label FROM reply_corrections").fetchone()[0], "DENY")
             self.assertEqual(db.execute("SELECT COUNT(*) FROM reply_shadow_predictions").fetchone()[0], 0)
 
@@ -122,3 +122,23 @@ class StorageTests(unittest.TestCase):
             self.assertEqual(db.execute("SELECT count(*) FROM outcomes").fetchone()[0], 1)
             self.assertEqual(db.execute("SELECT count(*) FROM audit_events").fetchone()[0], 1)
         self.assertEqual(read_state(restored), read_state(self.path))
+
+    def test_wal_mode_enabled_and_concurrent_read_succeeds_during_write(self):
+        with connect(self.path) as db:
+            self.assertEqual(db.execute("PRAGMA journal_mode").fetchone()[0].lower(), "wal")
+            self.assertGreaterEqual(db.execute("PRAGMA busy_timeout").fetchone()[0], 15000)
+        with transaction(self.path, order_ids=("CG-WAL-1",)) as state:
+            append_event(state, "CG-WAL-1", "outcome", "operator", outcome="delivered")
+            # Concurrent read while write transaction is still open must not raise database is locked.
+            snapshot_during_write = read_state(self.path)
+            self.assertIsInstance(snapshot_during_write, dict)
+        self.assertEqual(read_state(self.path)["outcomes"].get("CG-WAL-1"), "delivered")
+
+    def test_migrate_v12_adds_traffic_source_columns(self):
+        with connect(self.path) as db, db:
+            db.execute("PRAGMA user_version=12")
+        with connect(self.path) as db:
+            self.assertEqual(db.execute("PRAGMA user_version").fetchone()[0], 13)
+            cols = {row[1] for row in db.execute("PRAGMA table_info(orders)")}
+            for field in ("utm_source", "utm_medium", "utm_campaign", "referring_site"):
+                self.assertIn(field, cols)

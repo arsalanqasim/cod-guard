@@ -42,6 +42,10 @@ class ConfirmedOrder(BaseModel):
     city: str = Field(default="", max_length=100)
     items: str = Field(min_length=1, max_length=200)
     amount_pkr: Decimal = Field(gt=0, le=10000000, decimal_places=2, allow_inf_nan=False)
+    utm_source: str = Field(default="", max_length=200)
+    utm_medium: str = Field(default="", max_length=200)
+    utm_campaign: str = Field(default="", max_length=200)
+    referring_site: str = Field(default="", max_length=500)
 
 
 def _require_shadow(operator):
@@ -85,7 +89,10 @@ def confirm(body: ConfirmedOrder, operator: Operator = Depends(write_operator)):
     features = validate_features({"address_words": len(body.address.split()), "amount_pkr": float(body.amount_pkr)})
     source = f"DM_{body.channel.upper()}"
     order = {"customer_name": body.name, "phone": phone, "city": body.city, "product": body.items,
-             "address_issues": classify_address(body.address, body.city), **features}
+             "address_issues": classify_address(body.address, body.city),
+             "utm_source": body.utm_source or None, "utm_medium": body.utm_medium or None,
+             "utm_campaign": body.utm_campaign or None, "referring_site": body.referring_site or None,
+             **features}
     queued = ingest(service.STATE_PATH, (operator.tenant_id, source, "seller-confirmed"),
                     [(body.confirmation_id, order)], operator.actor)
     return {"queued": queued}

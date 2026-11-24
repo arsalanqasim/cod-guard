@@ -118,8 +118,22 @@ def parse_order(payload):
     if any(not isinstance(item, dict) for item in items):
         raise ValueError("Invalid WooCommerce line item")
 
-    def text(value):
-        return value.strip()[:200] if isinstance(value, str) else ""
+    def text(value, limit=200):
+        return value.strip()[:limit] if isinstance(value, str) else ""
+
+    meta = {}
+    if isinstance(payload.get("meta_data"), list):
+        for entry in payload["meta_data"]:
+            if isinstance(entry, dict) and isinstance(entry.get("key"), str) and isinstance(entry.get("value"), str):
+                meta[entry["key"]] = entry["value"]
+    traffic = {
+        "utm_source": text(meta.get("_wc_order_attribution_utm_source") or meta.get("utm_source"), 200) or None,
+        "utm_medium": text(meta.get("_wc_order_attribution_utm_medium") or meta.get("utm_medium"), 200) or None,
+        "utm_campaign": text(meta.get("_wc_order_attribution_utm_campaign") or meta.get("utm_campaign"), 200) or None,
+        "referring_site": text(meta.get("_wc_order_attribution_session_entry")
+                               or meta.get("_wc_order_attribution_referrer")
+                               or meta.get("referring_site"), 500) or None,
+    }
 
     name = " ".join(filter(None, (text(billing.get("first_name")), text(billing.get("last_name")))))
     titles = ", ".join(filter(None, (text(item.get("name")) for item in items)))
@@ -140,6 +154,7 @@ def parse_order(payload):
         "phone": phone, "city": city,
         "address_issues": classify_address(address, city) if address.strip() else None,
         **validate_features(risk),
+        **traffic,
     })
 
 
@@ -203,7 +218,7 @@ def poll_once(path, store, *, clock=lambda: datetime.now(timezone.utc)):
                     "_fields": "id,status,payment_method,currency,date_modified_gmt,date_paid_gmt,"
                                "billing.first_name,billing.last_name,"
                                "billing.phone,billing.city,billing.address_1,billing.address_2,shipping.city,"
-                               "shipping.address_1,shipping.address_2,line_items.name,line_items.quantity,total",
+                               "shipping.address_1,shipping.address_2,line_items.name,line_items.quantity,total,meta_data",
                 })
                 if not isinstance(payload, list) or len(payload) > PAGE_SIZE:
                     raise WooCommerceError("WooCommerce returned an invalid order page")

@@ -15,6 +15,7 @@ FEATURES = frozenset(("phone_valid", "phone_fraud_history", "phone_velocity_24h"
                       "address_words", "address_has_landmark", "amount_pkr", "items_count",
                       "order_hour", "is_repeat_customer", "customer_past_delivered",
                       "customer_past_refusals"))
+TRAFFIC_FIELDS = frozenset(("utm_source", "utm_medium", "utm_campaign", "referring_site"))
 MAX_CSV_BYTES = 1024 * 1024
 MAX_ROWS = 2000
 
@@ -28,7 +29,7 @@ def _parse(contents):
         source = io.StringIO(contents.decode("utf-8-sig"), newline="")
         reader = csv.DictReader(source, strict=True)
         fields = reader.fieldnames or []
-        if len(set(fields)) != len(fields) or REQUIRED - set(fields) or set(fields) - (REQUIRED | FEATURES | {"city", "address"}):
+        if len(set(fields)) != len(fields) or REQUIRED - set(fields) or set(fields) - (REQUIRED | FEATURES | TRAFFIC_FIELDS | {"city", "address"}):
             raise ValueError("CSV header must contain order_id, customer_name, product and phone, with optional risk features")
         rows, errors = [], []
         for index, row in enumerate(reader, start=2):
@@ -49,8 +50,15 @@ def _parse(contents):
                     raise ValueError("City must be at most 100 characters")
                 if len(row.get("address", "")) > 500:
                     raise ValueError("Address must be at most 500 characters")
+                traffic = {}
+                for field in TRAFFIC_FIELDS:
+                    limit = 500 if field == "referring_site" else 200
+                    val = row.get(field, "")
+                    if len(val) > limit:
+                        raise ValueError(f"{field} must be at most {limit} characters")
+                    traffic[field] = val or None
                 values = validate_features({key: row[key] for key in FEATURES if row.get(key)})
-                rows.append((index, {**{key: row[key] for key in REQUIRED}, **values,
+                rows.append((index, {**{key: row[key] for key in REQUIRED}, **values, **traffic,
                                      "city": city, "data_source": "SHADOW",
                                      "address_issues": classify_address(row.get("address"), city)}))
             except ValueError as exc:

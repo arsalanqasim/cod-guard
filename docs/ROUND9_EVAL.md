@@ -1,5 +1,7 @@
 # Round 9 evaluation
 
+> **Round 11 cost-sensitivity addendum:** See [Cost-Model Sensitivity to Live Pakistan WhatsApp Pricing](COST_SENSITIVITY.md) for these holdout tables re-evaluated at live Meta Pakistan Utility rates (PKR 4.15 and PKR 12.45 vs. the PKR 50 assumption below). No served policy or result below was rewritten.
+
 **The model-first policy stays in shadow.** It met the false-hold bound
 and tied the incumbent’s modeled cost on [PK-REAL]. The gate requires
 lower expected cost on both holdouts. The [PK-REAL] licence is unstated

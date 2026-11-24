@@ -5,7 +5,6 @@ import json
 import os
 import re
 from dataclasses import dataclass
-from functools import lru_cache
 from threading import Lock
 from time import monotonic
 
@@ -24,7 +23,6 @@ _limits_lock = Lock()
 _write_windows = {}
 
 
-@lru_cache(maxsize=1)
 def _configured_operators(config):
     records = json.loads(config)
     if not isinstance(records, dict):
