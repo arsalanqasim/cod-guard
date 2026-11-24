@@ -11,7 +11,9 @@ import streamlit as st
 
 BASE = os.environ.get("COD_GUARD_INTAKE_API", "http://127.0.0.1:8000").rstrip("/")
 FIELDS = (("name", "Buyer name"), ("phone", "Pakistan mobile number"), ("address", "Address"), ("city", "City"),
-          ("items", "Items"), ("amount_pkr", "Total in PKR"))
+          ("items", "Items"), ("amount_pkr", "Total in PKR"),
+          ("utm_source", "UTM source (optional)"), ("utm_medium", "UTM medium (optional)"),
+          ("utm_campaign", "UTM campaign (optional)"), ("referring_site", "Referring site (optional)"))
 
 
 def send(path, key, **kwargs):
