@@ -12,7 +12,7 @@ CANCELLED = "closed_cancelled"
 NON_COD = "out_of_cod_scope"
 CLOSED = "closed_at_source"
 STATUS_RANK = {OPEN: 0, CLOSED: 1, NON_COD: 2, CANCELLED: 3}
-SOURCE_FIELDS = ("customer_name", "product", "city", "phone", "amount_pkr", "address_words", "items_count")
+SOURCE_FIELDS = ("customer_name", "product", "city", "phone", "amount_pkr", "address_words", "items_count", "utm_source", "utm_medium", "utm_campaign", "referring_site")
 
 
 @dataclass(frozen=True)
