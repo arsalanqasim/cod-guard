@@ -7,6 +7,7 @@ import os
 import re
 from dataclasses import dataclass, field
 from functools import lru_cache
+from urllib.parse import parse_qs, urlsplit
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from starlette.concurrency import run_in_threadpool
@@ -63,8 +64,21 @@ def configured_shops():
         raise HTTPException(503, "Shopify configuration is unavailable") from None
 
 
-def _text(value):
-    return value.strip()[:200] if isinstance(value, str) else ""
+def _text(value, limit=200):
+    return value.strip()[:limit] if isinstance(value, str) else ""
+
+
+def _traffic(payload):
+    landing = payload.get("landing_site")
+    params = parse_qs(urlsplit(landing).query) if isinstance(landing, str) else {}
+    result = {}
+    for key in ("utm_source", "utm_medium", "utm_campaign"):
+        raw = next((item for item in params.get(key, ()) if isinstance(item, str) and item.strip()), None)
+        if raw is None:
+            raw = payload.get(key)
+        result[key] = _text(raw, 200) or None
+    result["referring_site"] = _text(payload.get("referring_site"), 500) or None
+    return result
 
 
 def parse_order(shop, payload, topic):
@@ -115,6 +129,7 @@ def parse_order(shop, payload, topic):
         "product": ", ".join(filter(None, (_text(item.get("title")) for item in items)))[:200] or "Items unavailable",
         "city": city, "phone": phone, **validate_features(flags),
         "address_issues": classify_address(address, city) if address.strip() else None,
+        **_traffic(payload),
     })
 
 
