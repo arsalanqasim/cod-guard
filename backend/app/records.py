@@ -7,11 +7,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 DEMO_TENANT = "demo"
+TRAFFIC_FIELDS = ("utm_source", "utm_medium", "utm_campaign", "referring_site")
 ORDER_FIELDS = (
     "order_id", "customer_name", "product", "city", "phone", "amount_pkr",
     "phone_valid", "phone_fraud_history", "phone_velocity_24h", "address_words",
     "address_has_landmark", "items_count", "order_hour", "is_repeat_customer",
     "customer_past_delivered", "customer_past_refusals", "label_failed", "data_source",
+    *TRAFFIC_FIELDS,
 )
 SCHEMA = (
     """CREATE TABLE orders (
@@ -21,6 +23,7 @@ SCHEMA = (
         address_words INTEGER, address_has_landmark INTEGER, items_count INTEGER,
         order_hour INTEGER, is_repeat_customer INTEGER, customer_past_delivered INTEGER,
         customer_past_refusals INTEGER, label_failed INTEGER, data_source TEXT NOT NULL,
+        utm_source TEXT, utm_medium TEXT, utm_campaign TEXT, referring_site TEXT,
         PRIMARY KEY (tenant_id, order_id))""",
     """CREATE TABLE decisions (
         tenant_id TEXT NOT NULL, order_id TEXT NOT NULL, revision INTEGER NOT NULL,
@@ -152,7 +155,7 @@ RISK_SHADOW_SCHEMA = (
         PRIMARY KEY (tenant_id, order_id, revision),
         FOREIGN KEY (tenant_id, order_id, revision) REFERENCES decisions(tenant_id, order_id, revision))""",
 )
-STATE_SCHEMA_VERSION = 12
+STATE_SCHEMA_VERSION = 13
 
 
 class StateUnavailable(RuntimeError):
@@ -291,6 +294,12 @@ def _initialize(connection, legacy):
         # Older Cloud records used the same source for a signed tap and typed text.
         connection.execute("""UPDATE messages SET source='whatsapp_legacy'
             WHERE source='whatsapp' AND ((text='Confirm' AND intent='CONFIRM') OR (text='Cancel' AND intent='DENY'))""")
+    if 0 < version < 13:
+        existing_cols = {row[1] for row in connection.execute("PRAGMA table_info(orders)")}
+        if existing_cols:
+            for column in TRAFFIC_FIELDS:
+                if column not in existing_cols:
+                    connection.execute(f"ALTER TABLE orders ADD COLUMN {column} TEXT")
     for statement in (*CONNECTOR_SCHEMA, *WHATSAPP_SCHEMA, *COURIER_SCHEMA, *NETWORK_SCHEMA,
                       *REPLY_CORRECTION_SCHEMA, *DISPATCH_ADVICE_SCHEMA, *RISK_SHADOW_SCHEMA):
         connection.execute(statement)
@@ -306,6 +315,8 @@ def connect(path):
         with closing(sqlite3.connect(legacy.with_suffix(".sqlite3"), timeout=15)) as connection:
             connection.row_factory = sqlite3.Row
             connection.execute("PRAGMA foreign_keys=ON")
+            connection.execute("PRAGMA busy_timeout=15000")
+            connection.execute("PRAGMA journal_mode=WAL")
             try:
                 version = connection.execute("PRAGMA user_version").fetchone()[0]
                 if 0 <= version < STATE_SCHEMA_VERSION:
