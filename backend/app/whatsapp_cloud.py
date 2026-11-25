@@ -89,6 +89,32 @@ def _recipient(account, phone):
     return _digest(account, "recipient", phone)
 
 
+def advice_contacts(db, tenant, orders):
+    try:
+        account = accounts().get(tenant)
+    except CloudError:
+        return {}
+    if account is None:
+        return {}
+    recipients = {order["order_id"]: _recipient(account, phone) for order in orders
+                  if (phone := normalize_phone(order["phone"]))}
+    if not recipients:
+        return {}
+    recipient_keys = tuple(set(recipients.values()))
+    slots = ", ".join("?" for _ in recipient_keys)
+    consent = {row["recipient"]: bool(row["opted_in"]) for row in db.execute(f"""SELECT recipient, opted_in
+        FROM whatsapp_consent WHERE tenant_id=? AND recipient IN ({slots})""", (tenant, *recipient_keys))}
+    result = {order_id: {"opted_in": consent.get(recipient)} for order_id, recipient in recipients.items()}
+    slots = ", ".join("?" for _ in recipients)
+    attempts = db.execute(f"""SELECT order_id, recipient, status, started_at, expires FROM whatsapp_verifications
+        WHERE tenant_id=? AND order_id IN ({slots}) AND replied_at IS NULL""", (tenant, *recipients))
+    for attempt in attempts:
+        order_id = attempt["order_id"]
+        if attempt["recipient"] == recipients[order_id]:
+            result[order_id].update(status=attempt["status"], started_at=attempt["started_at"], expires=attempt["expires"])
+    return result
+
+
 def _button(account, attempt, action):
     raw = f"{attempt}.{action}"
     return f"{raw}.{_digest(account, 'button', raw)}"

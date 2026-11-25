@@ -3,6 +3,7 @@ import os
 import sys
 import tempfile
 import unittest
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import patch
 
@@ -13,6 +14,7 @@ import dispatch_advice
 import main
 import operators
 import service
+import whatsapp_cloud
 from address_quality import classify_address
 from records import connect, insert_order, now, write
 
@@ -108,6 +110,66 @@ class DispatchAdviceTests(unittest.TestCase):
         self.assertEqual(classify_address("مکان ۱۲، گلی ۳، گلبرگ، لاہور", "Lahore"), [])
         self.assertEqual(classify_address("Street 22, Model Town, Lahroe", "Lahore"), ["city_misspelling"])
         self.assertEqual(classify_address("House 13, Street 2, Lahore", "Karachi"), ["city_mismatch"])
+
+    def test_reviewed_address_changes_the_advice_without_rewriting_the_reply(self):
+        self.enterContext(patch.dict(os.environ, COD_GUARD_DISPATCH_EXPERIMENTS='{"alpha":{"next_action":{}}}'))
+        path = "/orders/ORD-1"
+        self.assertEqual(self.alpha.post(path + "/verify", json={"text": "Yes confirm"}).status_code, 200)
+        before = self.alpha.get(path).json()
+        self.assertEqual(before["next_action"]["action"], "fix_address")
+        self.assertEqual(before["decision"], "SHIP")
+        body = {"address": "House 12, Street 4, Sample Block, Lahore", "saved_at_source": True}
+        endpoint = path + "/dispatch-address"
+        self.assertEqual(self.beta.put(endpoint, json=body).status_code, 409)
+        self.assertEqual(self.alpha.put(endpoint, json={**body, "saved_at_source": False}).status_code, 422)
+        self.assertEqual(self.alpha.put(endpoint, json={**body, "address": "Near Sample Mosque"}).status_code, 409)
+        first = self.alpha.put(endpoint, json=body)
+        self.assertEqual(first.status_code, 200, first.text)
+        self.assertEqual(first.json()["next_action"]["action"], "dispatch")
+        self.assertEqual(self.alpha.put(endpoint, json=body).json(), first.json())
+        detail = self.alpha.get(path).json()
+        self.assertEqual(detail["decision_revision"], before["decision_revision"])
+        self.assertEqual(self.alpha.get("/orders").json()[0]["next_action"], detail["next_action"])
+        self.assertNotIn("Sample Block", json.dumps(detail))
+        with connect(self.path) as db:
+            self.assertEqual(db.execute("SELECT count(*) FROM audit_events WHERE action='dispatch_address_reviewed'").fetchone()[0], 1)
+        self.alpha.post(path + "/verify", json={"text": "No, cancel"})
+        self.assertEqual(self.alpha.get(path).json()["next_action"]["action"], "stop")
+        self.assertEqual(self.alpha.put(endpoint, json=body).status_code, 409)
+
+    def test_cloud_contact_and_confirmed_custom_order_have_distinct_actions(self):
+        config = {"alpha": {"next_action": {"advance": {"delivery_fee_pkr": 301, "percent": 50,
+                                                        "made_to_order_products": ["Custom jacket"]}}}}
+        account = {"waba_id": "1", "phone_number_id": "2", "template_id": "3", "token": "fixture-token-not-real",
+                   "app_secret": "fixture-secret-not-real", "verify_token": "fixture-verify-not-real",
+                   "signing_key": "fixture-signing-key-not-real-12345", "business_verified": True}
+        self.enterContext(patch.dict(os.environ, COD_GUARD_DISPATCH_EXPERIMENTS=json.dumps(config),
+                                     COD_GUARD_WHATSAPP=json.dumps({"alpha": account})))
+        path = "/orders/ORD-2"
+        address = "House 12, Street 4, Sample Block, Lahore"
+        with write(self.path) as db:
+            insert_order(db, "alpha", {"order_id": "ORD-2", "city": "Lahore", "customer_name": "Example",
+                                       "product": "Custom jacket", "phone": "03000000002", "amount_pkr": 4500,
+                                       "data_source": "SHADOW", "address_issues": classify_address(address, "Lahore")})
+        self.assertEqual(self.alpha.get(path).json()["next_action"]["action"], "confirm_whatsapp")
+        self.assertEqual(self.alpha.post("/integrations/whatsapp" + path + "/consent",
+                                         json={"opted_in": True, "evidence_reference": "fixture-1"}).status_code, 200)
+        recipient = whatsapp_cloud._recipient(whatsapp_cloud.accounts()["alpha"], "923000000002")
+        at = datetime.now(timezone.utc)
+        with write(self.path) as db:
+            db.execute("""INSERT INTO whatsapp_verifications
+                (tenant_id, order_id, attempt_id, recipient, started_at, expires, status)
+                VALUES ('alpha', 'ORD-2', 'fixture-attempt', ?, ?, ?, 'accepted')""",
+                       (recipient, (at - timedelta(minutes=90)).isoformat(), int(at.timestamp()) + 600))
+        self.assertEqual(self.alpha.get(path).json()["next_action"]["action"], "wait_for_reply")
+        with write(self.path) as db:
+            db.execute("UPDATE whatsapp_verifications SET status='delivered' WHERE tenant_id='alpha'")
+        self.assertEqual(self.alpha.get(path).json()["next_action"]["action"], "call_buyer")
+        self.alpha.post(path + "/verify", json={"text": "Yes confirm"})
+        advice = self.alpha.get(path).json()["next_action"]
+        self.assertEqual(advice["action"], "offer_advance")
+        self.assertEqual(advice["advance"], {"amount_pkr": "150.50", "remaining_cod_pkr": "4349.50",
+                                             "order_total_pkr": "4500.00"})
 
 
 if __name__ == "__main__":

@@ -3,9 +3,11 @@ import json
 import os
 from collections import defaultdict
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from functools import lru_cache
 
 from address_quality import CLARIFICATION, REASONS, city_key
+import next_action as next_actions
 from records import audit, now
 
 PAYMENT_METHODS = ("JazzCash", "Easypaisa")
@@ -19,6 +21,7 @@ class Settings:
     prepaid: tuple[int, str] | None = None
     courier_choice: bool = False
     address_quality: bool = False
+    next_action: next_actions.Policy | None = None
 
 
 @lru_cache(maxsize=8)
@@ -39,7 +42,8 @@ def _configured(raw, tenant):
             prepaid = None
     else:
         prepaid = None
-    return Settings(prepaid, config.get("courier_choice") is True, config.get("address_quality") is True)
+    return Settings(prepaid, config.get("courier_choice") is True, config.get("address_quality") is True,
+                    next_actions.policy(config.get("next_action")))
 
 
 def settings(tenant_id):
@@ -107,14 +111,23 @@ def recommend_courier(rates, city):
             "prior_orders": PRIOR_ORDERS}
 
 
-def queue_context(db, tenant, order_ids, config):
+def queue_context(db, tenant, orders, config):
+    order_ids = tuple(order["order_id"] for order in orders)
+    contacts = {}
+    if config.next_action and orders:
+        from whatsapp_cloud import advice_contacts
+
+        contacts = advice_contacts(db, tenant, orders)
     return {
         "rates": courier_rates(courier_history(db, tenant)) if config.courier_choice and order_ids else {},
         "offers": _records(db, "prepaid_offer_outcomes", tenant, order_ids, "discount_pct", "payment_method",
                            "sent_at", "accepted_at", "paid_at") if config.prepaid else {},
-        "findings": _records(db, "address_findings", tenant, order_ids, "issues") if config.address_quality else {},
+        "findings": _records(db, "address_findings", tenant, order_ids, "issues")
+        if config.address_quality or config.next_action else {},
         "drafts": _records(db, "address_clarifications", tenant, order_ids, "drafted_at")
         if config.address_quality else {},
+        "contacts": contacts,
+        "at": datetime.now(timezone.utc),
     }
 
 
@@ -128,12 +141,15 @@ def annotate(order, assessment, context, config):
         result["courier_recommendation"] = (
             recommend_courier(context["rates"], order["city"])
             if assessment["decision"] == "SHIP" and assessment["queue_status"] == "open" else None)
+    finding = context["findings"].get(order_id)
+    issues = json.loads(finding["issues"]) if finding else None
     if config.address_quality:
-        row = context["findings"].get(order_id)
-        issues = json.loads(row["issues"]) if row else []
-        result["address_quality"] = {"status": ("flagged" if issues else "clear") if row else "unavailable",
-                                     "reasons": [REASONS[reason] for reason in issues],
+        result["address_quality"] = {"status": ("flagged" if issues else "clear") if finding else "unavailable",
+                                     "reasons": [REASONS[reason] for reason in issues or ()],
                                      "clarification": CLARIFICATION if order_id in context["drafts"] and issues else None}
+    if config.next_action:
+        result["next_action"] = next_actions.recommend(order, assessment, issues, context["contacts"].get(order_id, {}),
+                                                       config.next_action, at=context["at"])
     return result
 
 

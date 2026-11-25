@@ -4,6 +4,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from urllib.parse import urlsplit
 from unittest.mock import patch
 
 from fastapi.testclient import TestClient
@@ -79,3 +80,34 @@ class SocialTests(unittest.TestCase):
             self.assertFalse(app.exception, str(app.exception))
             self.assertEqual(service.load_orders("alpha").iloc[0]["product"], "Corrected fixture")
             self.assertEqual(app.text_area(key="dm_transcript").value, "")
+
+    def test_seller_screen_refreshes_the_recommendation_after_address_review(self):
+        path = "/orders/ORD-1"
+        csv = ('order_id,customer_name,product,phone,city,address\n'
+               'ORD-1,Example,Shirt,03000000001,Lahore,"Near Sample Mosque, Lahore"\n')
+        imported = self.client.post("/orders/import", headers={**self.headers, "Idempotency-Key": "advice-fixture"},
+                                    files={"file": ("orders.csv", csv)})
+        self.assertEqual(imported.json()["imported"], 1)
+        self.assertEqual(self.client.post(path + "/verify", headers=self.headers,
+                                          json={"text": "Yes confirm"}).status_code, 200)
+
+        def get(url, *, headers, params, **_):
+            return self.client.get(urlsplit(url).path, headers=headers, params=params)
+
+        def put(url, *, headers, json, **_):
+            return self.client.put(urlsplit(url).path, headers=headers, json=json)
+
+        with patch.dict(os.environ, COD_GUARD_INTAKE_API="http://127.0.0.1:8000", COD_GUARD_EXHIBITION="0",
+                        COD_GUARD_WHATSAPP="{}", COD_GUARD_DISPATCH_EXPERIMENTS='{"alpha":{"next_action":{}}}'), \
+             patch("httpx.get", side_effect=get), patch("httpx.put", side_effect=put):
+            app = AppTest.from_file(str(ROOT / "frontend/social_intake.py"), default_timeout=30).run()
+            app.text_input(key="operator_key").set_value("example-social-operator-key-alpha").run()
+            app.session_state["seller_tab"] = "Next action"
+            app.run()
+            self.assertIn("Ask for the missing address details", [section.value for section in app.subheader])
+            next(field for field in app.text_input if field.label == "Corrected delivery address").set_value(
+                "House 12, Street 4, Gulberg, Lahore")
+            next(item for item in app.checkbox if item.label.startswith("I checked and saved")).check()
+            next(button for button in app.button if button.label == "Record address review").click().run()
+            self.assertFalse(app.exception, str(app.exception))
+            self.assertIn("Ready to dispatch", [section.value for section in app.subheader])

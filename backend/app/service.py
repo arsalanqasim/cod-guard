@@ -14,14 +14,15 @@ from pathlib import Path
 import pandas as pd
 import dispatch_advice
 import risk_shadow
+from address_quality import classify_address
 
 from risk_engine import OPTIONAL_MODEL_FEATURES, assess as rule_assess
 from verification import parse_reply, apply_reply, opening_message
 from artifacts import active_version
-from storage import queue_snapshot, read_state, transaction, update_state
+from storage import queue_snapshot, read_state, state_snapshot, transaction, update_state
 from decision_events import append_event
 from records import (DEMO_TENANT, ORDER_FIELDS, StateUnavailable, add_model_version, audit,
-                     connect, ensure_seeded, select_orders, select_page, write)
+                     connect, ensure_seeded, select_orders, select_page, store_address_finding, write)
 from model_schema import probabilities, validate_bundle
 from jobs import JobQueue
 from reply_corrections import CorrectionConflict, LABELS as REPLY_LABELS, record as record_correction
@@ -162,7 +163,7 @@ def order_page(tenant_id=DEMO_TENANT, *, limit=50, offset=0, search=""):
         orders, total = select_page(connection, tenant_id, limit, offset, search)
         order_ids = tuple(order["order_id"] for order in orders)
         state = queue_snapshot(connection, tenant_id, order_ids)
-        context = dispatch_advice.queue_context(connection, tenant_id, order_ids, config)
+        context = dispatch_advice.queue_context(connection, tenant_id, orders, config)
     bundle, status = _available_model()
     scores = _batch_probabilities(bundle, orders)
     assessments = [_assessment(order, state, status, score) for order, score in zip(orders, scores)]
@@ -186,14 +187,21 @@ def shadow_decisions(order, tenant_id, after):
     return {"current": preview, "revisions": history}
 
 
-def order_advice(order, assessment, tenant_id):
+def order_detail(order_id, tenant_id):
+    if tenant_id == DEMO_TENANT:
+        ensure_seeded(STATE_PATH, SEED_PATH)
     config = dispatch_advice.settings(tenant_id)
-    if config == dispatch_advice.Settings():
-        return {}
     with connect(STATE_PATH) as db:
         db.execute("BEGIN")
-        context = dispatch_advice.queue_context(db, tenant_id, (order["order_id"],), config)
-    return dispatch_advice.annotate(order, assessment, context, config)
+        matches = select_orders(db, tenant_id, order_id=order_id)
+        if not matches:
+            raise KeyError(order_id)
+        order = matches[0]
+        state = state_snapshot(db, tenant_id, (order_id,))
+        context = dispatch_advice.queue_context(db, tenant_id, (order,), config)
+    assessment = assess_order(order, state=state, tenant_id=tenant_id)
+    assessment.update(dispatch_advice.annotate(order, assessment, context, config))
+    return order, assessment, state["messages"].get(order_id, [])
 
 
 def _assess_in_transaction(db, tenant, order_id):
@@ -211,7 +219,7 @@ def prepare_verification(order_id, *, actor="local-demo", tenant_id=DEMO_TENANT)
         return None
     with write(STATE_PATH) as db:
         order, assessment = _assess_in_transaction(db, tenant_id, order_id)
-        context = dispatch_advice.queue_context(db, tenant_id, (order_id,), config)
+        context = dispatch_advice.queue_context(db, tenant_id, (order,), config)
         advice = dispatch_advice.annotate(order, assessment, context, config)
         clarification = dispatch_advice.draft_address_clarification(db, tenant_id, actor, assessment, advice)
         offer = advice.get("prepaid_offer")
@@ -229,6 +237,26 @@ def record_prepaid_offer(order_id, stage, *, actor, tenant_id):
     with write(STATE_PATH) as db:
         _, assessment = _assess_in_transaction(db, tenant_id, order_id)
         return dispatch_advice.record_offer(db, tenant_id, actor, assessment, stage, config)
+
+
+def review_dispatch_address(order_id, address, *, actor, tenant_id):
+    config = dispatch_advice.settings(tenant_id)
+    with write(STATE_PATH) as db:
+        order, assessment = _assess_in_transaction(db, tenant_id, order_id)
+        if not config.next_action:
+            raise ValueError("Next action is disabled for this tenant")
+        if (assessment["queue_status"] != "open" or assessment["storefront_conflict"]
+                or assessment["outcome"] or assessment["decision"] == "HOLD_CANCEL"):
+            raise ValueError("Review the active order in the storefront first")
+        if not order["city"] or classify_address(address, order["city"]):
+            raise ValueError("Check that the corrected address includes a house or street identifier and matches the order city")
+        context = dispatch_advice.queue_context(db, tenant_id, (order,), config)
+        finding = context["findings"].get(order_id)
+        if not finding or json.loads(finding["issues"]):
+            store_address_finding(db, tenant_id, order_id, [])
+            audit(db, tenant_id, actor, "dispatch_address_reviewed", order_id=order_id)
+            context["findings"][order_id] = {"issues": "[]"}
+        return dispatch_advice.annotate(order, assessment, context, config)["next_action"]
 
 
 def verify_reply(order, reply_text, source="text", *, actor="local-demo", tenant_id=DEMO_TENANT):

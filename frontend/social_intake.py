@@ -2,7 +2,7 @@
 
 import hashlib
 import os
-from urllib.parse import urlsplit
+from urllib.parse import quote, urlsplit
 from uuid import uuid4
 
 import httpx
@@ -16,21 +16,23 @@ FIELDS = (("name", "Buyer name"), ("phone", "Pakistan mobile number"), ("address
           ("utm_campaign", "UTM campaign (optional)"), ("referring_site", "Referring site (optional)"))
 
 
-def send(path, key, **kwargs):
+def request(send, path, key, **kwargs):
     try:
-        response = httpx.post(f"{BASE}/integrations/social/{path}", headers={
+        response = send(f"{BASE}{path}", headers={
             "Authorization": f"Bearer {key}", **kwargs.pop("headers", {})}, timeout=15,
             follow_redirects=False, **kwargs)
         if response.is_success:
             return response.json()
         if response.status_code in (401, 403):
             st.error("Enter a valid key for your shadow tenant.")
+        elif response.status_code == 409:
+            st.error(response.json().get("detail", "Review the current order before retrying."))
         elif response.status_code == 422:
-            st.error("The order or CSV was rejected. Check the required fields, format and size.")
+            st.error("Check the required fields and try again.")
         else:
-            st.error("Intake could not complete. Check the connection and retry.")
+            st.error("The request could not complete. Check the connection and retry.")
     except (httpx.HTTPError, ValueError):
-        st.error("The intake API is unavailable. Check the connection and retry.")
+        st.error("The seller API is unavailable. Check the connection and retry.")
     return None
 
 
@@ -38,6 +40,12 @@ def discard():
     for key, _ in FIELDS:
         st.session_state.pop(f"draft_{key}", None)
     for key in ("dm_draft", "dm_transcript", "dm_reviewed"):
+        st.session_state.pop(key, None)
+
+
+def change_operator():
+    discard()
+    for key in ("advice_order", "advice_page"):
         st.session_state.pop(key, None)
 
 
@@ -49,7 +57,7 @@ if (not target.hostname or target.username or target.password or target.query or
         or (target.scheme != "https" and not (target.scheme == "http" and target.hostname in ("127.0.0.1", "localhost", "::1")))):
     st.error("Configure an HTTPS API or a loopback development API before use.")
     st.stop()
-key = st.text_input("Shadow tenant operator key", type="password", key="operator_key", on_change=discard)
+key = st.text_input("Shadow tenant operator key", type="password", key="operator_key", on_change=change_operator)
 if not key:
     st.stop()
 if notice := st.session_state.pop("saved_notice", None):
@@ -57,7 +65,8 @@ if notice := st.session_state.pop("saved_notice", None):
 if st.session_state.pop("clear_draft", False):
     discard()
 
-dm, sheets = st.tabs(["Paste a DM", "Import Google Sheets CSV"])
+dm, sheets, advice = st.tabs(["Paste a DM", "Import Google Sheets CSV", "Next action"],
+                             key="seller_tab", on_change="rerun")
 with dm:
     if "dm_draft" not in st.session_state:
         with st.form("extract"):
@@ -65,7 +74,8 @@ with dm:
             transcript = st.text_area("Conversation", max_chars=6000, key="dm_transcript",
                                       help="Lines such as Name:, Phone:, Address:, City:, Items: and Total: are easiest to extract.")
             if st.form_submit_button("Extract draft"):
-                result = send("dm/preview", key, json={"channel": channel, "transcript": transcript})
+                result = request(httpx.post, "/integrations/social/dm/preview", key,
+                                 json={"channel": channel, "transcript": transcript})
                 if result is not None:
                     st.session_state["dm_draft"] = (channel, uuid4().hex)
                     for field, value in result["draft"].items():
@@ -81,8 +91,9 @@ with dm:
                 if not reviewed:
                     st.error("Review the draft before saving.")
                 else:
-                    result = send("dm/confirm", key, json={**values, "channel": channel, "confirmed": True,
-                                                          "confirmation_id": confirmation_id})
+                    result = request(httpx.post, "/integrations/social/dm/confirm", key,
+                                     json={**values, "channel": channel, "confirmed": True,
+                                           "confirmation_id": confirmation_id})
                     if result is not None:
                         st.session_state["saved_notice"] = "Order saved." if result["queued"] else "Order was already saved."
                         st.session_state["clear_draft"] = True
@@ -99,9 +110,53 @@ with sheets:
                 st.error("Choose a nonempty CSV up to 1 MiB.")
             else:
                 contents = upload.getvalue()
-                result = send("sheets/import", key, headers={"Idempotency-Key": hashlib.sha256(contents).hexdigest()},
-                              files={"file": ("orders.csv", contents, "text/csv")})
+                result = request(httpx.post, "/integrations/social/sheets/import", key,
+                                 headers={"Idempotency-Key": hashlib.sha256(contents).hexdigest()},
+                                 files={"file": ("orders.csv", contents, "text/csv")})
                 if result is not None:
                     st.success(f"{result['imported']} imported; {len(result['errors'])} rejected.")
                     if result["errors"]:
                         st.dataframe(result["errors"], hide_index=True)
+
+with advice:
+    if advice.open:
+        page = st.number_input("Order page", min_value=1, max_value=100_000, step=1, key="advice_page")
+        st.button("Refresh recommendations")
+        orders = request(httpx.get, "/orders", key, params={"limit": 50, "offset": (page - 1) * 50})
+        if orders == []:
+            st.info("No orders on this page.")
+        if orders:
+            choices = {order["order_id"]: order for order in orders}
+            order_id = st.selectbox("Order", options=choices, key="advice_order",
+                                    format_func=lambda oid: f"{oid} · {choices[oid]['product']}")
+            action = choices[order_id].get("next_action")
+            if action is None:
+                st.info("Enable Next action for this tenant to see dispatch recommendations.")
+            else:
+                order_path = f"/orders/{quote(order_id, safe='')}"
+                st.subheader(action["title"])
+                st.write(action["reason"])
+                if deadline := action.get("deadline"):
+                    st.write(f"**Before {deadline}**")
+                if advance := action.get("advance"):
+                    st.write(f"**PKR {advance['amount_pkr']} today · PKR {advance['remaining_cod_pkr']} at delivery**")
+                    st.caption(f"Order total · PKR {advance['order_total_pkr']}")
+                st.write(action["next_step"])
+                st.caption(action["fallback"])
+                if draft := action.get("draft"):
+                    st.code(draft, language=None)
+                if action["action"] in ("fix_address", "check_address"):
+                    with st.form(f"review_address_{order_id}", clear_on_submit=True):
+                        address = st.text_input("Corrected delivery address", max_chars=500)
+                        saved = st.checkbox("I checked and saved this address in the source order")
+                        if st.form_submit_button("Record address review"):
+                            result = request(httpx.put, order_path + "/dispatch-address", key,
+                                             json={"address": address, "saved_at_source": saved})
+                            if result is not None:
+                                st.rerun()
+                if action["action"] in ("call_buyer", "confirm_whatsapp", "wait_for_reply"):
+                    with st.form(f"record_reply_{order_id}", clear_on_submit=True):
+                        reply = st.text_input("Buyer’s reply", max_chars=2000)
+                        if st.form_submit_button("Record buyer reply"):
+                            if request(httpx.post, order_path + "/verify", key, json={"text": reply}) is not None:
+                                st.rerun()

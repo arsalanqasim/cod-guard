@@ -13,6 +13,27 @@ from reply_corrections import export_page
 
 
 class DashboardTests(unittest.TestCase):
+    def test_exhibition_next_action_examples_recalculate_and_reset(self):
+        with tempfile.TemporaryDirectory() as directory, \
+             patch.object(service, "STATE_PATH", Path(directory) / "state.json"), \
+             patch.dict("os.environ", COD_GUARD_EXHIBITION="1"):
+            app = AppTest.from_file(str(ROOT / "frontend/dashboard.py"), default_timeout=30).run()
+            self.assertFalse(app.exception, str(app.exception))
+            self.assertEqual(app.tabs[0].label, "Next action")
+
+            def headlines():
+                return [item.value for item in app.tabs[0].markdown]
+
+            self.assertIn("**Ask for the missing address details**", headlines())
+            self.assertIn("**Call the buyer**", headlines())
+            self.assertIn("**Offer a credited advance**", headlines())
+            next(button for button in app.button if button.label == "Review the corrected address").click().run()
+            self.assertFalse(app.exception, str(app.exception))
+            self.assertIn("**Ready to dispatch**", headlines())
+            self.assertNotIn("**Ask for the missing address details**", headlines())
+            next(button for button in app.button if button.label == "Reset examples").click().run()
+            self.assertIn("**Ask for the missing address details**", headlines())
+
     def test_operator_can_correct_the_latest_unclear_reply(self):
         with tempfile.TemporaryDirectory() as directory, \
              patch.object(service, "STATE_PATH", Path(directory) / "state.json"):

@@ -8,7 +8,7 @@ from typing import Annotated, Literal
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from fastapi import Depends, FastAPI, File, Header, HTTPException, Path as PathParam, Query, Response, UploadFile
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, StrictBool, field_validator
 import service
 from jobs import JobQueue, QueueFull
 from operators import Operator, require_operator, write_operator
@@ -105,9 +105,11 @@ def csv_import(file: Annotated[UploadFile, File()],
 @app.get("/orders/{order_id}")
 def order_detail(order_id: str, response: Response, reveal_phone: bool = False,
                  operator: Operator = Depends(require_operator)):
-    order = _order(order_id, operator)
+    try:
+        order, assessment, conversation = service.order_detail(order_id, operator.tenant_id)
+    except KeyError:
+        raise HTTPException(404, "Order not found") from None
     response.headers["Cache-Control"] = "no-store"
-    conversation = service.conversation(order_id, operator.tenant_id)
     if reveal_phone:
         service.record_access(operator.tenant_id, operator.actor, "phone_read", order_id=order_id)
     else:
@@ -116,10 +118,28 @@ def order_detail(order_id: str, response: Response, reveal_phone: bool = False,
             if message["text"]:
                 message["text"] = REPLY_PHONE.sub(lambda match: _mask_phone(match[0]), message["text"])
     # Evaluation ground-truth labels are deliberately not returned to the seller.
-    assessment = service.assess_order(order, tenant_id=operator.tenant_id)
     return {**{key: value for key, value in order.items() if key != "label_failed"},
-            **assessment, **service.order_advice(order, assessment, operator.tenant_id),
-            "messages": conversation}
+            **assessment, "messages": conversation}
+
+
+class DispatchAddressReview(BaseModel):
+    address: str = Field(min_length=1, max_length=500)
+    saved_at_source: StrictBool
+
+
+@app.put("/orders/{order_id}/dispatch-address")
+def review_dispatch_address(order_id: str, body: DispatchAddressReview, response: Response,
+                            operator: Operator = Depends(write_operator)):
+    if not body.saved_at_source:
+        raise HTTPException(422, "Save the corrected address in the source order first")
+    response.headers["Cache-Control"] = "no-store"
+    try:
+        action = service.review_dispatch_address(order_id, body.address, actor=operator.actor, tenant_id=operator.tenant_id)
+    except KeyError:
+        raise HTTPException(404, "Order not found") from None
+    except ValueError as exc:
+        raise HTTPException(409, str(exc)) from None
+    return {"next_action": action}
 
 
 @app.get("/orders/{order_id}/risk-shadow")

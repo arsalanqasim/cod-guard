@@ -127,8 +127,16 @@ def decision_message(assessment):
         st.warning("Clarify the last reply with the customer.")
 
 
-tab_orders, tab_verification, tab_metrics = st.tabs(
-    ["Orders & risk", "Verification", "Metrics & learning"], key="active_tab", on_change="rerun")
+tab_labels = ["Orders & risk", "Verification", "Metrics & learning"]
+if os.environ.get("COD_GUARD_EXHIBITION") == "1":
+    from dispatch_demo import render as render_dispatch_demo
+
+    tab_demo, tab_orders, tab_verification, tab_metrics = st.tabs(
+        ["Next action", *tab_labels], key="active_tab", on_change="rerun")
+    with tab_demo:
+        render_dispatch_demo()
+else:
+    tab_orders, tab_verification, tab_metrics = st.tabs(tab_labels, key="active_tab", on_change="rerun")
 
 with tab_orders:
     st.subheader("Dispatch queue")
