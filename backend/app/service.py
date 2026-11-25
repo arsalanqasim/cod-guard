@@ -22,9 +22,10 @@ from artifacts import active_version
 from storage import queue_snapshot, read_state, state_snapshot, transaction, update_state
 from decision_events import append_event
 from records import (DEMO_TENANT, ORDER_FIELDS, StateUnavailable, add_model_version, audit,
-                     connect, ensure_seeded, select_orders, select_page, store_address_finding, write)
+                     connect, ensure_seeded, reply_text, select_orders, select_page, store_address_finding, write)
 from model_schema import probabilities, validate_bundle
 from jobs import JobQueue
+from platform_data import database_url
 from reply_corrections import CorrectionConflict, LABELS as REPLY_LABELS, record as record_correction
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -80,7 +81,7 @@ def model_status():
 def load_orders(tenant_id=DEMO_TENANT):
     if tenant_id == DEMO_TENANT:
         ensure_seeded(STATE_PATH, SEED_PATH)
-    with connect(STATE_PATH) as connection:
+    with connect(STATE_PATH, tenant_id=tenant_id) as connection:
         return pd.DataFrame(select_orders(connection, tenant_id),
                             columns=("tenant_id", *ORDER_FIELDS, "queue_status", "storefront_conflict"))
 
@@ -88,7 +89,7 @@ def load_orders(tenant_id=DEMO_TENANT):
 def get_order(order_id, tenant_id=DEMO_TENANT):
     if tenant_id == DEMO_TENANT:
         ensure_seeded(STATE_PATH, SEED_PATH)
-    with connect(STATE_PATH) as connection:
+    with connect(STATE_PATH, tenant_id=tenant_id) as connection:
         matches = select_orders(connection, tenant_id, order_id=order_id)
     if not matches:
         raise KeyError(order_id)
@@ -154,13 +155,12 @@ def _assessment(order, state, status, probability):
             "model_id": status.get("model_id"), "model_error": status["reason"]}
 
 
-def order_page(tenant_id=DEMO_TENANT, *, limit=50, offset=0, search=""):
+def order_page(tenant_id=DEMO_TENANT, *, limit=50, offset=0, search="", view="all"):
     if tenant_id == DEMO_TENANT:
         ensure_seeded(STATE_PATH, SEED_PATH)
     config = dispatch_advice.settings(tenant_id)
-    with connect(STATE_PATH) as connection:
-        connection.execute("BEGIN")
-        orders, total = select_page(connection, tenant_id, limit, offset, search)
+    with connect(STATE_PATH, tenant_id=tenant_id, snapshot=True) as connection:
+        orders, total = select_page(connection, tenant_id, limit, offset, search, view=view)
         order_ids = tuple(order["order_id"] for order in orders)
         state = queue_snapshot(connection, tenant_id, order_ids)
         context = dispatch_advice.queue_context(connection, tenant_id, orders, config)
@@ -182,7 +182,7 @@ def shadow_decisions(order, tenant_id, after):
     assessment = assess_order(order, tenant_id=tenant_id)
     config = risk_shadow.configuration(tenant_id)
     preview = risk_shadow.predictions(config, [order], [assessment["intent"]])[0] if config else None
-    with connect(STATE_PATH) as db:
+    with connect(STATE_PATH, tenant_id=tenant_id) as db:
         history = risk_shadow.history(db, tenant_id, order["order_id"], after)
     return {"current": preview, "revisions": history}
 
@@ -191,8 +191,7 @@ def order_detail(order_id, tenant_id):
     if tenant_id == DEMO_TENANT:
         ensure_seeded(STATE_PATH, SEED_PATH)
     config = dispatch_advice.settings(tenant_id)
-    with connect(STATE_PATH) as db:
-        db.execute("BEGIN")
+    with connect(STATE_PATH, tenant_id=tenant_id, snapshot=True) as db:
         matches = select_orders(db, tenant_id, order_id=order_id)
         if not matches:
             raise KeyError(order_id)
@@ -217,7 +216,7 @@ def prepare_verification(order_id, *, actor="local-demo", tenant_id=DEMO_TENANT)
     config = dispatch_advice.settings(tenant_id)
     if not config.address_quality and not config.prepaid:
         return None
-    with write(STATE_PATH) as db:
+    with write(STATE_PATH, tenant_id=tenant_id) as db:
         order, assessment = _assess_in_transaction(db, tenant_id, order_id)
         context = dispatch_advice.queue_context(db, tenant_id, (order,), config)
         advice = dispatch_advice.annotate(order, assessment, context, config)
@@ -234,14 +233,14 @@ def prepare_verification(order_id, *, actor="local-demo", tenant_id=DEMO_TENANT)
 
 def record_prepaid_offer(order_id, stage, *, actor, tenant_id):
     config = dispatch_advice.settings(tenant_id)
-    with write(STATE_PATH) as db:
+    with write(STATE_PATH, tenant_id=tenant_id) as db:
         _, assessment = _assess_in_transaction(db, tenant_id, order_id)
         return dispatch_advice.record_offer(db, tenant_id, actor, assessment, stage, config)
 
 
 def review_dispatch_address(order_id, address, *, actor, tenant_id):
     config = dispatch_advice.settings(tenant_id)
-    with write(STATE_PATH) as db:
+    with write(STATE_PATH, tenant_id=tenant_id) as db:
         order, assessment = _assess_in_transaction(db, tenant_id, order_id)
         if not config.next_action:
             raise ValueError("Next action is disabled for this tenant")
@@ -271,7 +270,7 @@ def verification_revision(tenant_id, order_id):
 
 def apply_queued_verification(order, reply_text, intent, source, *, actor, tenant_id, expected_revision):
     order_id = order["order_id"]
-    with write(STATE_PATH) as db, update_state(db, tenant_id, (order_id,)) as state:
+    with write(STATE_PATH, tenant_id=tenant_id) as db, update_state(db, tenant_id, (order_id,)) as state:
         current = state["decisions"].get(order_id, {})
         revision = current.get("revision")
         if revision != expected_revision:
@@ -311,7 +310,7 @@ def conversation(order_id, tenant_id=DEMO_TENANT):
 def correct_reply(order_id, reply_revision, expected_revision, label, *, actor="local-demo", tenant_id=DEMO_TENANT):
     if label not in REPLY_LABELS:
         raise ValueError("Invalid reply label")
-    with write(STATE_PATH) as db:
+    with write(STATE_PATH, tenant_id=tenant_id) as db:
         orders = select_orders(db, tenant_id, order_id=order_id)
         if not orders:
             raise KeyError(order_id)
@@ -325,6 +324,7 @@ def correct_reply(order_id, reply_revision, expected_revision, label, *, actor="
                 ORDER BY id DESC LIMIT 1""", (tenant_id, order_id, reply_revision)).fetchone()
             if message is None or not message["text"]:
                 raise CorrectionConflict("This reply is unavailable for correction.")
+            message = {**dict(message), "text": reply_text(db, tenant_id, order_id, message["text"])}
             last_correction = db.execute("""SELECT decision_revision FROM reply_corrections
                 WHERE tenant_id=? AND message_id=? ORDER BY id DESC LIMIT 1""",
                                          (tenant_id, message["id"])).fetchone()
@@ -493,7 +493,7 @@ def retrain_model(*, actor="local-demo"):
     # The activated pair is authoritative. A secondary metadata write cannot
     # turn an already activated version into a failed serving job.
     try:
-        with write(STATE_PATH) as connection:
+        with write(STATE_PATH, tenant_id=DEMO_TENANT) as connection:
             add_model_version(connection, DEMO_TENANT, bundle)
     except StateUnavailable:
         getLogger(__name__).exception("Could not update SQLite metadata for activated model %s", bundle["model_id"])
@@ -503,13 +503,14 @@ def retrain_model(*, actor="local-demo"):
 
 
 def record_access(tenant_id, actor, action, *, order_id=None):
-    with write(STATE_PATH) as connection:
+    with write(STATE_PATH, tenant_id=tenant_id) as connection:
         audit(connection, tenant_id, actor, action, order_id=order_id)
 
 
 def check_state():
-    ensure_seeded(STATE_PATH, SEED_PATH)
-    with connect(STATE_PATH) as connection:
+    if not database_url():
+        ensure_seeded(STATE_PATH, SEED_PATH)
+    with connect(STATE_PATH, tenant_id=DEMO_TENANT) as connection:
         connection.execute("SELECT order_id FROM orders LIMIT 1").fetchone()
         connection.execute("SELECT revision FROM decisions LIMIT 1").fetchone()
         connection.execute("SELECT revision FROM outcomes LIMIT 1").fetchone()

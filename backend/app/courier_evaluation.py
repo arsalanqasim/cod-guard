@@ -15,7 +15,7 @@ from train_model import FEATURES, fit_and_evaluate
 def run(tenant_id):
     if tenant_id == DEMO_TENANT:
         raise ValueError("Use a separately authorized shadow tenant")
-    with connect(service.STATE_PATH) as db:
+    with connect(service.STATE_PATH, tenant_id=tenant_id) as db:
         db.execute("BEGIN")
         evidence = {row["order_id"]: row["outcome"] for row in db.execute(
             "SELECT order_id, outcome FROM courier_outcome_evidence WHERE tenant_id=?", (tenant_id,))}

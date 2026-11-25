@@ -14,3 +14,5 @@ host-data/
 data/*.sqlite3*
 data/whisper/
 data/latest_evaluation.json
+frontend/portal/node_modules/
+frontend/portal/dist/

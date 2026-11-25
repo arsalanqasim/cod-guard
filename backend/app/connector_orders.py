@@ -4,7 +4,8 @@ import hashlib
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
-from records import audit, connect, insert_order, now, store_address_finding, write
+from records import audit, connect, insert_order, now, open_order, seal_order, store_address_finding, write
+from merchant_events import queue_order_event
 
 
 OPEN = "open"
@@ -38,14 +39,14 @@ def source_timestamp(value):
 
 
 def connection_state(path, identity):
-    with connect(path) as connection:
+    with connect(path, tenant_id=identity[0]) as connection:
         row = connection.execute("""SELECT cursor, last_poll, last_webhook, last_error FROM connector_state
             WHERE tenant_id=? AND channel=? AND account=?""", identity).fetchone()
     return dict(row) if row else dict.fromkeys(("cursor", "last_poll", "last_webhook", "last_error"))
 
 
 def linked_order(path, identity, order_id):
-    with connect(path) as connection:
+    with connect(path, tenant_id=identity[0]) as connection:
         row = connection.execute("""SELECT external_id FROM external_orders
             WHERE tenant_id=? AND channel=? AND account=? AND order_id=?""", (*identity, order_id)).fetchone()
     return row["external_id"] if row else None
@@ -79,6 +80,7 @@ def _reconcile(db, identity, order_id, previous, snapshot, actor):
     if snapshot.details is not None:
         current = db.execute("SELECT * FROM orders WHERE tenant_id=? AND order_id=?",
                              (tenant_id, order_id)).fetchone()
+        current = open_order(db, current)
         changes = {key: snapshot.details.get(key) for key in SOURCE_FIELDS
                    if current[key] != snapshot.details.get(key)}
     conflict = bool(previous and previous["conflict"])
@@ -89,6 +91,7 @@ def _reconcile(db, identity, order_id, previous, snapshot, actor):
                                (tenant_id, order_id, tenant_id, order_id)).fetchone()[0]
         if changes and not committed:
             assignments = ", ".join(f"{column}=?" for column in changes)
+            changes = seal_order(db, tenant_id, order_id, changes)
             db.execute(f"UPDATE orders SET {assignments} WHERE tenant_id=? AND order_id=?",
                        (*changes.values(), tenant_id, order_id))
         reference = f"{channel}:{snapshot.status}"
@@ -115,6 +118,11 @@ def _store_orders(connection, identity, orders, actor):
             external_id, details = entry
             snapshot = StorefrontSnapshot(external_id, OPEN, None, details)
         external_id = snapshot.external_id
+        if channel == "SHOPIFY" and getattr(connection, "encrypted", False):
+            redacted = connection.execute("""SELECT 1 FROM shopify_redacted_orders
+                WHERE tenant_id=? AND shop=? AND external_id=?""", (tenant_id, account, external_id)).fetchone()
+            if redacted:
+                continue
         previous = None
         if reconcile:
             previous = connection.execute("""SELECT status, updated_at, conflict FROM storefront_order_status
@@ -144,26 +152,30 @@ def _store_orders(connection, identity, orders, actor):
         if reconcile:
             _record_status(connection, identity, snapshot)
         audit(connection, tenant_id, actor, "connector_order_intake", order_id=order_id, reference=channel)
+        if getattr(connection, "encrypted", False) and channel in ("SHOPIFY", "WOOCOMMERCE"):
+            queue_order_event(connection, tenant_id, order_id, "order.accepted", {"revision": 0})
         inserted += 1
     return inserted
 
 
 def ingest(path, identity, orders, actor, *, cursor=None, webhook=False):
-    with write(path) as connection:
+    with write(path, tenant_id=identity[0]) as connection:
         inserted = _store_orders(connection, identity, orders, actor)
         if webhook:
             connection.execute("""INSERT INTO connector_state (tenant_id, channel, account, last_webhook)
-                VALUES (?, ?, ?, ?) ON CONFLICT DO UPDATE SET last_webhook=excluded.last_webhook""",
+                VALUES (?, ?, ?, ?) ON CONFLICT (tenant_id, channel, account)
+                DO UPDATE SET last_webhook=excluded.last_webhook""",
                                (*identity, now()))
         elif cursor is not None:
             connection.execute("""INSERT INTO connector_state (tenant_id, channel, account, cursor, last_poll)
-                VALUES (?, ?, ?, ?, ?) ON CONFLICT DO UPDATE SET cursor=excluded.cursor,
+                VALUES (?, ?, ?, ?, ?) ON CONFLICT (tenant_id, channel, account) DO UPDATE SET cursor=excluded.cursor,
                 last_poll=excluded.last_poll, last_error=NULL WHERE excluded.cursor >= connector_state.cursor
                 OR connector_state.cursor IS NULL""", (*identity, cursor, now()))
         return inserted
 
 
 def record_poll_error(path, identity, message):
-    with write(path) as connection:
+    with write(path, tenant_id=identity[0]) as connection:
         connection.execute("""INSERT INTO connector_state (tenant_id, channel, account, last_error)
-            VALUES (?, ?, ?, ?) ON CONFLICT DO UPDATE SET last_error=excluded.last_error""", (*identity, message))
+            VALUES (?, ?, ?, ?) ON CONFLICT (tenant_id, channel, account)
+            DO UPDATE SET last_error=excluded.last_error""", (*identity, message))

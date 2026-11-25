@@ -6,6 +6,7 @@ from pathlib import Path
 import pickle
 import re
 import sys
+from tempfile import TemporaryDirectory
 
 import numpy as np
 import pandas as pd
@@ -46,20 +47,10 @@ def read_seller_csv(path):
     return frame
 
 
-def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--tenant", required=True)
-    parser.add_argument("--seller-csv", type=Path, required=True)
-    parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--max-validation-false-hold-rate", type=float, default=0)
-    args = parser.parse_args()
-    if args.tenant == DEMO_TENANT or not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", args.tenant):
-        parser.error("Select the operator tenant for the seller who supplied the orders")
-    if not 0 <= args.max_validation_false_hold_rate <= 1:
-        parser.error("False hold rate must be a probability")
-    source_hash = pk_real.sha256(args.seller_csv)
-    frame = read_seller_csv(args.seller_csv)
-    if pk_real.sha256(args.seller_csv) != source_hash:
+def train_seller(tenant, seller_csv, output, *, max_validation_false_hold_rate=0):
+    source_hash = pk_real.sha256(seller_csv)
+    frame = read_seller_csv(seller_csv)
+    if pk_real.sha256(seller_csv) != source_hash:
         raise ValueError("Seller CSV changed during training setup")
     train, val, test = pk_real.split_customers_and_time(frame)
     calibration, validation = pk_real.validation_partitions(val)
@@ -68,18 +59,49 @@ def main():
     estimator, brier = fit_model(train, calibration, validation)
     labels = validation["label_failed"].to_numpy()
     bands, _ = select_bands(labels, estimator.predict(validation[list(FEATURES)]),
-                            np.zeros(len(labels), dtype=bool), args.max_validation_false_hold_rate)
+                            np.zeros(len(labels), dtype=bool), max_validation_false_hold_rate)
     settings = {"verify_at": bands.verify_at, "hold_at": bands.hold_at}
-    identity = f"seller-r9-v1:{args.tenant}:{source_hash}:{args.max_validation_false_hold_rate}"
+    identity = f"seller-r9-v1:{tenant}:{source_hash}:{max_validation_false_hold_rate}"
     model_id = "seller-r9-" + hashlib.sha256(identity.encode()).hexdigest()[:16]
-    bundle = {"version": 1, "source": SOURCE, "tenant": args.tenant, "model_id": model_id,
+    bundle = {"version": 1, "source": SOURCE, "tenant": tenant, "model_id": model_id,
               "estimator": estimator, "bands": settings}
     scores = estimator.predict(test[list(FEATURES)])
     metrics = score(test["label_failed"].to_numpy(), candidate_actions(
         scores, bands, np.zeros(len(scores), dtype=bool)), scores)
-    atomic_write(args.output, pickle.dumps(bundle))
-    print(json.dumps({"mode": "shadow", "source": SOURCE, "model_id": model_id,
-                      "calibration_validation_brier": brier, "bands": settings, "holdout": metrics}, indent=2))
+    atomic_write(output, pickle.dumps(bundle))
+    return {"mode": "shadow", "source": SOURCE, "model_id": model_id,
+            "calibration_validation_brier": brier, "bands": settings, "holdout": metrics}
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--tenant", required=True)
+    source = parser.add_mutually_exclusive_group(required=True)
+    source.add_argument("--seller-csv", type=Path)
+    source.add_argument("--from-merchant-database", action="store_true")
+    parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--max-validation-false-hold-rate", type=float, default=0)
+    args = parser.parse_args()
+    if args.tenant == DEMO_TENANT or not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", args.tenant):
+        parser.error("Select the operator tenant for the seller who supplied the orders")
+    if not 0 <= args.max_validation_false_hold_rate <= 1:
+        parser.error("False hold rate must be a probability")
+
+    with TemporaryDirectory(prefix="cod-guard-seller-training-") as folder:
+        source_path = args.seller_csv
+        if args.from_merchant_database:
+            from merchant_couriers import seller_dataset
+            from platform_data import database_url
+            if not database_url():
+                parser.error("Set the PostgreSQL runtime DSN before training from merchant data")
+            data, count = seller_dataset(args.tenant)
+            if not count:
+                parser.error("The tenant has no eligible courier outcomes")
+            source_path = Path(folder) / "seller.csv"
+            source_path.write_text(data, encoding="utf-8", newline="")
+        report = train_seller(args.tenant, source_path, args.output,
+                              max_validation_false_hold_rate=args.max_validation_false_hold_rate)
+    print(json.dumps(report, indent=2))
 
 
 if __name__ == "__main__":

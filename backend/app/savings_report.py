@@ -16,7 +16,7 @@ def seller_report(tenant_id, evaluation):
             evaluation = None
     observations = []
     if tenant_id != DEMO_TENANT:
-        with connect(service.STATE_PATH) as db:
+        with connect(service.STATE_PATH, tenant_id=tenant_id) as db:
             db.execute("BEGIN")
             outcomes = state_snapshot(db, tenant_id, messages=False)["outcomes"]
             observations = [row for row in db.execute("""SELECT order_id, outcome, billed_fee_paisa

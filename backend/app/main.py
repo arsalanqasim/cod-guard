@@ -5,13 +5,25 @@ import sys
 from pathlib import Path
 from typing import Annotated, Literal
 
+import psycopg
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from fastapi import Depends, FastAPI, File, Header, HTTPException, Path as PathParam, Query, Response, UploadFile
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, StrictBool, field_validator
 import service
 from jobs import JobQueue, QueueFull
-from operators import Operator, require_operator, write_operator
+from operators import Operator, order_reader, require_operator, write_operator
+import merchant_auth
+import merchant_couriers
+import merchant_integration_routes
+import merchant_shopify
+import merchant_shopify_privacy
+import merchant_verification
+import merchant_woo
+import platform_jobs
+from platform_data import database_url
 from order_intake import MAX_CSV_BYTES, IdempotencyConflict, import_orders
 from records import DEMO_TENANT, StateUnavailable
 from request_limits import RequestBodyLimit
@@ -28,6 +40,19 @@ from reply_corrections import CorrectionConflict, export_page, shadow_agreement
 
 app = FastAPI(title="COD-Guard — shadow intake", version="0.3")
 app.add_middleware(RequestBodyLimit, limit=VOICE_LIMIT_BYTES + 1024 * 1024)
+if origins := merchant_auth.portal_origins():
+    app.add_middleware(CORSMiddleware, allow_origins=origins, allow_credentials=True,
+                       allow_methods=["GET", "POST", "PUT", "DELETE"],
+                       allow_headers=["Authorization", "Content-Type", "Idempotency-Key"],
+                       expose_headers=["X-Total-Count", "X-Next-Cursor"])
+app.add_exception_handler(psycopg.Error, merchant_auth.database_error)
+app.include_router(merchant_auth.router)
+app.include_router(merchant_integration_routes.router)
+app.include_router(merchant_couriers.router)
+app.include_router(merchant_shopify.router)
+app.include_router(merchant_shopify_privacy.router)
+app.include_router(merchant_woo.router)
+app.include_router(merchant_verification.router)
 app.include_router(woo_router)
 app.include_router(whatsapp_router)
 app.include_router(courier_router)
@@ -74,11 +99,17 @@ def ready():
 @app.get("/orders")
 def orders(response: Response, limit: Annotated[int, Query(ge=1, le=100)] = 50,
            offset: Annotated[int, Query(ge=0, le=2**31 - 1)] = 0,
-           operator: Operator = Depends(require_operator)):
-    rows, assessments, total = service.order_page(operator.tenant_id, limit=limit, offset=offset)
+           search: Annotated[str, Query(max_length=200)] = "",
+           view: Literal["all", "queue", "conflicts", "packing", "closed"] = "all",
+           operator: Operator = Depends(order_reader)):
+    packing = operator.role == "packer"
+    rows, assessments, total = service.order_page(operator.tenant_id, limit=limit, offset=offset,
+                                                  search=search.strip(), view="packing" if packing else view)
     response.headers["X-Total-Count"] = str(total)
     response.headers["Cache-Control"] = "no-store"
-    return [{**{key: order[key] for key in ("order_id", "customer_name", "product", "city", "amount_pkr", "data_source")},
+    if packing:
+        return [_packing_order(order) for order in rows]
+    return [{**{key: order[key] for key in ("order_id", "source_order_id", "customer_name", "product", "city", "amount_pkr", "data_source")},
              "phone": _mask_phone(order["phone"]),
              **assessment} for order, assessment in zip(rows, assessments)]
 
@@ -104,12 +135,19 @@ def csv_import(file: Annotated[UploadFile, File()],
 
 @app.get("/orders/{order_id}")
 def order_detail(order_id: str, response: Response, reveal_phone: bool = False,
-                 operator: Operator = Depends(require_operator)):
+                 operator: Operator = Depends(order_reader)):
+    if reveal_phone and operator.role == "packer":
+        raise HTTPException(403, "Packing access does not include buyer phone numbers")
     try:
         order, assessment, conversation = service.order_detail(order_id, operator.tenant_id)
     except KeyError:
         raise HTTPException(404, "Order not found") from None
     response.headers["Cache-Control"] = "no-store"
+    if operator.role == "packer":
+        if (assessment["decision"] != "SHIP" or assessment["decision_revision"] is None
+                or assessment["needs_review"] or assessment["outcome"] or assessment["queue_status"] != "open"):
+            raise HTTPException(404, "Order not found")
+        return _packing_order(order)
     if reveal_phone:
         service.record_access(operator.tenant_id, operator.actor, "phone_read", order_id=order_id)
     else:
@@ -120,6 +158,12 @@ def order_detail(order_id: str, response: Response, reveal_phone: bool = False,
     # Evaluation ground-truth labels are deliberately not returned to the seller.
     return {**{key: value for key, value in order.items() if key != "label_failed"},
             **assessment, "messages": conversation}
+
+
+def _packing_order(order):
+    return {key: order[key] for key in ("order_id", "source_order_id", "product", "city", "items_count", "data_source")} | {
+        "decision": "SHIP", "queue_status": "open"
+    }
 
 
 class DispatchAddressReview(BaseModel):
@@ -215,6 +259,8 @@ def correct_reply(order_id: str, reply_revision: Annotated[int, PathParam(ge=1, 
 def export_reply_corrections(after: Annotated[int, Query(ge=0, le=2**63 - 1)] = 0,
                              limit: Annotated[int, Query(ge=1, le=500)] = 500,
                              operator: Operator = Depends(require_operator)):
+    if operator.role == "ops":
+        raise HTTPException(403, "Only owners can export retained buyer replies")
     rows = export_page(service.STATE_PATH, operator.tenant_id, operator.actor, after=after, limit=limit)
     return Response("".join(json.dumps(row, ensure_ascii=False) + "\n" for row in rows),
                     media_type="application/x-ndjson",
@@ -251,6 +297,16 @@ def voice(order_id: str, file: UploadFile = File(...), commit_decision: bool = F
     contents = file.file.read(VOICE_LIMIT_BYTES + 1)
     if not contents or len(contents) > VOICE_LIMIT_BYTES:
         raise HTTPException(status_code=422, detail="Audio must be nonempty and at most 12 MiB")
+    if database_url():
+        if commit_decision:
+            raise HTTPException(422, "Review voice transcripts before saving a decision")
+        if not platform_jobs.broker_url():
+            raise HTTPException(503, "The voice worker is unavailable")
+        try:
+            return platform_jobs.enqueue_voice(service.STATE_PATH, operator.tenant_id, order_id,
+                                               operator.actor, suffix, contents)
+        except QueueFull as exc:
+            raise HTTPException(429, str(exc)) from exc
     service.record_access(operator.tenant_id, operator.actor, "voice_requested", order_id=order_id)
     revision = service.verification_revision(operator.tenant_id, order_id) if commit_decision else None
 
@@ -274,8 +330,11 @@ def voice(order_id: str, file: UploadFile = File(...), commit_decision: bool = F
 
 
 @app.get("/orders/{order_id}/voice/{job_id}")
-def voice_status(order_id: str, job_id: str, operator: Operator = Depends(require_operator)):
+def voice_status(order_id: str, job_id: str, response: Response, operator: Operator = Depends(require_operator)):
+    response.headers["Cache-Control"] = "no-store"
     try:
+        if database_url():
+            return platform_jobs.voice_status(service.STATE_PATH, operator.tenant_id, order_id, operator.actor, job_id)
         return voice_jobs.get(job_id, scope=(operator, order_id))
     except KeyError:
         raise HTTPException(status_code=404, detail="Voice job not found") from None
@@ -308,7 +367,7 @@ def model(operator: Operator = Depends(require_operator)):
 
 @app.post("/model/retrain", status_code=202)
 def retrain(operator: Operator = Depends(write_operator)):
-    if operator.tenant_id != DEMO_TENANT:
+    if database_url() or operator.tenant_id != DEMO_TENANT:
         raise HTTPException(status_code=403, detail="Retraining is restricted to synthetic demo outcomes")
     try:
         return service.RETRAIN_JOBS.submit(lambda: service.retrain_model(actor=operator.actor), scope=operator)

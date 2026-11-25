@@ -116,6 +116,10 @@ short-reply evaluation.
 
 ## Hosting and API
 
+The [merchant platform foundation](docs/MERCHANT_PLATFORM.md) covers
+PostgreSQL migrations, browser sessions, merchant roles, and Redis-backed
+voice workers. The single-host pilot setup is below.
+
 Run `python scripts/run_host.py --bootstrap` from a clean checkout to
 start the loopback API and an isolated exhibition dashboard. Copy
 [`.env.example`](.env.example) to configure tenant keys and connectors,

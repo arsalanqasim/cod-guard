@@ -1,14 +1,17 @@
 """Transactional projections over normalized SQLite records."""
 from contextlib import contextmanager
 import risk_shadow
+from merchant_events import queue_order_event
 
 from records import (DEMO_TENANT, add_decision, add_message, add_model_version, add_outcome,
-                     audit, connect, write)
+                     audit, connect, reply_text, write)
 
 
 def _where(tenant_id, order_ids):
     if order_ids is None:
         return "tenant_id=?", (tenant_id,)
+    if not order_ids:
+        return "tenant_id=? AND 1=0", (tenant_id,)
     placeholders = ", ".join("?" for _ in order_ids)
     return f"tenant_id=? AND order_id IN ({placeholders})", (tenant_id, *order_ids)
 
@@ -41,6 +44,7 @@ def state_snapshot(connection, tenant_id=DEMO_TENANT, order_ids=None, *, message
     if messages:
         for row in connection.execute(f"SELECT * FROM messages WHERE {where} ORDER BY id", parameters):
             message = dict(row)
+            message["text"] = reply_text(connection, tenant_id, row["order_id"], row["text"])
             message.pop("tenant_id")
             message.pop("id")
             state["messages"].setdefault(message.pop("order_id"), []).append(message)
@@ -64,14 +68,13 @@ def queue_snapshot(connection, tenant_id, order_ids):
 
 
 def read_state(path, tenant_id=DEMO_TENANT, order_ids=None, *, messages=True):
-    with connect(path) as connection:
-        connection.execute("BEGIN")
+    with connect(path, tenant_id=tenant_id, snapshot=True) as connection:
         return state_snapshot(connection, tenant_id, order_ids, messages=messages)
 
 
 @contextmanager
 def transaction(path, tenant_id=DEMO_TENANT, order_ids=None):
-    with write(path) as connection:
+    with write(path, tenant_id=tenant_id) as connection:
         with update_state(connection, tenant_id, order_ids) as state:
             yield state
 
@@ -95,6 +98,13 @@ def update_state(connection, tenant_id, order_ids):
                                        (tenant_id, order_id, event["outcome"]))
             audit(connection, tenant_id, event["actor"], event["kind"],
                   order_id=order_id, reference=str(event["revision"]))
+            if getattr(connection, "encrypted", False):
+                fields = {key: event[key] for key in ("revision", "at", "decision", "intent", "needs_review",
+                                                     "outcome", "decision_revision") if key in event}
+                kind = "order.outcome" if event["kind"] == "outcome" else "order.decision"
+                if event.get("default_snapshot"):
+                    continue
+                queue_order_event(connection, tenant_id, order_id, kind, fields)
     for order_id, messages in state["messages"].items():
         for message in messages[message_counts.get(order_id, 0):]:
             add_message(connection, tenant_id, order_id, message)
