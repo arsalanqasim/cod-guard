@@ -16,6 +16,7 @@ import httpx
 
 import service
 from pakistan_phone import normalize_phone
+from platform_data import database_url
 from records import DEMO_TENANT, audit, connect, now, select_orders, write
 from storage import update_state
 from verification import opening_message, parse_reply
@@ -74,6 +75,8 @@ def _accounts(raw):
 
 
 def accounts():
+    if database_url():
+        return {}
     try:
         return _accounts(os.environ.get("COD_GUARD_WHATSAPP", "{}"))
     except (TypeError, ValueError, KeyError):

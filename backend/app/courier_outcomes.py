@@ -12,6 +12,7 @@ import httpx
 
 import reputation_network
 import service
+from platform_data import database_url
 from records import DEMO_TENANT, audit, now, select_orders, write
 from storage import update_state
 
@@ -63,7 +64,7 @@ def store(tenant_id, actor, rows, source):
         raise ValueError("Courier evidence requires a separate shadow tenant")
     order_ids = [row[0] for row in rows]
     labels = evidence = 0
-    with write(service.STATE_PATH) as db, update_state(db, tenant_id, order_ids) as state:
+    with write(service.STATE_PATH, tenant_id=tenant_id) as db, update_state(db, tenant_id, order_ids) as state:
         for order_id, courier, tracking, outcome, fee in rows:
             orders = select_orders(db, tenant_id, order_id=order_id)
             if not orders or orders[0]["data_source"].casefold() == "synthetic":
@@ -119,6 +120,8 @@ def tcs_status(tracking, token):
 
 
 def tcs_token(tenant_id):
+    if database_url():
+        raise CourierUnavailable("TCS tracking is not configured for this tenant")
     try:
         accounts = json.loads(os.environ.get("COD_GUARD_TCS", "{}"))
         token = accounts.get(tenant_id)

@@ -16,6 +16,7 @@ import service
 from address_quality import classify_address
 from connector_orders import CANCELLED, CLOSED, NON_COD, OPEN, StorefrontSnapshot, connection_state, ingest, source_timestamp
 from operators import Operator, require_operator
+from platform_data import database_url
 from records import DEMO_TENANT
 from risk_engine import validate_features
 
@@ -58,6 +59,8 @@ def _shops(raw):
 
 
 def configured_shops():
+    if database_url():
+        return {}
     try:
         return _shops(os.environ.get("COD_GUARD_SHOPIFY", "{}"))
     except (ValueError, TypeError, KeyError):

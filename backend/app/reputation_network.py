@@ -6,6 +6,7 @@ import re
 from time import time
 
 from pakistan_phone import normalize_phone
+from platform_data import database_url
 from records import DEMO_TENANT, audit, connect, write
 
 
@@ -20,6 +21,8 @@ class NetworkUnavailable(ValueError):
 
 
 def configuration():
+    if database_url():
+        return None, ()
     secret = os.environ.get("COD_GUARD_NETWORK_KEY", "")
     tenants = tuple(sorted({part.strip() for part in os.environ.get("COD_GUARD_NETWORK_TENANTS", "").split(",")
                             if part.strip()}))
@@ -56,6 +59,8 @@ def _matches_key(db, secret, *, bind=False):
 
 
 def seller_enrollment(path, tenant_id, actor, enabled):
+    if database_url():
+        raise NetworkUnavailable("Reputation network is not enabled for this tenant")
     if enabled:
         secret, _ = _allowed(tenant_id)
     with write(path) as db:
@@ -69,6 +74,8 @@ def seller_enrollment(path, tenant_id, actor, enabled):
 
 
 def buyer_consent(path, tenant_id, actor, order, enabled, evidence):
+    if database_url():
+        raise NetworkUnavailable("Reputation network is not enabled for this tenant")
     secret, tenants = configuration()
     if not secret or (enabled and tenant_id not in tenants):
         raise NetworkUnavailable("Reputation network is not enabled for this tenant")

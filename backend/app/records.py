@@ -5,9 +5,14 @@ import sqlite3
 from contextlib import closing, contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
+from threading import Lock
+
+import psycopg
+from platform_data import DataEncryptionError, database_url, decrypt, encrypt, tenant_connection
 
 DEMO_TENANT = "demo"
 TRAFFIC_FIELDS = ("utm_source", "utm_medium", "utm_campaign", "referring_site")
+PRIVATE_ORDER_FIELDS = ("customer_name", "city", "phone", *TRAFFIC_FIELDS)
 ORDER_FIELDS = (
     "order_id", "customer_name", "product", "city", "phone", "amount_pkr",
     "phone_valid", "phone_fraud_history", "phone_velocity_24h", "address_words",
@@ -156,6 +161,7 @@ RISK_SHADOW_SCHEMA = (
         FOREIGN KEY (tenant_id, order_id, revision) REFERENCES decisions(tenant_id, order_id, revision))""",
 )
 STATE_SCHEMA_VERSION = 13
+_sqlite_setup_lock = Lock()
 
 
 class StateUnavailable(RuntimeError):
@@ -172,11 +178,32 @@ def audit(connection, tenant_id, actor, action, *, order_id=None, reference=None
         (tenant_id, actor, action, order_id, now(), reference))
 
 
+def seal_order(connection, tenant_id, order_id, values):
+    if not getattr(connection, "encrypted", False):
+        return values
+    return {key: encrypt(value, tenant_id, order_id, key) if key in PRIVATE_ORDER_FIELDS else value
+            for key, value in values.items()}
+
+
+def open_order(connection, row):
+    order = dict(row)
+    if getattr(connection, "encrypted", False):
+        for field in PRIVATE_ORDER_FIELDS:
+            if field in order:
+                order[field] = decrypt(order[field], order["tenant_id"], order["order_id"], field)
+    return order
+
+
+def reply_text(connection, tenant_id, order_id, text):
+    return decrypt(text, tenant_id, order_id, "message.text") if getattr(connection, "encrypted", False) else text
+
+
 def insert_order(connection, tenant_id, order):
+    values = seal_order(connection, tenant_id, order["order_id"], order)
     fields = ", ".join(("tenant_id", *ORDER_FIELDS))
     parameters = ", ".join("?" for _ in range(len(ORDER_FIELDS) + 1))
     connection.execute(f"INSERT INTO orders ({fields}) VALUES ({parameters})",
-                       (tenant_id, *(order.get(field) for field in ORDER_FIELDS)))
+                       (tenant_id, *(values.get(field) for field in ORDER_FIELDS)))
     if order.get("address_issues") is not None:
         store_address_finding(connection, tenant_id, order["order_id"], order["address_issues"])
 
@@ -206,18 +233,21 @@ def add_outcome(connection, tenant_id, order_id, event):
 
 
 def add_message(connection, tenant_id, order_id, message):
+    text = message.get("text")
+    if getattr(connection, "encrypted", False):
+        text = encrypt(text, tenant_id, order_id, "message.text")
     connection.execute("""INSERT INTO messages
         (tenant_id, order_id, text, source, intent, decision, why, at, actor, decision_revision)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-        (tenant_id, order_id, message.get("text"), message.get("source", "text"),
+        (tenant_id, order_id, text, message.get("source", "text"),
          message.get("intent"), message.get("decision"), message.get("why"),
          message.get("at"), message.get("actor", "legacy"), message.get("decision_revision")))
 
 
 def add_model_version(connection, tenant_id, training):
-    connection.execute("INSERT OR IGNORE INTO model_versions VALUES (?, ?, ?)",
+    connection.execute("INSERT INTO model_versions VALUES (?, ?, ?) ON CONFLICT DO NOTHING",
                        (tenant_id, training["model_id"], training.get("trained_at")))
-    connection.executemany("INSERT OR IGNORE INTO model_feedback VALUES (?, ?, ?, ?)",
+    connection.executemany("INSERT INTO model_feedback VALUES (?, ?, ?, ?) ON CONFLICT DO NOTHING",
                            ((tenant_id, training["model_id"], order_id, outcome)
                             for order_id, outcome in training.get("feedback", {}).items()))
 
@@ -308,7 +338,14 @@ def _initialize(connection, legacy):
 
 
 @contextmanager
-def connect(path):
+def connect(path, *, tenant_id=None, snapshot=False):
+    if database_url():
+        try:
+            with tenant_connection(tenant_id) as connection:
+                yield connection
+        except (psycopg.Error, DataEncryptionError) as exc:
+            raise StateUnavailable("Merchant database is unavailable") from exc
+        return
     legacy = Path(path)
     try:
         legacy.parent.mkdir(parents=True, exist_ok=True)
@@ -316,15 +353,18 @@ def connect(path):
             connection.row_factory = sqlite3.Row
             connection.execute("PRAGMA foreign_keys=ON")
             connection.execute("PRAGMA busy_timeout=15000")
-            connection.execute("PRAGMA journal_mode=WAL")
-            try:
-                version = connection.execute("PRAGMA user_version").fetchone()[0]
-                if 0 <= version < STATE_SCHEMA_VERSION:
-                    _initialize(connection, legacy)
-                elif version != STATE_SCHEMA_VERSION:
-                    raise ValueError("Unsupported state schema version")
-            except (ValueError, KeyError, TypeError, AttributeError) as exc:
-                raise StateUnavailable("State migration is unavailable") from exc
+            with _sqlite_setup_lock:
+                # A first-time WAL transition must not compete with other openers.
+                if connection.execute("PRAGMA journal_mode").fetchone()[0] != "wal":
+                    connection.execute("PRAGMA journal_mode=WAL")
+                try:
+                    version = connection.execute("PRAGMA user_version").fetchone()[0]
+                    if 0 <= version < STATE_SCHEMA_VERSION:
+                        _initialize(connection, legacy)
+                    elif version != STATE_SCHEMA_VERSION:
+                        raise ValueError("Unsupported state schema version")
+                except (ValueError, KeyError, TypeError, AttributeError) as exc:
+                    raise StateUnavailable("State migration is unavailable") from exc
             if legacy.is_file() and connection.execute("SELECT 1 FROM settings WHERE key='archive-legacy'").fetchone():
                 archive = legacy.with_name(legacy.name + ".archive")
                 try:
@@ -334,24 +374,33 @@ def connect(path):
                 except FileNotFoundError:
                     if not archive.is_file():
                         raise
+            if snapshot:
+                connection.execute("BEGIN")
             yield connection
     except (OSError, sqlite3.DatabaseError) as exc:
         raise StateUnavailable("State store is unavailable") from exc
 
 
 @contextmanager
-def write(path):
-    with connect(path) as connection, connection:
+def write(path, *, tenant_id=None):
+    if database_url():
+        try:
+            with tenant_connection(tenant_id, writable=True) as connection:
+                yield connection
+        except (psycopg.Error, DataEncryptionError) as exc:
+            raise StateUnavailable("Merchant database is unavailable") from exc
+        return
+    with connect(path, tenant_id=tenant_id) as connection, connection:
         connection.execute("BEGIN IMMEDIATE")
         yield connection
 
 
 def ensure_seeded(path, seed_path):
     key = "demo-seed"
-    with connect(path) as connection:
+    with connect(path, tenant_id=DEMO_TENANT) as connection:
         if connection.execute("SELECT 1 FROM settings WHERE key=?", (key,)).fetchone():
             return
-    with write(path) as connection:
+    with write(path, tenant_id=DEMO_TENANT) as connection:
         if connection.execute("SELECT 1 FROM settings WHERE key=?", (key,)).fetchone():
             return
         with Path(seed_path).open(encoding="utf-8", newline="") as source:
@@ -360,7 +409,7 @@ def ensure_seeded(path, seed_path):
         connection.execute("INSERT INTO settings VALUES (?)", (key,))
 
 
-_QUEUE_ORDERS = """SELECT orders.*, COALESCE(source.status, 'open') AS queue_status,
+_QUEUE_ORDERS = """SELECT orders.*, external_orders.external_id AS source_order_id, COALESCE(source.status, 'open') AS queue_status,
     COALESCE(source.conflict, 0) AS storefront_conflict
     FROM orders LEFT JOIN external_orders USING (tenant_id, order_id)
     LEFT JOIN storefront_order_status AS source USING (tenant_id, channel, account, external_id)"""
@@ -372,16 +421,46 @@ def select_orders(connection, tenant_id, *, order_id=None):
     if order_id is not None:
         query += " AND order_id=?"
         parameters += (order_id,)
-    return [dict(row) for row in connection.execute(query + " ORDER BY order_id", parameters)]
+    return [open_order(connection, row) for row in connection.execute(query + " ORDER BY order_id", parameters)]
 
 
-def select_page(connection, tenant_id, limit, offset, search):
+def select_page(connection, tenant_id, limit, offset, search, *, view="all"):
     where = "tenant_id=?"
     params = (tenant_id,)
+    source = "orders"
+    query = _QUEUE_ORDERS
+    sort = "order_id"
+    if view != "all" or search:
+        source = f"({_QUEUE_ORDERS}) AS queue"
+        query = f"SELECT * FROM {source}"
+    if view != "all":
+        sort = "storefront_conflict DESC, order_id"
     if search:
-        where += " AND instr(lower(order_id || ' ' || customer_name || ' ' || product || ' ' || city), ?) > 0"
+        searchable = "order_id || ' ' || product || ' ' || COALESCE(source_order_id, '')"
+        if getattr(connection, "encrypted", False):
+            where += f" AND strpos(lower({searchable}), ?) > 0"
+        else:
+            where += f" AND instr(lower({searchable} || ' ' || customer_name || ' ' || city), ?) > 0"
         params += (search.casefold(),)
-    total = connection.execute(f"SELECT COUNT(*) FROM orders WHERE {where}", params).fetchone()[0]
-    rows = connection.execute(f"{_QUEUE_ORDERS} WHERE {where} ORDER BY order_id LIMIT ? OFFSET ?",
+    if view == "conflicts":
+        where += " AND storefront_conflict<>0"
+    if view in ("queue", "closed", "packing"):
+        terminal = """EXISTS (SELECT 1 FROM outcomes AS o
+            WHERE o.tenant_id=queue.tenant_id AND o.order_id=queue.order_id)"""
+        if view == "closed":
+            where += f" AND (queue_status<>'open' OR {terminal})"
+        elif view == "queue":
+            where += f" AND ((queue_status='open' AND NOT {terminal}) OR storefront_conflict<>0)"
+        else:
+            where += f" AND queue_status='open' AND NOT {terminal}"
+    if view == "packing":
+        where += """ AND storefront_conflict=0
+            AND EXISTS (SELECT 1 FROM decisions AS d
+                WHERE d.tenant_id=queue.tenant_id AND d.order_id=queue.order_id AND d.default_snapshot=0
+                AND d.revision=(SELECT MAX(latest.revision) FROM decisions AS latest
+                    WHERE latest.tenant_id=d.tenant_id AND latest.order_id=d.order_id AND latest.default_snapshot=0)
+                AND d.decision='SHIP' AND d.needs_review=0)"""
+    total = connection.execute(f"SELECT COUNT(*) FROM {source} WHERE {where}", params).fetchone()[0]
+    rows = connection.execute(f"{query} WHERE {where} ORDER BY {sort} LIMIT ? OFFSET ?",
                               (*params, limit, offset))
-    return [dict(row) for row in rows], total
+    return [open_order(connection, row) for row in rows], total

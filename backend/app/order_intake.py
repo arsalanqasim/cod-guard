@@ -71,7 +71,7 @@ def _parse(contents):
 def import_orders(path, tenant_id, actor, key, contents, *, source="SHADOW"):
     digest = hashlib.sha256(contents).hexdigest()
     rows, errors = _parse(contents)
-    with write(path) as connection:
+    with write(path, tenant_id=tenant_id) as connection:
         existing = connection.execute("SELECT digest, receipt FROM imports WHERE tenant_id=? AND idempotency_key=?",
                                       (tenant_id, key)).fetchone()
         if existing:

@@ -3,6 +3,7 @@
 import base64
 import hmac
 import json
+import public_https
 import os
 import re
 from dataclasses import dataclass, field
@@ -16,6 +17,7 @@ from urllib.request import HTTPRedirectHandler, Request, build_opener
 from connector_orders import (CANCELLED, CLOSED, NON_COD, OPEN, StorefrontSnapshot,
                               connection_state, ingest, linked_order, record_poll_error, source_timestamp)
 from records import DEMO_TENANT, connect
+from platform_data import database_url
 from address_quality import classify_address
 from risk_engine import validate_features
 
@@ -82,6 +84,8 @@ def _stores(raw):
 
 
 def configured_stores():
+    if database_url():
+        return {}
     try:
         return _stores(os.environ.get("COD_GUARD_WOOCOMMERCE", "{}"))
     except (ValueError, TypeError, KeyError):
@@ -175,6 +179,17 @@ class WooCommerceClient:
         if query:
             url += f"?{urlencode(query)}"
         body = None if payload is None else json.dumps(payload).encode()
+        if database_url():
+            try:
+                status, response_headers, contents = public_https.request(
+                    method, url, body=body, headers=headers, limit=MAX_BODY)
+                if not 200 <= status < 300:
+                    raise WooCommerceError(f"Unexpected WooCommerce HTTP status {status}")
+                pages = next((value for key, value in response_headers.items()
+                              if key.lower() == "x-wp-totalpages"), None)
+                return json.loads(contents), (int(pages) if pages is not None else None)
+            except (OSError, ValueError, RecursionError):
+                raise WooCommerceError("Check WooCommerce HTTPS connectivity and REST data") from None
         request = Request(url, data=body, headers=headers, method=method)
         try:
             with self.opener.open(request, timeout=8) as response:
@@ -240,7 +255,7 @@ def write_outcome(path, store, order_id):
         external_id = linked_order(path, store.identity, order_id)
         if external_id is None:
             raise KeyError(order_id)
-        with connect(path) as connection:
+        with connect(path, tenant_id=store.tenant_id) as connection:
             event = connection.execute("""SELECT outcome, revision FROM outcomes WHERE tenant_id=? AND order_id=?
                 ORDER BY revision DESC LIMIT 1""", (store.tenant_id, order_id)).fetchone()
         if event is None:

@@ -8,14 +8,17 @@ from dataclasses import dataclass
 from threading import Lock
 from time import monotonic
 
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from merchant_auth import limit_operator, require_portal_origin, require_session
+from platform_data import database_url
 
 
 @dataclass(frozen=True)
 class Operator:
     actor: str
     tenant_id: str
+    role: str = "pilot"
 
 
 _bearer = HTTPBearer(auto_error=False)
@@ -40,7 +43,10 @@ def _configured_operators(config):
     return entries
 
 
-def require_operator(credentials: HTTPAuthorizationCredentials | None = Depends(_bearer)):
+def order_reader(request: Request, credentials: HTTPAuthorizationCredentials | None = Depends(_bearer)):
+    if database_url():
+        session = require_session(request)
+        return Operator(session["user_id"], session["tenant_id"], session["role"])
     try:
         entries = _configured_operators(os.environ.get("COD_GUARD_OPERATORS", "{}"))
     except (TypeError, ValueError, KeyError):
@@ -53,7 +59,17 @@ def require_operator(credentials: HTTPAuthorizationCredentials | None = Depends(
     raise HTTPException(status_code=401, detail="Operator key required", headers={"WWW-Authenticate": "Bearer"})
 
 
-def write_operator(operator: Operator = Depends(require_operator)):
+def require_operator(operator: Operator = Depends(order_reader)):
+    if operator.role == "packer":
+        raise HTTPException(403, "This action is restricted to owners and operations staff")
+    return operator
+
+
+def write_operator(request: Request, operator: Operator = Depends(require_operator)):
+    if operator.role != "pilot":
+        require_portal_origin(request)
+        limit_operator(operator)
+        return operator
     now = monotonic()
     with _limits_lock:
         started, count = _write_windows.get(operator, (now, 0))

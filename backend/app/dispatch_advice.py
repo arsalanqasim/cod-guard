@@ -8,7 +8,7 @@ from functools import lru_cache
 
 from address_quality import CLARIFICATION, REASONS, city_key
 import next_action as next_actions
-from records import audit, now
+from records import audit, now, open_order
 
 PAYMENT_METHODS = ("JazzCash", "Easypaisa")
 OFFER_STAGES = ("sent", "accepted", "paid")
@@ -73,12 +73,15 @@ def _records(db, table, tenant, order_ids, *columns):
 
 
 def courier_history(db, tenant):
-    return db.execute("""SELECT o.city, e.courier, COUNT(*) AS n,
-        SUM(COALESCE((SELECT terminal.outcome FROM outcomes AS terminal
+    encrypted = getattr(db, "encrypted", False)
+    fields = "o.tenant_id, o.order_id, o.city" if encrypted else "o.city"
+    rows = db.execute(f"""SELECT {fields}, e.courier, COUNT(*) AS n,
+        SUM(CASE WHEN COALESCE((SELECT terminal.outcome FROM outcomes AS terminal
             WHERE terminal.tenant_id=e.tenant_id AND terminal.order_id=e.order_id
-            ORDER BY terminal.revision DESC LIMIT 1), e.outcome)='returned') AS returns
+            ORDER BY terminal.revision DESC LIMIT 1), e.outcome)='returned' THEN 1 ELSE 0 END) AS returns
         FROM courier_outcome_evidence AS e JOIN orders AS o USING (tenant_id, order_id)
-        WHERE e.tenant_id=? GROUP BY o.city, e.courier""", (tenant,)).fetchall()
+        WHERE e.tenant_id=? GROUP BY {fields}, e.courier""", (tenant,)).fetchall()
+    return [open_order(db, row) for row in rows] if encrypted else rows
 
 
 def courier_rates(history):
