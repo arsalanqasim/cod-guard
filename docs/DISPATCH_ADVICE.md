@@ -97,5 +97,5 @@ Build the baseline with `python scripts/build_demo.py`, then run the
 evaluation with the scenario's assumptions.
 
 ```text
-python scripts/evaluate_dispatch_advice.py --reply-rate 0.60 --accept-rate 0.30 --payment-rate 0.80 --output dispatch-results.json
+python scripts/experiments/evaluate_dispatch_advice.py --reply-rate 0.60 --accept-rate 0.30 --payment-rate 0.80 --output dispatch-results.json
 ```

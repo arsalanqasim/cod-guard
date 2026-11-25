@@ -5,9 +5,14 @@ import json
 from pathlib import Path
 import pickle
 import re
+import sys
 
 import numpy as np
 import pandas as pd
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "backend/app"))
+sys.path.insert(0, str(ROOT / "scripts/experiments"))
 
 from evaluate_round9 import candidate_actions, pk_real, score, select_bands
 from artifacts import atomic_write

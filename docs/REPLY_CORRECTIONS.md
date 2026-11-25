@@ -35,7 +35,7 @@ The command uses `COD_GUARD_DATA_DIR` or the repository data directory. Pass `--
 2. Refit the local models. The evaluator keeps the latest label per source message, excludes exact reserved texts, and uses the export as additional training data. Review near-duplicates before fitting. Use a fresh work directory for each run.
 
    ```powershell
-   python scripts/evaluate_reply_models.py --corrections PATH_TO_REVIEWED_EXPORT --work-dir .venv/round7/candidate --minilm-checkpoint .venv/round7/original
+   python scripts/experiments/evaluate_reply_models.py --corrections PATH_TO_REVIEWED_EXPORT --work-dir .venv/round7/candidate --minilm-checkpoint .venv/round7/original
    ```
 
 3. Compare the new candidate with the rules against the frozen regression and test corpus, then run the same metrics on the prospective merchant set. Use shadow evaluation on fresh replies to measure agreement. The training command writes candidate artifacts and metrics locally. Adoption remains subject to the Round 7 gate.

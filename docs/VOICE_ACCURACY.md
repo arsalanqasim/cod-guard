@@ -56,5 +56,5 @@ Cache the voice weights with `python scripts/prepare_voice.py`. Fetch the
 and run with the checked-in manifest.
 
 ```text
-python scripts/evaluate_urdu_voice.py PATH_TO_TEST_TAR_GZ --output voice-results.json
+python scripts/experiments/evaluate_urdu_voice.py PATH_TO_TEST_TAR_GZ --output voice-results.json
 ```

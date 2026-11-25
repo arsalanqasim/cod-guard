@@ -18,7 +18,7 @@ import operators
 import service
 from records import insert_order, write
 from risk_candidate import Bands, FEATURES, decide, fit_model
-from scripts.pk_real import split_customers_and_time
+from scripts.experiments.pk_real import split_customers_and_time
 
 
 class Round9RiskTests(unittest.TestCase):

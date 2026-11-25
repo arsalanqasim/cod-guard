@@ -31,6 +31,9 @@ def test_opening_message_mentions_order():
     assert "CG-1" in m and "3500" in m and "YES" in m
 
 if __name__ == "__main__":
-    test_parse_replies(); test_confirmation_rescues_flagged_order()
-    test_denial_stops_clean_order(); test_unclear_amber_waits()
-    test_opening_message_mentions_order(); print("5/5 tests passed")
+    test_parse_replies()
+    test_confirmation_rescues_flagged_order()
+    test_denial_stops_clean_order()
+    test_unclear_amber_waits()
+    test_opening_message_mentions_order()
+    print("5/5 tests passed")

@@ -273,25 +273,50 @@ def render_report(report):
     return "\n".join(lines) + "\n"
 
 
+def _write_if_changed(path, payload):
+    if path.exists() and path.read_bytes() == payload:
+        return
+    atomic_write(path, payload)
+
+
+def _reuse_unchanged_timestamp(bundle, report, evaluation_path):
+    if not evaluation_path.is_file():
+        return
+    try:
+        existing = json.loads(evaluation_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return
+    existing_time = existing.get("trained_at")
+    if not existing_time:
+        return
+    if {k: v for k, v in existing.items() if k != "trained_at"} == {
+        k: v for k, v in report.items() if k != "trained_at"
+    }:
+        bundle["trained_at"] = existing_time
+        report["trained_at"] = existing_time
+
+
 def main():
     sys.path.insert(0, str(ROOT))
     from data.generate_benchmark import generate_benchmark
 
     model_path = ROOT / "backend/app/model.pkl"
+    evaluation_path = ROOT / "data/evaluation.json"
     expected = active_version(model_path)
     benchmark = pd.read_csv(ROOT / "data/benchmark_orders.csv")
     generated, oracle = generate_benchmark()
     if not benchmark.equals(generated):
         raise ValueError("Benchmark differs from the generator. Run data/generate_benchmark.py before training.")
     bundle, report = fit_and_evaluate(benchmark, oracle=oracle.set_index("order_id"))
+    _reuse_unchanged_timestamp(bundle, report, evaluation_path)
     markdown = render_report(report)
     public_markdown = benchmark_markdown(report)
     publish(bundle, report, markdown, model_path, expected=expected)
     # These standalone diagnostics are not the active version's artifact set.
     try:
-        atomic_write(ROOT / "data/evaluation.json", json.dumps(report, indent=2).encode("utf-8"))
-        atomic_write(ROOT / "docs/EVAL_REPORT.md", markdown.encode("utf-8"))
-        atomic_write(ROOT / "docs/BENCHMARK.md", public_markdown.encode("utf-8"))
+        _write_if_changed(evaluation_path, (json.dumps(report, indent=2) + "\n").encode("utf-8"))
+        _write_if_changed(ROOT / "docs/EVAL_REPORT.md", markdown.encode("utf-8"))
+        _write_if_changed(ROOT / "docs/BENCHMARK.md", public_markdown.encode("utf-8"))
     except OSError as exc:
         raise OSError("Model activation succeeded, but standalone diagnostics are incomplete") from exc
     print(json.dumps({"model_id": bundle["model_id"], "model": bundle["model_name"],

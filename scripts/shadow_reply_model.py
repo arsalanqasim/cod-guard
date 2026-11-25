@@ -6,10 +6,11 @@ import os
 from pathlib import Path
 import sys
 
-from round7_models import LABELS, fasttext_predictor, minilm_predictor, zero_shot_predictor
-
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "backend/app"))
+sys.path.insert(0, str(ROOT / "scripts/experiments"))
+
+from round7_models import LABELS, fasttext_predictor, minilm_predictor, zero_shot_predictor
 from reply_corrections import run_shadow, shadow_agreement
 
 

@@ -9,7 +9,6 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "backend/app"))
 import service
-from verification import parse_reply
 
 
 def clean_order(**overrides):

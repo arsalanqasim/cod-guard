@@ -154,7 +154,7 @@ from Round 9. The licence is unstated. Keep the archive and private
 evaluation files outside Git.
 
 ```text
-python scripts/evaluate_round10.py PATH_TO_PRIVATE_KAGGLE_ZIP --output-dir PATH_TO_NEW_PRIVATE_DIRECTORY
+python scripts/experiments/evaluate_round10.py PATH_TO_PRIVATE_KAGGLE_ZIP --output-dir PATH_TO_NEW_PRIVATE_DIRECTORY
 python scripts/build_demo.py --verify-only
 ```
 

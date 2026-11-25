@@ -9,6 +9,7 @@ data/state.json.archive
 .venv/
 .env
 .env.*
+!.env.example
 host-data/
 data/*.sqlite3*
 data/whisper/

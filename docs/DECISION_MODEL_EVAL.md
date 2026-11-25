@@ -106,7 +106,7 @@ hf download sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2 config.j
 hf download onnx-community/multilingual-MiniLMv2-L6-mnli-xnli-ONNX config.json tokenizer.json onnx/model_int8.onnx --revision ca5daf3d11b6c4b3143b1f4602a2edfb64c3ad7e --local-dir .venv/round7/zero
 hf download Xenova/LaMini-Flan-T5-77M tokenizer.json onnx/encoder_model_int8.onnx onnx/decoder_model_int8.onnx --revision ac7ed8d --local-dir .venv/round7/dm
 $env:HF_HUB_OFFLINE = '1'
-python scripts/evaluate_reply_models.py --work-dir .venv/round7/run --minilm-checkpoint .venv/round7/original --zero-shot .venv/round7/zero --dm-model .venv/round7/dm
+python scripts/experiments/evaluate_reply_models.py --work-dir .venv/round7/run --minilm-checkpoint .venv/round7/original --zero-shot .venv/round7/zero --dm-model .venv/round7/dm
 ```
 
 The script writes per-split and per-language metrics, threshold decisions, wrong commit IDs and DM failure examples to `metrics.json` in the work directory. FastText uses word and character n-grams. MiniLM trains the final encoder block and a linear head for six epochs, then exports and evaluates dynamic INT8 ONNX. LaMini-Flan-T5 gets one extractive prompt per field with greedy decoding. The model downloads contain public weights and tokenizers. Scoring uses local inference. [MiniLM source checkpoint](https://huggingface.co/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2) · [Zero-shot ONNX checkpoint](https://huggingface.co/onnx-community/multilingual-MiniLMv2-L6-mnli-xnli-ONNX)
@@ -175,8 +175,8 @@ Use the Round 7 dependencies and checkpoint. Run `tune` with
 command refuses to overwrite an existing run.
 
 ```text
-python scripts/rematch_reply_models.py tune --work-dir PATH_TO_RUN --checkpoint PATH_TO_ORIGINAL_MINILM
-python scripts/rematch_reply_models.py test --work-dir PATH_TO_RUN
+python scripts/experiments/rematch_reply_models.py tune --work-dir PATH_TO_RUN --checkpoint PATH_TO_ORIGINAL_MINILM
+python scripts/experiments/rematch_reply_models.py test --work-dir PATH_TO_RUN
 ```
 
 ## Round 8 addendum · Synthetic address quality

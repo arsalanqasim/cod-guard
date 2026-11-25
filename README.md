@@ -109,15 +109,18 @@ demo decisions, outcomes and learned model state.
 Voice (once, while online): `scripts/prepare_voice.py` caches Whisper
 `small` weights under `data/whisper/`; inference then runs **offline**.
 The bundled sample clip is general Urdu speech from Google FLEURS
-(CC BY 4.0). See [Urdu voice accuracy](docs/VOICE_ACCURACY.md) for the
-read-speech measurement, and [Round 9 Urdu voice](docs/ROUND9_VOICE.md)
-for the short-reply evaluation.
+(CC BY 4.0). See [the Urdu voice smoke test](docs/VOICE_TEST.md),
+[Urdu voice accuracy](docs/VOICE_ACCURACY.md) for the read-speech
+measurement, and [Round 9 Urdu voice](docs/ROUND9_VOICE.md) for the
+short-reply evaluation.
 
 ## Hosting and API
 
 Run `python scripts/run_host.py --bootstrap` from a clean checkout to
-start the loopback API and an isolated exhibition dashboard.
-[Host setup, privacy and tenant configuration](docs/HOSTING.md)
+start the loopback API and an isolated exhibition dashboard. Copy
+[`.env.example`](.env.example) to configure tenant keys and connectors,
+or build the API container from [`Dockerfile`](Dockerfile).
+[Host setup, privacy and tenant configuration](docs/HOSTING.md) · [Security policy](SECURITY.md) · [Contributing](CONTRIBUTING.md)
 
 Operators can correct the latest classified reply and export versioned labels
 for offline retraining. See [reply corrections and shadow evaluation](docs/REPLY_CORRECTIONS.md)
@@ -135,7 +138,7 @@ page over 10,000 stored orders loads in tens of milliseconds), and
 active model bundle, and that its evaluation artifacts match.
 
 The real-data evaluation keeps model-first scoring in seller-specific
-shadow mode. [Round 9 metrics](docs/ROUND9_EVAL.md) · [Data provenance](docs/DATA_SOURCES.md)
+shadow mode. [Round 9 metrics](docs/ROUND9_EVAL.md) · [Cost-model sensitivity](docs/COST_SENSITIVITY.md) · [Data provenance](docs/DATA_SOURCES.md)
 
 ## Channels and evidence
 
@@ -144,10 +147,10 @@ shadow mode. [Round 9 metrics](docs/ROUND9_EVAL.md) · [Data provenance](docs/DA
 | WooCommerce | Signed webhooks + polling, outcome write-back, source reconciliation | [WOOCOMMERCE.md](docs/WOOCOMMERCE.md) |
 | Shopify | Signed custom-app `orders/create` intake (no App Store flow yet) | [SHOPIFY.md](docs/SHOPIFY.md) |
 | Daraz | Read-only spike client; score-and-queue only until a seller payload proves phone access | [DARAZ_SPIKE.md](docs/DARAZ_SPIKE.md) |
-| Social / DM | Paste or sheet import, review-before-save | [SOCIAL_INTAKE.md](docs/SOCIAL_INTAKE.md) |
+| Social / DM | Paste or sheet import, review-before-save, next-action advice & address review | [SOCIAL_INTAKE.md](docs/SOCIAL_INTAKE.md) |
 | WhatsApp | Meta Cloud API, utility template, consent + opt-out, per-message cost accounting | [WHATSAPP_CLOUD.md](docs/WHATSAPP_CLOUD.md) |
 | Couriers | CSV outcomes + read-only TCS adapter; shadow retraining | [COURIERS.md](docs/COURIERS.md) |
-| Dispatch advice | Shadow prepaid offers and courier guidance, plus address clarification drafts | [DISPATCH_ADVICE.md](docs/DISPATCH_ADVICE.md) |
+| Dispatch advice | Shadow prepaid offers, courier guidance, address clarification, and next-action recommendations | [DISPATCH_ADVICE.md](docs/DISPATCH_ADVICE.md) |
 | Reputation network | Opt-in, hashed, governed, off by default, never affects dispatch | [NETWORK.md](docs/NETWORK.md) |
 
 ## Status & roadmap
@@ -157,7 +160,8 @@ milestone: onboarding design-partner sellers for shadow-mode trials —
 COD-Guard scores and verifies alongside the seller's existing process,
 and savings are measured on real orders before anything is charged.
 Also ahead: Daraz live intake (gated on a seller payload proving
-buyer-phone access) and Shopify App Store distribution.
+buyer-phone access), Shopify App Store distribution, and the items
+tracked in [the post-audit roadmap](docs/ROADMAP_POST_AUDIT.md).
 
 Competitors in this space include ConfirmFlow, OrderWitness, Botaura
 and DukaanFlow. COD-Guard claims no "first" — its case rests on the

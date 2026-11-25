@@ -9,7 +9,7 @@ import sys
 
 import pandas as pd
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "backend/app"))
 from address_quality import classify_address
 from dispatch_advice import courier_rates, prepaid_offer, recommend_courier

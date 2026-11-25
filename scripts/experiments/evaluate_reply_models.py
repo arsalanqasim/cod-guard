@@ -14,7 +14,7 @@ from scipy.special import softmax
 from round7_models import (LABELS, dm_predictor, fasttext_predictor, minilm_predictor,
                            train_fasttext, zero_shot_predictor)
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "backend/app"))
 from pakistan_phone import normalize_phone
 from social_routes import extract

@@ -1,0 +1,14 @@
+.git
+.venv
+__pycache__
+*.pyc
+.env
+.env.*
+host-data
+data/state.json*
+data/*.sqlite3*
+data/whisper
+backend/app/model.pkl
+backend/app/model.active
+backend/app/model.versions
+backend/app/model.publish.sqlite3*

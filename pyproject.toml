@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cod-guard"
+version = "0.1.0"
+description = "Pre-dispatch refusal-risk intelligence, buyer verification, and outcome learning for Cash-on-Delivery orders."
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi==0.165.0",
+    "uvicorn==0.54.0",
+    "streamlit==1.67.0",
+    "scikit-learn==1.9.1",
+    "pandas==3.1.1",
+    "numpy==2.5.5",
+    "faster-whisper==1.2.1",
+    "httpx==0.28.1",
+    "av==16.1.0",
+    "threadpoolctl==3.8.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.15",
+]
+
+[tool.setuptools.packages.find]
+include = ["backend*"]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 120
+exclude = [
+    ".venv",
+    "data/whisper",
+    "host-data",
+]
+
+[tool.ruff.lint]
+select = ["E", "F"]
+ignore = ["E402", "E501"]

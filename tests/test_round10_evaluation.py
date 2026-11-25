@@ -5,7 +5,7 @@ import unittest
 import numpy as np
 import pandas as pd
 
-sys.path.append(str(Path(__file__).resolve().parents[1] / "scripts"))
+sys.path.append(str(Path(__file__).resolve().parents[1] / "scripts/experiments"))
 from evaluate_round10 import (
     lagged_outcome_features, order_cost, purchase_features, reallocate_verification, release_actions, select_release,
 )

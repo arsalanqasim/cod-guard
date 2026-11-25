@@ -58,7 +58,7 @@ with Transformers and CPU PyTorch to generate a new set, then use the
 same WAVs for both runs.
 
 ```text
-python scripts/evaluate_round9_voice.py --tts-checkpoint PATH_TO_MMS --short PATH_TO_NEW_WAV_SET
-python scripts/evaluate_round9_voice.py --short PATH_TO_WAV_SET --fleurs PATH_TO_FLEURS_TAR_GZ --output PATH_TO_STOCK_RESULT
-python scripts/evaluate_round9_voice.py --short PATH_TO_WAV_SET --fleurs PATH_TO_FLEURS_TAR_GZ --checkpoint PATH_TO_APPROVED_CTRANSLATE2 --output PATH_TO_CANDIDATE_RESULT
+python scripts/experiments/evaluate_round9_voice.py --tts-checkpoint PATH_TO_MMS --short PATH_TO_NEW_WAV_SET
+python scripts/experiments/evaluate_round9_voice.py --short PATH_TO_WAV_SET --fleurs PATH_TO_FLEURS_TAR_GZ --output PATH_TO_STOCK_RESULT
+python scripts/experiments/evaluate_round9_voice.py --short PATH_TO_WAV_SET --fleurs PATH_TO_FLEURS_TAR_GZ --checkpoint PATH_TO_APPROVED_CTRANSLATE2 --output PATH_TO_CANDIDATE_RESULT
 ```

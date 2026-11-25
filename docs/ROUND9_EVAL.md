@@ -71,7 +71,7 @@ to serve after the failed gate. [Hosting and tenant configuration](HOSTING.md)
 ## Reproduce
 
 ```text
-python scripts/evaluate_round9.py PATH_TO_PRIVATE_KAGGLE_ZIP --report PATH_TO_PRIVATE_JSON_RESULT
+python scripts/experiments/evaluate_round9.py PATH_TO_PRIVATE_KAGGLE_ZIP --report PATH_TO_PRIVATE_JSON_RESULT
 ```
 
 The repository ships the frozen lock. The command verifies it before

@@ -26,5 +26,7 @@ def test_fraud_phone_plus_refusals_is_red():
     assert r["reasons"], "every flag must explain itself"
 
 if __name__ == "__main__":
-    test_clean_order_is_green(); test_single_weak_signal_does_not_block()
-    test_fraud_phone_plus_refusals_is_red(); print("3/3 tests passed")
+    test_clean_order_is_green()
+    test_single_weak_signal_does_not_block()
+    test_fraud_phone_plus_refusals_is_red()
+    print("3/3 tests passed")
